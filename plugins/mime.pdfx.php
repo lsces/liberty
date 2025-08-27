@@ -1,4 +1,9 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
+
 /**
  * @version		$Header: /cvsroot/bitweaver/_bit_liberty/plugins/mime.pdf.php,v 1.2 2009/04/29 14:29:24 wjames5 Exp $
  *
@@ -21,7 +26,7 @@ global $gLibertySystem;
  */
 define( 'PLUGIN_MIME_GUID_PDFX', 'mimepdfx' );
 
-$pluginParams = array (
+$pluginParams = [
 	// Set of functions and what they are called in this paricular plugin
 	// Use the GUID as your namespace
 	'verify_function'     => 'mime_default_verify',
@@ -33,23 +38,23 @@ $pluginParams = array (
 	'help_function'       => 'mime_pdfx_help',
 	// Brief description of what the plugin does
 	'title'               => 'Browsable PDFs with thumbnails',
-	'description'         => 'Convert PDFs to flash files that can be browsed online and provides thumbnail images for the galleries and links.',
+	'description'         => 'View PDFs in browser online and provides thumbnail images for the galleries and links.',
 	// Templates to display the files
-	'view_tpl'            => 'bitpackage:liberty/mime/pdf/view.tpl',
+	'view_tpl'            => 'bitpackage:liberty/mime/pdfx/view.tpl',
 	//'attachment_tpl'      => 'bitpackage:liberty/mime/image/attachment.tpl',
 	// url to page with options for this plugin
 	'plugin_settings_url' => LIBERTY_PKG_URL.'admin/plugins/mime_pdfx.php',
 	// This should be the same for all mime plugins
 	'plugin_type'         => MIME_PLUGIN,
-	// Set this to TRUE if you want the plugin active right after installation
-	'auto_activate'       => FALSE,
+	// Set this to true if you want the plugin active right after installation
+	'auto_activate'       => false,
 	// Help page on bitweaver.org
 	//'help_page'           => 'LibertyMime+Image+Plugin',
 	// this should pick up all raw pdf files
-	'mimetypes'           => array(
+	'mimetypes'           => [
 		'#.*/pdf#i',
-	),
-);
+	],
+];
 $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_PDFX, $pluginParams );
 
 /**
@@ -57,29 +62,30 @@ $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_PDFX, $pluginParams );
  *
  * @param array $pStoreRow File data needed to store details in the database - sanitised and generated in the verify function
  * @access public
- * @return TRUE on success, FALSE on failure - $pStoreRow[errors] will contain reason
+ * @return bool true on success, false on failure - $pStoreRow[errors] will contain reason
  */
 function mime_pdfx_store( &$pStoreRow ) {
 	global $gBitSystem;
 
 	// this will set the correct pluign guid, even if we let default handle the store process
 	$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_PDFX;
-	$pStoreRow['log'] = array();
+	$pStoreRow['log'] = [];
 
 	// if storing works, we process the image
 	if( $ret = mime_default_store( $pStoreRow )) {
-		if( !mime_pdfx_convert_pdf2swf( $pStoreRow )) {
+/*		if( !mime_pdfx_convert_pdf2swf( $pStoreRow )) {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
-			$ret = FALSE;
+			$ret = false;
 		}
+*/
 	}
 
 	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' ) {
 		if( !mime_pdfx_thumbnail( $pStoreRow )) {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
-			$ret = FALSE;
+			$ret = false;
 		}
 	}
 	return $ret;
@@ -90,30 +96,31 @@ function mime_pdfx_store( &$pStoreRow ) {
  *
  * @param array $pStoreRow File data needed to update details in the database
  * @access public
- * @return TRUE on success, FALSE on failure - $pStoreRow[errors] will contain reason
+ * @return bool true on success, false on failure - $pStoreRow[errors] will contain reason
  */
-function mime_pdfx_update( &$pStoreRow, $pParams = NULL ) {
+function mime_pdfx_update( &$pStoreRow, $pParams = null ) {
 	global $gThumbSizes, $gBitSystem;
 
-	$ret = TRUE;
+	$ret = true;
 
 	// this will set the correct pluign guid, even if we let default handle the store process
 	$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_PDFX;
 
 	// if storing works, we process the image
 	if( !empty( $pStoreRow['upload'] ) && $ret = mime_default_update( $pStoreRow )) {
-		if( !mime_pdfx_convert_pdf2swf( $pStoreRow )) {
+/*		if( !mime_pdfx_convert_pdf2swf( $pStoreRow )) {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
-			$ret = FALSE;
+			$ret = false;
 		}
+*/
 	}
 
 	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' ) {
 		if( !mime_pdfx_thumbnail( $pStoreRow )) {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
-			$ret = FALSE;
+			$ret = false;
 		}
 	}
 	return $ret;
@@ -126,18 +133,15 @@ function mime_pdfx_update( &$pStoreRow, $pParams = NULL ) {
  * @param array $pPrefs Attachment preferences taken liberty_attachment_prefs
  * @param array $pParams Parameters for loading the plugin - e.g.: might contain values such as thumbnail size from the view page
  * @access public
- * @return TRUE on success, FALSE on failure - $pStoreRow[errors] will contain reason
+ * @return bool true on success, false on failure - $pStoreRow[errors] will contain reason
  */
-function mime_pdfx_load( &$pFileHash, &$pPrefs, $pParams = NULL ) {
+function mime_pdfx_load( &$pFileHash, &$pPrefs, $pParams = null ) {
 	global $gBitSystem;
 	// don't load a mime image if we don't have an image for this file
-	if( $ret = mime_default_load( $pFileHash, $pPrefs, $pParams )) {
+	if( $ret = mime_default_load( $pFileHash, $pPrefs )) {
 		if( !empty( $ret['source_file'] )) {
 			$source_path = dirname( $ret['source_file'] ).'/';
-			// if the swf file exists, we pass it back that it can be viewed.
-			if( is_file( $source_path.'pdf.swf' )) {
-				$ret['media_url'] = storage_path_to_url( dirname( $ret['source_url'] ).'/pdf.swf' );
-			}
+//				$ret['media_url'] = KernelTools::storage_path_to_url( dirname( $ret['source_url'] ).'/pdf.swf' );
 		}
 	}
 	return $ret;
@@ -149,11 +153,11 @@ function mime_pdfx_load( &$pFileHash, &$pPrefs, $pParams = NULL ) {
  * @param array $pFileHash file details.
  * @param array $pFileHash[upload] should contain a complete hash from $_FILES
  * @access public
- * @return TRUE on success, FALSE on failure
+ * @return bool true on success, false on failure
  */
 function mime_pdfx_convert_pdf2swf( $pFileHash ) {
 	global $gBitSystem;
-	if( !empty( $pFileHash['upload'] ) && @BitBase::verifyId( $pFileHash['attachment_id'] )) {
+	if( !empty( $pFileHash['upload'] ) && BitBase::verifyId( $pFileHash['attachment_id'] )) {
 		// get file paths
 
 		$pdf2swf    = trim( $gBitSystem->getConfig( 'swf2pdf_path', shell_exec( 'which pdf2swf' )));
@@ -195,7 +199,7 @@ function mime_pdfx_convert_pdf2swf( $pFileHash ) {
 			$pFileHash['log']['pdf2swf'] = "PDF to SWF functions not installed.";
 		}
 	}
-	return( empty( $pFileHash['log'] ));
+	return empty( $pFileHash['log'] );
 }
 
 /**
@@ -204,7 +208,7 @@ function mime_pdfx_convert_pdf2swf( $pFileHash ) {
  * @param array $pFileHash file details.
  * @param array $pFileHash[upload] should contain a complete hash from $_FILES
  * @access public
- * @return TRUE on success, FALSE on failure
+ * @return bool true on success, false on failure
  */
 function mime_pdfx_thumbnail( $pFileHash ) {
 	global $gBitSystem;
@@ -228,13 +232,13 @@ function mime_pdfx_thumbnail( $pFileHash ) {
 			else if( is_file( "$dest_branch/thumb-0.jpg" ) ) {
 				$thumb_file = "$dest_branch/thumb-0.jpg";
 			}
-			$genHash = array(
+			$genHash = [
 				'attachment_id'	=> $pFileHash['attachment_id'],
 				'dest_branch'		=> $pFileHash['upload']['dest_branch'],
 				'source_file'		=> $thumb_file,
 				'type'				=> 'image/jpeg',
-				'thumbnail_sizes'	=> array( 'extra-large', 'large', 'medium', 'small', 'avatar', 'icon' ),
-			);
+				'thumbnail_sizes'	=> [ 'extra-large', 'large', 'medium', 'small', 'avatar', 'icon' ],
+			];
 			if( liberty_generate_thumbnails( $genHash )) {
 //				$genHash['source_file'] = $genHash['icon_thumb_path'];
 //				if( !$panoramaFunc( $genHash )) {
@@ -244,7 +248,7 @@ function mime_pdfx_thumbnail( $pFileHash ) {
 			$mask = "$dest_branch/thumb*.jpg";
    			array_map( "unlink", glob( $mask ) );
 		}
-	return( empty( $pFileHash['log'] ));
+	return empty( $pFileHash['log'] );
 }
 
 /**
@@ -256,4 +260,3 @@ function mime_pdfx_thumbnail( $pFileHash ) {
 function mime_pdfx_help() {
 	return '';
 }
-?>

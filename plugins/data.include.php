@@ -1,4 +1,10 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyBase;
+use Bitweaver\Wiki\BitPage;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -24,18 +30,18 @@
  */
 define( 'PLUGIN_GUID_DATAINCLUDE', 'datainclude' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams = [
 	'tag' => 'INCLUDE',
-	'auto_activate' => TRUE,
-	'requires_pair' => FALSE,
-	'load_function' => 'data_include',
+	'auto_activate' => true,
+	'requires_pair' => false,
+	'load_function' => '\data_include',
 	'title' => 'Include',
 	'help_page' => 'DataPluginInclude',
-	'description' => tra("This plugin is used to include the contents of one Wiki page in another Wiki page."),
-	'help_function' => 'data_include_help',
+	'description' => KernelTools::tra("This plugin is used to include the contents of one Wiki page in another Wiki page."),
+	'help_function' => '\data_include_help',
 	'syntax' => "{INCLUDE content_id= }",
 	'plugin_type' => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAINCLUDE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAINCLUDE );
 
@@ -44,24 +50,24 @@ function data_include_help() {
 	$help = '
 		<table class="plugin help">
 			<tr>
-				<th>'.tra( 'key' ).'</th>
-				<th>'.tra( 'type' ).'</th>
-				<th>'.tra( 'comments' ).'</th>
+				<th>'.KernelTools::tra( 'key' ).'</th>
+				<th>'.KernelTools::tra( 'type' ).'</th>
+				<th>'.KernelTools::tra( 'comments' ).'</th>
 			</tr>
 			<tr class="odd">
 				<td>page_name</td>
-				<td>'.tra( 'string (optional)' ).'</td>
-				<td>'.tra( 'To include any wiki page you can use it\'s page name (this has to be a unique name. if it\'s not unique, use the page_id instead) (this method is deprecated).' ).'</td>
+				<td>'.KernelTools::tra( 'string (optional)' ).'</td>
+				<td>'.KernelTools::tra( 'To include any wiki page you can use it\'s page name (this has to be a unique name. if it\'s not unique, use the page_id instead) (this method is deprecated).' ).'</td>
 			</tr>
 			<tr class="even">
 				<td>page_id</td>
-				<td>'.tra( 'numeric (optional)' ).'</td>
-				<td>'.tra( 'To include any wiki page you can use it\'s page_id number.' ).'</td>
+				<td>'.KernelTools::tra( 'numeric (optional)' ).'</td>
+				<td>'.KernelTools::tra( 'To include any wiki page you can use it\'s page_id number.' ).'</td>
 			</tr>
 			<tr class="odd">
 				<td>content_id</td>
-				<td>'.tra( 'numeric (optional)' ).'</td>
-				<td>'.tra( 'To include any content from bitweaver insert the appropriate numeric content id. This can include blog posts, images, wiki texts...<br />
+				<td>'.KernelTools::tra( 'numeric (optional)' ).'</td>
+				<td>'.KernelTools::tra( 'To include any content from bitweaver insert the appropriate numeric content id. This can include blog posts, images, wiki texts...<br />
 					Avaliable content can be viewed <a href="'.LIBERTY_PKG_URL.'list_content.php">here</a>' ).'</td>
 			</tr>
 		</table>
@@ -98,4 +104,3 @@ function data_include($data, $params) {
 
 	return $ret;
 }
-?>

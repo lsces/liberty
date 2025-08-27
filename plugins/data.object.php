@@ -1,4 +1,8 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -29,18 +33,18 @@ if( $gBitSystem->isPackageActive( 'wiki' ) ) { // Do not include this Plugin if 
 
 define( 'PLUGIN_GUID_DATAOBJECT', 'dataobject' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams = [
 	'tag' => 'OBJECT',
-	'auto_activate' => FALSE,
-	'requires_pair' => FALSE,
-	'load_function' => 'data_object',
+	'auto_activate' => false,
+	'requires_pair' => false,
+	'load_function' => '\data_object',
 	'title' => 'Object',
 	'help_page' => 'DataPluginObject',
-	'description' => tra("This plugin displays a Flash, Tcl or Java applet/object."),
-	'help_function' => 'data_object_help',
+	'description' => KernelTools::tra("This plugin displays a Flash, Tcl or Java applet/object."),
+	'help_function' => '\data_object_help',
 	'syntax' => "{OBJECT type= src= width= height=}",
 	'plugin_type' => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAOBJECT, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAOBJECT );
 
@@ -49,100 +53,100 @@ function data_object_help() {
 	$help =
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>type</td>'
-				.'<td>' . tra( "key-word" ) . '<br />' . tra( "(manditory)" ) . '</td>'
-				.'<td>' . tra( "The type of object being displayed. Possible values are:") . ' <strong>tcl, flash, java</strong>.' . '</td>'
+				.'<td>' . KernelTools::tra( "key-word" ) . '<br />' . KernelTools::tra( "(manditory)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "The type of object being displayed. Possible values are:") . ' <strong>tcl, flash, java</strong>.' . '</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>src</td>'
-				.'<td>' . tra( "string" ) . '<br />' . tra( "(manditory)" ) . '</td>'
-				.'<td>' . tra( "The location of the file used for the object. This can be any URL or a site value. See Examples.") . '</td>'
+				.'<td>' . KernelTools::tra( "string" ) . '<br />' . KernelTools::tra( "(manditory)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "The location of the file used for the object. This can be any URL or a site value. See Examples.") . '</td>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>param_<i>name</i></td>'
-				.'<td>' . tra( "string" ) . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "Can be used to specify custom object parameters. Currently only available for Tcl applets. Replace \"<i>name</i>\" with the name of the parameter.") . '</td>'
+				.'<td>' . KernelTools::tra( "string" ) . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "Can be used to specify custom object parameters. Currently only available for Tcl applets. Replace \"<i>name</i>\" with the name of the parameter.") . '</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>width</td>'
-				.'<td>' . tra( "number or percentage" ) . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "The width of the object. This value can be given in pixels or as a percentage of available area. A pixel value is assumed so only a numeric value is needed. To specify a percentage - the character <strong>% MUST</strong> follow the value.") . '</td>'
+				.'<td>' . KernelTools::tra( "number or percentage" ) . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "The width of the object. This value can be given in pixels or as a percentage of available area. A pixel value is assumed so only a numeric value is needed. To specify a percentage - the character <strong>% MUST</strong> follow the value.") . '</td>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>height</td>'
-				.'<td>' . tra( "number or percentage" ) . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "The height of the object. This value can be given in pixels or as a percentage. A pixel value is assumed so only a numeric value is needed. To specify a percentage - the character <strong>% MUST</strong> follow the value.") . '</td>'
+				.'<td>' . KernelTools::tra( "number or percentage" ) . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "The height of the object. This value can be given in pixels or as a percentage. A pixel value is assumed so only a numeric value is needed. To specify a percentage - the character <strong>% MUST</strong> follow the value.") . '</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>float</td>'
-				.'<td>' . tra( "key-words" ) . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "Specifies how the object is to float on the page. Floating elements are positioned on the side specified, with content flowing around. Possible values are:") . ' <strong>left, right, none</strong>. '
-				. tra("(Default = ") . '<strong>' . tra( 'none - object is shown inline' ) . '</strong>)</td>'
+				.'<td>' . KernelTools::tra( "key-words" ) . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "Specifies how the object is to float on the page. Floating elements are positioned on the side specified, with content flowing around. Possible values are:") . ' <strong>left, right, none</strong>. '
+				. KernelTools::tra("(Default = ") . '<strong>' . KernelTools::tra( 'none - object is shown inline' ) . '</strong>)</td>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>clear</td>'
-				.'<td>' . tra( "key-words" ) . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "Specifies which horizontal sides of the object can not have other content flowing around. Possible values are:") . ' <strong>left, right, both, none</strong>. '
-				. tra("(Default = ") . '<strong>' . tra( 'none - content is allowed to flow around object' ) . '</strong>)</td>'
+				.'<td>' . KernelTools::tra( "key-words" ) . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "Specifies which horizontal sides of the object can not have other content flowing around. Possible values are:") . ' <strong>left, right, both, none</strong>. '
+				. KernelTools::tra("(Default = ") . '<strong>' . KernelTools::tra( 'none - content is allowed to flow around object' ) . '</strong>)</td>'
 			.'</tr>'
 		.'</table>'
 
 		.'<table class="data help">'
-			.'<caption>' . tra( "Flash specific parameters" ) . '</caption>'
+			.'<caption>' . KernelTools::tra( "Flash specific parameters" ) . '</caption>'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>quality</td>'
-				.'<td>' . tra( "key-word" ) . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "The quality at which to display a Flash applet. Possible values are unknown - except:") . ' <strong>high</strong> ' . tra("and probably") . ' <strong>low</strong>.</td>'
+				.'<td>' . KernelTools::tra( "key-word" ) . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "The quality at which to display a Flash applet. Possible values are unknown - except:") . ' <strong>high</strong> ' . KernelTools::tra("and probably") . ' <strong>low</strong>.</td>'
 			.'</tr>'
 		.'</table>'
 
 		.'<table class="data help">'
-			.'<caption>' . tra( "Java specific parameters" ) . '</caption>'
+			.'<caption>' . KernelTools::tra( "Java specific parameters" ) . '</caption>'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>vmversion</td>'
-				.'<td>' . tra( "version number" ) . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "The version of Java required for the applet. Should be in the form of <strong>X.x</strong>, eg: <strong>1.3</strong>." ) . '</td>'
+				.'<td>' . KernelTools::tra( "version number" ) . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "The version of Java required for the applet. Should be in the form of <strong>X.x</strong>, eg: <strong>1.3</strong>." ) . '</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>pagescript</td>'
-				.'<td>' . tra( "boolean" ) . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "Specifies if the applet can access Javascript features on the web page. Possible values are:") . ' <strong>true, false</strong>.</td>'
+				.'<td>' . KernelTools::tra( "boolean" ) . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "Specifies if the applet can access Javascript features on the web page. Possible values are:") . ' <strong>true, false</strong>.</td>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>appletscript</td>'
-				.'<td>' . tra( "boolean" ) . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "Specifies whether the applet is scriptable from the web page using JavaScript or VBScript. Possible values are:") . ' <strong>true, false</strong>.</td>'
+				.'<td>' . KernelTools::tra( "boolean" ) . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "Specifies whether the applet is scriptable from the web page using JavaScript or VBScript. Possible values are:") . ' <strong>true, false</strong>.</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>srcbase</td>'
-				.'<td>' . tra( "string" ) . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "The base location of the Java applet." ) . '</td>'
+				.'<td>' . KernelTools::tra( "string" ) . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "The base location of the Java applet." ) . '</td>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>archive</td>'
-				.'<td>' . tra( "string" ) . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "Specifies the name of the Java archive." ) . '</td>'
+				.'<td>' . KernelTools::tra( "string" ) . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "Specifies the name of the Java archive." ) . '</td>'
 			.'</tr>'
 		.'</table>'
 
-		. tra("Example: ") . "{OBJECT type=flash src=../liberty/icons/Mind-Reader.swf}<br />"
-		. tra("Example: ") . "{OBJECT type=flash src=http://www.bitweaver.org/liberty/icons/Mind-Reader.swf width='100%' height='600' quality='high'}<br />"
-		. tra('Both of these examples display "The Flash Mind Reader" by Andy Naughton. The first example is on your site and is not very large. The second example is located on the bitweaver.org site and takes the width of the center column with an appropriate height.');
+		. KernelTools::tra("Example: ") . "{OBJECT type=flash src=../liberty/icons/Mind-Reader.swf}<br />"
+		. KernelTools::tra("Example: ") . "{OBJECT type=flash src=http://www.bitweaver.org/liberty/icons/Mind-Reader.swf width='100%' height='600' quality='high'}<br />"
+		. KernelTools::tra('Both of these examples display "The Flash Mind Reader" by Andy Naughton. The first example is on your site and is not very large. The second example is located on the bitweaver.org site and takes the width of the center column with an appropriate height.');
 	return $help;
 }
 
@@ -151,20 +155,20 @@ function data_object ($data, $params) {
 	// Need these plugin parameters
 	foreach (array("type", "src") as $parameter) {
 		if (!array_key_exists($parameter, $params))
-			return '<span class="warning">'.tra('When using <strong>{object}</strong>, a <strong>type</strong> and <strong>src</strong> parameter is required.').'</span>';
+			return '<span class="warning">'.KernelTools::tra('When using <strong>{object}</strong>, a <strong>type</strong> and <strong>src</strong> parameter is required.').'</span>';
 	}
 
-	$objectParams = array();
+	$objectParams = [];
 
 	switch ($params["type"]) {
 		case "tcl":
 			// This loop scans for and sets param_ custom object parmeters. Note that in the future, it may be used for object types other than Tcl, so don't go making this part of the tcl clause below.
 			foreach (array_keys($params) as $parameter) {
-				if (ereg("param_*", $parameter))
+				if (mb_ereg("param_*", $parameter))
 					$objectParams[substr($parameter, 6)] = $params[$parameter];
 			}
 
-		case "tcl":
+//		case "tcl":
 			// Tcl Plugin applet
 			$classid = "clsid:D27CDB6E-AE6D-11cf-96B8-444553540000";
 			$objectParams["type"] = "application/x-tcl";
@@ -199,7 +203,7 @@ function data_object ($data, $params) {
 
 		default:
 			// Unrecognized object type
-			return '<span class="warning">'.tra('The <strong>type</strong> parameter of <strong>{object}</strong> must either be <strong>tcl</strong>, <strong>flash</strong> or <strong>java</strong>.').'</span>';
+			return '<span class="warning">'.KernelTools::tra('The <strong>type</strong> parameter of <strong>{object}</strong> must either be <strong>tcl</strong>, <strong>flash</strong> or <strong>java</strong>.').'</span>';
 	}
 
 	// Build the <object> HTML code
@@ -218,4 +222,4 @@ function data_object ($data, $params) {
 	return $result;
 }
 
-} ?>
+}

@@ -1,4 +1,8 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -27,18 +31,18 @@ if( ( $gBitSystem->isPackageActive( 'wiki' ) ) && ( $gBitSystem->isFeatureActive
 
 define( 'PLUGIN_GUID_DATACOPYRIGHT', 'datacopyright' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams = [
 	'tag' => 'COPYRIGHT',
-	'auto_activate' => FALSE,
-	'requires_pair' => FALSE,
-	'load_function' => 'data_copyright',
+	'auto_activate' => false,
+	'requires_pair' => false,
+	'load_function' => '\data_copyright',
 	'title' => 'CopyRight',
 	'help_page' => 'DataPluginCopyRight',
-	'description' => tra("This plugin is used to insert CopyRight notices."),
-	'help_function' => 'data_copyright_help',
+	'description' => KernelTools::tra("This plugin is used to insert CopyRight notices."),
+	'help_function' => '\data_copyright_help',
 	'syntax' => "{COPYRIGHT title= year= authors= }",
 	'plugin_type' => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATACOPYRIGHT, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATACOPYRIGHT );
 
@@ -47,27 +51,27 @@ function data_copyright_help() {
 	$help =
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>title</td>'
-				.'<td>' . tra( "string") . '<br />' . tra( "(optional)") . '</td>'
-				.'<td>' . tra( "The Title of the Publication. There is no default.") . '</td>'
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra( "(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "The Title of the Publication. There is no default.") . '</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>year</td>'
-				.'<td>' . tra( "string") . '<br />' . tra( "(optional)") . '</td>'
-				.'<td>' . tra( "The Year of the Publication. There is no default.") . '</td>'
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra( "(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "The Year of the Publication. There is no default.") . '</td>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>authors</td>'
-				.'<td>' . tra( "string") . '<br />' . tra( "(optional)") . '</td>'
-				.'<td>' . tra( "The Authors of the Publication. There is no default.") . '</td>'
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra( "(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "The Authors of the Publication. There is no default.") . '</td>'
 			.'</tr>'
 		.'</table>'
-		. tra("Example: ") . "{COPYRIGHT title='The Tiki Way' year='May 10, 2004' authors='StarRider' }";
+		. KernelTools::tra("Example: ") . "{COPYRIGHT title='The Tiki Way' year='May 10, 2004' authors='StarRider' }";
 	return $help;
 }
 
@@ -101,4 +105,3 @@ function data_copyright($data, $params) { // Pre-Clyde Changes
 	return $ret;
 }
 }
-?>

@@ -1,4 +1,9 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyContent;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -10,18 +15,18 @@
  */
 define( 'PLUGIN_GUID_DATASORT', 'datasort' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams = [
 	'tag'           => 'SORT',
-	'auto_activate' => FALSE,
-	'requires_pair' => TRUE,
-	'load_function' => 'data_sort',
+	'auto_activate' => false,
+	'requires_pair' => true,
+	'load_function' => '\data_sort',
 	'title'         => 'Sort',
 	'help_page'     => 'DataPluginSort',
-	'description'   => tra( "This plugin will sort the lines within a {sort} block." ),
-	'help_function' => 'data_sort_help',
-	'syntax'        => "{sort sort= }".tra( "Lines to be sorted" )."{sort}",
+	'description'   => KernelTools::tra( "This plugin will sort the lines within a {sort} block." ),
+	'help_function' => '\data_sort_help',
+	'syntax'        => "{sort sort= }".KernelTools::tra( "Lines to be sorted" )."{sort}",
 	'plugin_type'   => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATASORT, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATASORT );
 
@@ -32,17 +37,17 @@ function data_sort_help() {
 	$help ='
 		<table class="data help">
 			<tr>
-				<th>'.tra( 'Key' ).'</th>
-				<th>'.tra( 'Value' ).'</th>
-				<th>'.tra( 'Comments' ).'</th>
+				<th>'.KernelTools::tra( 'Key' ).'</th>
+				<th>'.KernelTools::tra( 'Value' ).'</th>
+				<th>'.KernelTools::tra( 'Comments' ).'</th>
 			</tr>
 			<tr class="even">
 				<td>'.'sort' .'</td>
-				<td>'.tra( "key-words").'<br />'.tra("(optional)").'</td>
-				<td>'.tra( 'Will sort the lines in the desired direction.  Choices are:' ).'<strong>asc</strong>, <strong>desc</strong>, <strong>reverse</strong>, <strong>shuffle</strong>'.tra( 'Default:' ).'<strong>asc</strong>'.'</td>
+				<td>'.KernelTools::tra( "key-words").'<br />'.KernelTools::tra("(optional)").'</td>
+				<td>'.KernelTools::tra( 'Will sort the lines in the desired direction.  Choices are:' ).'<strong>asc</strong>, <strong>desc</strong>, <strong>reverse</strong>, <strong>shuffle</strong>'.KernelTools::tra( 'Default:' ).'<strong>asc</strong>'.'</td>
 			</tr>
 		</table>'.
-		tra( "Example: " ).'{sort sort=shuffle}<br />Line 1<br />Line 2<br />Line 3<br />{sort}';
+		KernelTools::tra( "Example: " ).'{sort sort=shuffle}<br />Line 1<br />Line 2<br />Line 3<br />{sort}';
 	return $help;
 }
 
@@ -69,8 +74,7 @@ function data_sort( $pData, $pParams, $pCommonObject, $pParseHash ) {
 
 	$parseHash['content_id'] = $pParseHash['content_id'];
 	$parseHash['user_id']    = $pParseHash['user_id'];
-	$parseHash['no_cache']   = TRUE;
+	$parseHash['no_cache']   = true;
 	$parseHash['data']       = trim( $pData );
 	return LibertyContent::parseDataHash( $parseHash, $pCommonObject );
 }
-?>

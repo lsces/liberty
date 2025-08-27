@@ -1,4 +1,12 @@
 <?php
+
+namespace Bitweaver;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyBase;
+use Bitweaver\Liberty\LibertyContent;
+use Bitweaver\Wiki\BitPage;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -20,24 +28,23 @@
 /**
  * definitions
  */
-global $gBitSystem;
-
 define( 'PLUGIN_GUID_DATAATTACHMENT', 'dataattachment' );
-global $gLibertySystem;
-$pluginParams = array (
+global $gLibertySystem, $gBitSystem;
+
+$pluginParams = [
 	'tag'           => 'attachment',
-	'auto_activate' => TRUE,
-	'requires_pair' => FALSE,
-	'load_function' => 'data_attachment',
+	'auto_activate' => true,
+	'requires_pair' => false,
+	'load_function' => '\data_attachment',
 	'title'         => 'Attachment',
 	'help_page'     => 'DataPluginAttachment',
-	'description'   => tra("Display attachment in content"),
-	'help_function' => 'data_attachment_help',
+	'description'   => KernelTools::tra("Display attachment in content"),
+	'help_function' => '\data_attachment_help',
 	'syntax'        => '{attachment id= size= align= }',
 	'plugin_type'   => DATA_PLUGIN,
-	'booticon'       => '{booticon iname="fa-paperclip" iexplain="Attachment"}',
+	'booticon'       => '{booticon iname="icon-paper-clip" iexplain="Attachment"}',
 	'taginsert'     => '{attachment id= align= size= description= alt=}',
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAATTACHMENT, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAATTACHMENT );
 
@@ -46,69 +53,69 @@ function data_attachment_help() {
 	$help =
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>id</td>'
-				.'<td>' . tra( "numeric") . '<br />' . tra("(required)") . '</td>'
-				.'<td>' . tra( "Id number of Attachment to display inline.") . '</td>'
+				.'<td>' . KernelTools::tra( "numeric") . '<br />' . KernelTools::tra("(required)") . '</td>'
+				.'<td>' . KernelTools::tra( "Id number of Attachment to display inline.") . '</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>size</td>'
-				.'<td>' . tra( "key-words") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "If the Attachment is an image, you can specify the size of the thumbnail displayed. Possible values are:") . ' <strong>avatar, small, medium, large, original</strong> '
-				. tra( "(Default = " ) . '<strong>medium</strong>)</td>'
+				.'<td>' . KernelTools::tra( "key-words") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "If the Attachment is an image, you can specify the size of the thumbnail displayed. Possible values are:") . ' <strong>avatar, small, medium, large, original</strong> '
+				. KernelTools::tra( "(Default = " ) . '<strong>medium</strong>)</td>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>description</td>'
-				.'<td>' . tra( "string") . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "The text to use in the title attribute or as the link text if output=desc. Will also be used for the alt attribute if no alt is specified. This text is parsed." )
-				.tra( "(Default = " ) . '<strong>'.tra( 'Image' ).'</strong>)</td>'
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "The text to use in the title attribute or as the link text if output=desc. Will also be used for the alt attribute if no alt is specified. This text is parsed." )
+				.KernelTools::tra( "(Default = " ) . '<strong>'.KernelTools::tra( 'Image' ).'</strong>)</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>alt</td>'
-				.'<td>' . tra( "string") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "The text to use in the alt tag. Will also be used for the title attribute if no description is specified.")
-				. tra("(Default = ") . '<strong>'.tra( 'Image' ).'</strong>)</td>'
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "The text to use in the alt tag. Will also be used for the title attribute if no description is specified.")
+				. KernelTools::tra("(Default = ") . '<strong>'.KernelTools::tra( 'Image' ).'</strong>)</td>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>link</td>'
-				.'<td>' . tra( "string") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "Allows you to specify a relative or absolute URL the image will link to if clicked. You can also link to one of the sizes of the image: icon, avatar, small, medium, large, original and download (insert download link, which will activate the download counter). If set to false, no link is inserted.")
-				. tra("(Default = ") . '<strong>'.tra( 'link to image details page' ).'</strong>)</td>'
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "Allows you to specify a relative or absolute URL the image will link to if clicked. You can also link to one of the sizes of the image: icon, avatar, small, medium, large, original and download (insert download link, which will activate the download counter). If set to false, no link is inserted.")
+				. KernelTools::tra("(Default = ") . '<strong>'.KernelTools::tra( 'link to image details page' ).'</strong>)</td>'
 			.'</tr>'
 			.'<tr class="even">
 				<td>page_id</td>
-				<td>'.tra( 'numeric (optional)' ).'</td>
-				<td>'.tra( "To include any wiki page you can use it's page_id number." ).'</td>
+				<td>'.KernelTools::tra( 'numeric (optional)' ).'</td>
+				<td>'.KernelTools::tra( "To include any wiki page you can use it's page_id number." ).'</td>
 			</tr>
 			<tr class="odd">
 				<td>content_id</td>
-				<td>'.tra( 'numeric (optional)' ).'</td>
-				<td>'.tra( 'To include any content from bitweaver insert the appropriate numeric content id. This can include blog posts, images, wiki texts...<br />
+				<td>'.KernelTools::tra( 'numeric (optional)' ).'</td>
+				<td>'.KernelTools::tra( 'To include any content from bitweaver insert the appropriate numeric content id. This can include blog posts, images, wiki texts...<br />
 					Available content can be viewed <a href="'.LIBERTY_PKG_URL.'list_content.php">here</a>' ).'</td>
 			</tr>
 			<tr class="even">
 				<td>output</td>
-				<td>'.tra( 'keyword (optional)' ).'</td>
-				<td>'.tra( "If you are attaching a file and you only want to display the description and not the image that goes with it, use: output=desc. If you want to force the use of a thumbnail, use output=thumbnail." ).'</td>
+				<td>'.KernelTools::tra( 'keyword (optional)' ).'</td>
+				<td>'.KernelTools::tra( "If you are attaching a file and you only want to display the description and not the image that goes with it, use: output=desc. If you want to force the use of a thumbnail, use output=thumbnail." ).'</td>
 			</tr>'
 			.'<tr class="odd">'
-				.'<td>'.tra( "styling" ).'</td>'
-				.'<td>'.tra( "string").'<br />'.tra("(optional)").'</td>'
-				.'<td>'.tra( "Multiple styling options available: width, height, background, background-color, border, color, display, float, font, font-family, font-size, font-weight, margin, overflow, padding, text-align, align. Please view <a href='http://www.w3.org/TR/CSS21/indexlist.html'>CSS guidelines</a> on what values these settings take.").'</td>'
+				.'<td>'.KernelTools::tra( "styling" ).'</td>'
+				.'<td>'.KernelTools::tra( "string").'<br />'.KernelTools::tra("(optional)").'</td>'
+				.'<td>'.KernelTools::tra( "Multiple styling options available: width, height, background, background-color, border, color, display, float, font, font-family, font-size, font-weight, margin, overflow, padding, text-align, align. Please view <a href='http://www.w3.org/TR/CSS21/indexlist.html'>CSS guidelines</a> on what values these settings take.").'</td>'
 			.'</tr>'
 		.'</table>'
-		. tra("Example: ") . ' ' . "{ATTACHMENT id='13' size='small' text-align='center' link='http://www.google.com'}"
+		. KernelTools::tra("Example: ") . ' ' . "{ATTACHMENT id='13' size='small' text-align='center' link='http://www.google.com'}"
 		. '<br />'
-		. tra("Example: ") . ' ' . "{ATTACHMENT id='11' description='Text, the link will be wrapped around' output=desc}";
+		. KernelTools::tra("Example: ") . ' ' . "{ATTACHMENT id='11' description='Text, the link will be wrapped around' output=desc}";
 	return $help;
 }
 
 function data_attachment( $pData, $pParams, $pCommonObject, $pParseHash ) {
-	require_once( LIBERTY_PKG_CLASS_PATH.'LibertyMime.php' );
+	require_once LIBERTY_PKG_CLASS_PATH.'LibertyMime.php';
 
 	// at a minimum, return blank string (not empty) so we still replace the tag
 	$ret = ' ';
@@ -120,36 +127,35 @@ function data_attachment( $pData, $pParams, $pCommonObject, $pParseHash ) {
 		return $ret;
 	}
 
-	$att = array();
+	$att = [];
 
-	if( !($att = LibertyMime::getAttachment( $pParams['id'], $pParams )) ) {
-		$ret = tra( "The attachment id given is not valid." );
+	if( is_a( $pCommonObject, 'LibertyMime' ) && !($att = $pCommonObject->getAttachment( $pParams['id'], $pParams )) ) {
+		$ret = KernelTools::tra( "The attachment id given is not valid." );
 		return $ret;
 	}
 
 	global $gBitSmarty, $gLibertySystem, $gContent;
 	// convert parameters into display properties
-	$wrapper = liberty_plugins_wrapper_style( $pParams );
+	$wrapper = \Bitweaver\Liberty\liberty_plugins_wrapper_style( $pParams );
 	// work out custom display_url if there is one
-	if( @BitBase::verifyId( $pParams['page_id'] )) {
+	if( BitBase::verifyId( $pParams['page_id'] )) {
 		// link to page by page_id
 		// avoid endless loops
 
-		require_once( WIKI_PKG_CLASS_PATH.'BitPage.php');
 		$wp = new BitPage( $pParams['page_id'] );
 		if( $wp->load() ) {
 				$wrapper['display_url'] = $wp->getDisplayUrl();
 		}
-	} elseif( @BitBase::verifyId( $pParams['content_id'] )) {
+	} elseif( BitBase::verifyId( $pParams['content_id'] )) {
 		// link to any content by content_id
 		if( $obj = LibertyBase::getLibertyObject( $pParams['content_id'] )) {
 				$wrapper['display_url'] = $obj->getDisplayUrl();
 		}
 	} elseif( !empty( $pParams['page_name'] )) {
 		// link to page by page_name
-		require_once( WIKI_PKG_CLASS_PATH.'BitPage.php');
+		require_once WIKI_PKG_CLASS_PATH.'BitPage.php';
 		$wp = new BitPage();
-			$wrapper['display_url'] = $wp->getDisplayUrl( $pParams['page_name'] );
+			$wrapper['display_url'] = $wp->getDisplayUrlfromHash( $pParams );
 	} elseif( !empty( $pParams['link'] ) && $pParams['link'] == 'false' ) {
 		// no link
 	} elseif( !empty( $pParams['link'] )) {
@@ -177,7 +183,7 @@ function data_attachment( $pData, $pParams, $pCommonObject, $pParseHash ) {
 	if( !empty( $wrapper['description'] )) {
 		$parseHash['content_id'] = $pParseHash['content_id'];
 		$parseHash['user_id']    = $pParseHash['user_id'];
-		$parseHash['no_cache']   = TRUE;
+		$parseHash['no_cache']   = true;
 		$parseHash['data']       = $wrapper['description'];
 		$wrapper['description_parsed'] = LibertyContent::parseDataHash( $parseHash );
 	}
@@ -185,7 +191,7 @@ function data_attachment( $pData, $pParams, $pCommonObject, $pParseHash ) {
 	// pass stuff to the template
 	$gBitSmarty->assign( 'attachment', $att );
 	$gBitSmarty->assign( 'wrapper', $wrapper );
-	$gBitSmarty->assign( 'thumbsize', (( !empty( $pParams['size'] ) && ( $pParams['size'] == 'original' || !empty( $att['thumbnail_url'][$pParams['size']] ))) ? $pParams['size'] : 'medium' ));
+	$gBitSmarty->assign( 'thumbsize', ( !empty( $pParams['size'] ) && $pParams['size'] == 'original' ) || !empty( $att['thumbnail_url'][$pParams['size']] ) ? $pParams['size'] : 'medium' );
 
 	//Carry only these attributes to the image tags
 	$width = !empty( $pParams['width'] ) ? $pParams['width'] : '';
@@ -194,7 +200,7 @@ function data_attachment( $pData, $pParams, $pCommonObject, $pParseHash ) {
 	$height = !empty( $pParams['height'] ) ? $pParams['height'] : '';
 	$gBitSmarty->assign( 'height', $height );
 
-	$mimehandler = (( !empty( $wrapper['output'] ) && $wrapper['output'] == 'thumbnail' ) ? LIBERTY_DEFAULT_MIME_HANDLER : $att['attachment_plugin_guid'] );
+	$mimehandler = !empty( $wrapper['output'] ) && $wrapper['output'] == 'thumbnail' ? LIBERTY_DEFAULT_MIME_HANDLER : $att['attachment_plugin_guid'];
 	$ret = $gBitSmarty->fetch( $gLibertySystem->getMimeTemplate( 'attachment', $mimehandler ));
 	return $ret;
 }

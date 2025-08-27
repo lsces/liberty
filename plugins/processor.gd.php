@@ -1,4 +1,8 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+
 /**
  * $Header$
  *
@@ -13,11 +17,11 @@
  *
  * @param array $pFileHash
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
 function liberty_gd_resize_image( &$pFileHash ) {
 	global $gBitSystem;
-	$ret = NULL;
+	$ret = null;
 	list($iwidth, $iheight, $itype, $iattr) = @getimagesize( $pFileHash['source_file'] );
 	list($type, $ext) = explode( '/', strtolower( $pFileHash['type'] ) );
 	if( ( empty( $pFileHash['max_width'] ) || empty( $pFileHash['max_height'] ) ) || ( $iwidth <= $pFileHash['max_width'] && $iheight <= $pFileHash['max_height'] && ( $ext == 'gif' || $ext == 'png'  || $ext == 'jpg'   || $ext == 'jpeg' ) ) ) {
@@ -46,18 +50,18 @@ function liberty_gd_resize_image( &$pFileHash ) {
 
 	if( !empty( $img ) && $size_x && $size_y ) {
 		if( $size_x > $size_y && !empty( $pFileHash['max_width'] ) ) {
-			$tscale = ( (int)$size_x / $pFileHash['max_width'] );
+			$tscale = (int)$size_x / $pFileHash['max_width'];
 		} elseif( !empty( $pFileHash['max_height'] ) ) {
-			$tscale = ( (int)$size_y / $pFileHash['max_height'] );
+			$tscale = (int)$size_y / $pFileHash['max_height'];
 		} else {
 			$tscale = 1;
 		}
-		$tw = ( (int)( $size_x / $tscale ));
-		$ty = ( (int)( $size_y / $tscale ));
+		$tw = (int)( $size_x / $tscale );
+		$ty = (int)( $size_y / $tscale );
 		if( get_gd_version() > 1 ) {
 			$t = imagecreatetruecolor( $tw, $ty );
-			imagesavealpha( $t, TRUE );
-			imagealphablending( $t, FALSE );
+			imagesavealpha( $t, true );
+			imagealphablending( $t, false );
 			imagecopyresampled( $t, $img, 0, 0, 0, 0, $tw, $ty, $size_x, $size_y );
 		} else {
 			$t = imagecreate( $tw, $ty );
@@ -81,11 +85,9 @@ function liberty_gd_resize_image( &$pFileHash ) {
 			$destExt = '.jpg';
 		}
 
-		if( !empty( $pFileHash['dest_file'] ) ) {
-			$destFile = $pFileHash['dest_file'];
-		} else {
-			$destFile = STORAGE_PKG_PATH.$pFileHash['dest_branch'].$pFileHash['dest_base_name'].$destExt;
-		}
+		$destFile = !empty( $pFileHash['dest_file'] )
+			? $pFileHash['dest_file']
+			: STORAGE_PKG_PATH.$pFileHash['dest_branch'].$pFileHash['dest_base_name'].$destExt;
 
 		switch( $targetType ) {
 			case 'png':
@@ -119,7 +121,7 @@ function liberty_gd_resize_image( &$pFileHash ) {
 		$pFileHash['size'] = filesize( $destFile );
 		$ret = $destFile;
 	} elseif( $iwidth && $iheight ) {
-		$ret = liberty_process_generic( $pFileHash, FALSE );
+		$ret = liberty_process_generic( $pFileHash, false );
 	}
 
 	return $ret;
@@ -131,13 +133,13 @@ function liberty_gd_resize_image( &$pFileHash ) {
  * @param array $pFileHash
  * @param array $pFormat
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
-function liberty_gd_rotate_image( &$pFileHash, $pFormat = NULL ) {
+function liberty_gd_rotate_image( &$pFileHash, $pFormat = null ) {
 	if( !function_exists( 'imagerotate' ) ) {
 		$pFileHash['error'] = "Rotate is not available on this webserver.";
 	} elseif( empty( $pFileHash['degrees'] ) || !is_numeric( $pFileHash['degrees'] ) ) {
-		$pFileHash['error'] = tra( 'Invalid rotation amount' );
+		$pFileHash['error'] = KernelTools::tra( 'Invalid rotation amount' );
 	} else {
 		// we need to scale and/or reformat
 		$fp = fopen( $pFileHash['source_file'], "rb" );
@@ -149,7 +151,7 @@ function liberty_gd_rotate_image( &$pFileHash, $pFormat = NULL ) {
 
 		if( !empty( $img ) ) {
 			// image rotate degrees seems back ass words.
-			$rotateImg = imagerotate ( $img, (-1 * $pFileHash['degrees']), 0 );
+			$rotateImg = imagerotate ( $img, -1 * $pFileHash['degrees'], 0 );
 			if( !empty( $rotateImg ) ) {
 				imagejpeg( $rotateImg, $pFileHash['source_file'] );
 			} else {
@@ -160,18 +162,18 @@ function liberty_gd_rotate_image( &$pFileHash, $pFormat = NULL ) {
 		}
 	}
 
-	return( empty( $pFileHash['error'] ) );
+	return empty( $pFileHash['error'] );
 }
 
 /**
  * liberty_gd_can_thumbnail_image
  *
- * @param array $pMimeType
+ * @param string $pMimeType
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return string|bool true on success, false on failure
  */
 function liberty_gd_can_thumbnail_image( $pMimeType ) {
-	$ret = FALSE;
+	$ret = false;
 	if( !empty( $pMimeType )) {
 		$ret = preg_match( '/^image/i', $pMimeType );
 	}
@@ -182,9 +184,9 @@ function liberty_gd_can_thumbnail_image( $pMimeType ) {
  * get_gd_version 
  * 
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return string
  */
-function get_gd_version( $pFullVersion = FALSE ) {
+function get_gd_version( $pFullVersion = false ) {
 	if( empty( $_SESSION['gd_version'] )) {
 		$gd = gd_info();
 		$_SESSION['gd_version'] = preg_replace( "!\D*([\d|\.]*)!", "$1", $gd['GD Version'] );
@@ -200,9 +202,8 @@ function get_gd_version( $pFullVersion = FALSE ) {
 // nicked from http://at2.php.net/manual/en/function.gd-info.php
 if( !function_exists( 'gd_info' )) {
 	function gd_info() {
-		$array = Array(
+		$array = [
 			"GD Version"         => "",
-			"FreeType Support"   => 0,
 			"FreeType Support"   => 0,
 			"FreeType Linkage"   => "",
 			"T1Lib Support"      => 0,
@@ -212,7 +213,7 @@ if( !function_exists( 'gd_info' )) {
 			"PNG Support"        => 0,
 			"WBMP Support"       => 0,
 			"XBM Support"        => 0
-		);
+		];
 		$gif_support = 0;
 
 		ob_start();
@@ -277,4 +278,3 @@ if( !function_exists( 'gd_info' )) {
 		return $array;
 	}
 }
-?>

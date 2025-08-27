@@ -1,4 +1,11 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+use Bitweaver\Boards\BitBoardPost;
+use Bitweaver\Liberty\LibertyComment;
+use Bitweaver\Users\RoleUser;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -26,18 +33,18 @@
 global $gBitSystem, $gBitSmarty;
 define( 'PLUGIN_GUID_DATAQUOTE', 'dataquote' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams = [
 	'tag'           => 'quote',
-	'auto_activate' => FALSE,
-	'requires_pair' => TRUE,
-	'load_function' => 'data_quote',
-	'help_function' => 'data_quote_help',
+	'auto_activate' => false,
+	'requires_pair' => true,
+	'load_function' => '\data_quote',
+	'help_function' => '\data_quote_help',
 	'title'         => 'Quote',
 	'help_page'     => 'DataPluginQuote',
-	'description'   => tra( "This plugin allows content to be attributed to other authors and visually indicated." ),
+	'description'   => KernelTools::tra( "This plugin allows content to be attributed to other authors and visually indicated." ),
 	'syntax'        => "{quote format_guid= user= comment_id= }.. content ..{/quote}",
 	'plugin_type'   => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAQUOTE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAQUOTE );
 
@@ -45,27 +52,27 @@ $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAQUOTE );
 function data_quote_help() {
 	$help ="<table class=\"data help\">
 			<tr>
-				<th>" . tra( "Key" ) . "</th>
-				<th>" . tra( "Type" ) . "</th>
-				<th>" . tra( "Comments" ) . "</th>
+				<th>" . KernelTools::tra( "Key" ) . "</th>
+				<th>" . KernelTools::tra( "Type" ) . "</th>
+				<th>" . KernelTools::tra( "Comments" ) . "</th>
 			</tr>
 			<tr class=\"even\">
 				<td>comment_id</td>
-				<td>" . tra( "comment_id") . '<br />' . tra("(optional)") . "</td>
-				<td>" . tra( "specify the comment_id of the comment being quoted") . "</td>
+				<td>" . KernelTools::tra( "comment_id") . '<br />' . KernelTools::tra("(optional)") . "</td>
+				<td>" . KernelTools::tra( "specify the comment_id of the comment being quoted") . "</td>
 			</tr>
 			<tr class=\"odd\">
 				<td>user</td>
-				<td>" . tra( "user") . '<br />' . tra("(optional)") . "</td>
-				<td>" . tra( "specify the user whose comemnt is being quoted") . "</td>
+				<td>" . KernelTools::tra( "user") . '<br />' . KernelTools::tra("(optional)") . "</td>
+				<td>" . KernelTools::tra( "specify the user whose comemnt is being quoted") . "</td>
 			</tr>
 			<tr class=\"even\">
 				<td>format_guid</td>
-				<td>" . tra( "string") . '<br />' . tra("(required)") . "</td>
-				<td>" . tra( "Specify what renderer should be used to render the contents") . "</td>
+				<td>" . KernelTools::tra( "string") . '<br />' . KernelTools::tra("(required)") . "</td>
+				<td>" . KernelTools::tra( "Specify what renderer should be used to render the contents") . "</td>
 			</tr>
 		</table>".
-	tra("Example: ") . '{quote format_guid="tikiwiki" comment_id="7" user="user"} ... {/quote}<br />';
+	KernelTools::tra("Example: ") . '{quote format_guid="tikiwiki" comment_id="7" user="user"} ... {/quote}<br />';
 	return $help;
 }
 
@@ -78,7 +85,7 @@ function data_quote( $pData, $pParams ) {
 		$pParams['format_guid'] = $gBitSystem->getConfig( 'default_format', 'tikiwiki' );
 	}
 
-	$rendererHash = array();
+	$rendererHash = [];
 	$rendererHash['content_id'] = 0;
 	$rendererHash['format_guid'] = $pParams['format_guid'];
 	$rendererHash['data'] = trim( $pData );
@@ -89,16 +96,14 @@ function data_quote( $pData, $pParams ) {
 //		$ret = $func( $rendererHash, $this );
 	}
 
-	$quote = array();
-	$user = empty( $pParams['user'] ) ? NULL : $pParams['user'];
+	$quote = [];
+	$user = empty( $pParams['user'] ) ? null : $pParams['user'];
 
 	if( !empty( $pParams['comment_id'] )) {
 		
-		if( $gBitSystem->getActivePackage() == 'boards' ) {
-			$c = new BitBoardPost( preg_replace( '/[^0-9]/', '', $pParams['comment_id'] ) );
-		} else {
-			$c = new LibertyComment( preg_replace( '/[^0-9]/', '', $pParams['comment_id'] ) );
-		}
+		$c = $gBitSystem->getActivePackage() == 'boards'
+			? new BitBoardPost( preg_replace( '/[^0-9]/', '', $pParams['comment_id'] ) )
+			: new LibertyComment( preg_replace( '/[^0-9]/', '', $pParams['comment_id'] ) );
 
 		if( empty( $c->mInfo['title'] )) {
 			$c->mInfo['title'] = "#".$c->mCommentId;
@@ -116,8 +121,8 @@ function data_quote( $pData, $pParams ) {
 	$quote['login'] = $user;
 
 	if( !empty( $user )) {
-		$u = new BitUser();
-		$u->load( TRUE, $user );
+		$u = new RoleUser();
+		$u->load( true, $user );
 
 		$quote['user_url'] = $u->getDisplayUrl();
 		$quote['user_display_name'] = $u->mInfo['display_name'];
@@ -130,4 +135,3 @@ function data_quote( $pData, $pParams ) {
 
 	return $repl;
 }
-?>

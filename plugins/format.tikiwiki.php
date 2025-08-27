@@ -1,4 +1,10 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
+use Bitweaver\BitSystem;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -11,8 +17,8 @@ global $gLibertySystem;
  */
 define( 'PLUGIN_GUID_TIKIWIKI', 'tikiwiki' );
 
-$pluginParams = array (
-	'auto_activate'    => TRUE,
+$pluginParams = [
+	'auto_activate'    => true,
 	'store_function'   => 'tikiwiki_save_data',
 	'load_function'    => 'tikiwiki_parse_data',
 	'verify_function'  => 'tikiwiki_verify_data',
@@ -22,7 +28,7 @@ $pluginParams = array (
 	'help_page'        => 'TikiWikiSyntax',
 	'plugin_type'      => FORMAT_PLUGIN,
 	'linebreak'        => "\r\n"
-);
+];
 
 $gLibertySystem->registerPlugin( PLUGIN_GUID_TIKIWIKI, $pluginParams );
 
@@ -37,9 +43,9 @@ function tikiwiki_save_data( &$pParamHash ) {
 }
 
 function tikiwiki_verify_data( &$pParamHash ) {
-	$errorMsg = NULL;
+	$errorMsg = null;
 	$pParamHash['content_store']['data'] = $pParamHash['edit'];
-	return( $errorMsg );
+	return $errorMsg;
 }
 
 function tikiwiki_parse_data( &$pParseHash, &$pCommonObject ) {
@@ -72,7 +78,7 @@ class TikiWikiParser extends BitBase {
 		$pData = preg_replace( "/&(?!([a-z]{1,7};))/", "&amp;", $pData );
 
 		// oft-used characters (case insensitive)
-		$patterns = array(
+		$patterns = [
 			"~bull~" => "&bull;",
 			"~bs~"   => "&#92;",
 			"~hs~"   => "&nbsp;",
@@ -88,7 +94,7 @@ class TikiWikiParser extends BitBase {
 			"~lt~"   => "&lt;",
 			"~gt~"   => "&gt;",
 			"~euro~" => "&euro;",
-		);
+		];
 
 		foreach( $patterns as $pattern => $replace ) {
 			$pData = str_ireplace( $pattern, $replace, $pData );
@@ -102,7 +108,7 @@ class TikiWikiParser extends BitBase {
 	}
 
 	function getLinks( $pData ) {
-		$links = array();
+		$links = [];
 
 		// Match things like [...], but ignore things like [[foo].
 		// -Robin
@@ -116,7 +122,7 @@ class TikiWikiParser extends BitBase {
 	function howManyAtStart($str, $car) {
 		$cant = 0;
 		$i = 0;
-		while (($i < strlen($str)) && (isset($str[$i])) && ($str[$i]== $car)) {
+		while (($i < strlen($str)) && isset($str[$i]) && ($str[$i]== $car)) {
 			$i++;
 			$cant++;
 		}
@@ -152,7 +158,7 @@ class TikiWikiParser extends BitBase {
 			}
 
 			// apply default class if no other class has been set
-			if( !empty( $table_params ) && strpos( 'class=', $table_params ) !== FALSE ) {
+			if( !empty( $table_params ) && strpos( 'class=', $table_params ) !== false ) {
 				$table_params .= ' class="table"';
 			}
 			$content = "<table $table_params>";
@@ -227,7 +233,7 @@ class TikiWikiParser extends BitBase {
 		}
 
 		// Extract [link] sections (to be re-inserted later)
-		$noparsedlinks = array();
+		$noparsedlinks = [];
 
 		// This section matches [...].
 		// Added handling for [[foo] sections.  -rlpowell
@@ -258,7 +264,7 @@ class TikiWikiParser extends BitBase {
 		$data = preg_replace("/\{rm\}/", "&rlm;", $data);
 
 		// Parse MediaWiki-style pipe syntax tables.
-		if(( strpos( $data, "{|" ) === 0 || strpos( $data, "\n{|" ) !== FALSE ) && strpos( $data, "\n|}" ) !== FALSE ) {
+		if(( strpos( $data, "{|" ) === 0 || strpos( $data, "\n{|" ) !== false ) && strpos( $data, "\n|}" ) !== false ) {
 			$data = $this->parseMediawikiTables($data);
 		}
 
@@ -281,14 +287,14 @@ class TikiWikiParser extends BitBase {
 					$value = $result->fetchRow();
 					$value = $value["data"];
 				} else {
-					//Default value is NULL
+					//Default value is null
 					$value = "NaV";
 				}
 				// Now build 2 divs
 				$id = 'dyn_'.$dvar;
 
 				if( $gBitUser->hasPermission( 'p_wiki_edit_dynvar' ) ) {
-					$span1 = "<span  style='display:inline;' id='dyn_".$dvar."_display'><a class='dynavar' onclick='javascript:toggle_dynamic_var(\"$dvar\");' title='".tra('Click to edit dynamic variable').": $dvar'>$value</a></span>";
+					$span1 = "<span  style='display:inline;' id='dyn_".$dvar."_display'><a class='dynavar' onclick='javascript:toggle_dynamic_var(\"$dvar\");' title='".KernelTools::tra('Click to edit dynamic variable').": $dvar'>$value</a></span>";
 					$span2 = "<span style='display:none;' id='dyn_".$dvar."_edit'><input type='text' name='dyn_".$dvar."' value='".$value."' /></span>";
 				} else {
 					$span1 = "<span class='dynavar' style='display:inline;' id='dyn_".$dvar."_display'>$value</span>";
@@ -303,8 +309,8 @@ class TikiWikiParser extends BitBase {
 
 			}
 			//At the end put an update button
-			//<br /><div style="text-align:center"><input type="submit" name="dyn_update" value="'.tra('Update variables').'"/></div>
-			$data='<form method="post" name="dyn_vars">'.$data.'<div style="display:none;"><input type="submit" name="_dyn_update" value="'.tra('Update variables').'"/></div></form>';
+			//<br /><div style="text-align:center"><input type="submit" name="dyn_update" value="'.KernelTools::tra('Update variables').'"/></div>
+			$data='<form method="post" name="dyn_vars">'.$data.'<div style="display:none;"><input type="submit" name="_dyn_update" value="'.KernelTools::tra('Update variables').'"/></div></form>';
 		}
 */
 
@@ -330,11 +336,7 @@ class TikiWikiParser extends BitBase {
 
 		// Note that there're links that are replaced
 		foreach( $links as $link ) {
-			if(( strstr( $link, $_SERVER["SERVER_NAME"] )) || ( !strstr( $link, '//' ))) {
-				$attributes = '';
-			} else {
-				$attributes = 'class="external"';
-			}
+			$attributes = strstr( $link, $_SERVER["SERVER_NAME"] ) || !strstr( $link, '//' ) ? '' : 'class="external"';
 
 			// comments and anonymously created pages get nofollow
 			if( is_object( $pCommonObject ) && ( get_class( $pCommonObject ) == 'comments' || ( isset( $pCommonObject->mInfo['user_id'] ) &&  $pCommonObject->mInfo['user_id'] == ANONYMOUS_USER_ID ))) {
@@ -358,19 +360,19 @@ class TikiWikiParser extends BitBase {
 
 		// now that all links have been taken care of, we can replace all email addresses with the encoded form
 		// this will also encode email addressed that have not been linked using []
-		$data = encode_email_addresses( $data );
+		$data = KernelTools::encode_email_addresses( $data );
 
 		if ($gBitSystem->getConfig('wiki_tables') != 'new') {
 			// New syntax for tables
 			if (preg_match_all("/\|\|(.*)\|\|/", $data, $tables)) {
 				$maxcols = 1;
 
-				$cols = array();
+				$cols = [];
 
 				for ($i = 0; $i < count($tables[0]); $i++) {
 					$rows = explode('||', $tables[0][$i]);
 
-					$col[$i] = array();
+					$col[$i] = [];
 
 					for ($j = 0; $j < count($rows); $j++) {
 						$cols[$i][$j] = explode('|', $rows[$j]);
@@ -413,11 +415,11 @@ class TikiWikiParser extends BitBase {
 			if( preg_match_all( "/\|\|(.*?)\|\|/s", $data, $tables ) ) {
 				$maxcols = 1;
 
-				$cols = array();
+				$cols = [];
 
 				for( $i = 0; $i < count( $tables[0] ); $i++ ) {
 					$rows = preg_split( "/(\n|\<br\/\>)/", $tables[0][$i] );
-					$col[$i] = array();
+					$col[$i] = [];
 
 					for( $j = 0; $j < count( $rows ); $j++ ) {
 						$rows[$j]     = str_replace( '||', '', $rows[$j] );
@@ -431,11 +433,7 @@ class TikiWikiParser extends BitBase {
 				for( $i = 0; $i < count( $tables[0] ); $i++ ) {
 					$repl = '<table class="table table-striped">';
 
-					if( preg_match( "#^~#", $cols[$i][0][0] ) && $cols[$i][0][0] = preg_replace( "#^~#", "", $cols[$i][0][0] ) ) {
-						$th = TRUE;
-					} else {
-						$th = FALSE;
-					}
+					$th =  preg_match( "#^~#", $cols[$i][0][0] ) && $cols[$i][0][0] = preg_replace( "#^~#", "", $cols[$i][0][0] ) ? true : false;
 
 					for( $j = 0; $j < count( $cols[$i] ); $j++ ) {
 						$ncols = count( $cols[$i][$j] );
@@ -451,7 +449,7 @@ class TikiWikiParser extends BitBase {
 						}
 
 						for( $k = 0; $k < $ncols; $k++ ) {
-							$thd = ( ( $j == 0 && $th ) ? 'th' : 'td' );
+							$thd = ( $j == 0 && $th ) ? 'th' : 'td';
 							$repl .= "<$thd";
 
 							if( $k == $ncols - 1 && $ncols < $maxcols ) {
@@ -474,8 +472,8 @@ class TikiWikiParser extends BitBase {
 		// Use tab and newline as tokenizing characters as well  ////
 		$lines = explode("\n", $data);
 		$data = '';
-		$listbeg = array();
-		$divdepth = array();
+		$listbeg = [];
+		$divdepth = [];
 		$inTable = 0;
 
 		// loop: process all lines
@@ -542,7 +540,7 @@ class TikiWikiParser extends BitBase {
 						$listyle = '';
 
 						while ($listlevel != count($listbeg)) {
-							array_unshift($listbeg, ($litype == '*' ? '</ul>' : '</ol>'));
+							array_unshift($listbeg, $litype == '*' ? '</ul>' : '</ol>' );
 
 							if ($listlevel == count($listbeg)) {
 								$listate = substr($line, $listlevel, 1);
@@ -555,7 +553,7 @@ class TikiWikiParser extends BitBase {
 								}
 							}
 
-							$data .= ($litype == '*' ? "<ul$listyle>" : "<ol$listyle>");
+							$data .= $litype == '*' ? "<ul$listyle>" : "<ol$listyle>";
 						}
 
 						$liclose = '';
@@ -575,9 +573,9 @@ class TikiWikiParser extends BitBase {
 							$addremove = 1;
 						}
 
-						$data .= ($litype == '*' ? "<ul$listyle>" : "<ol$listyle>");
+						$data .= $litype == '*' ? "<ul$listyle>" : "<ol$listyle>";
 						$liclose = '';
-						array_unshift($listbeg, ($litype == '*' ? '</li></ul>' : '</li></ol>'));
+						array_unshift($listbeg, $litype == '*' ? '</li></ul>' : '</li></ol>');
 					}
 
 					$line = $liclose . '<li>' . substr($line, $listlevel + $addremove);
@@ -639,7 +637,7 @@ class TikiWikiParser extends BitBase {
 						if( $gBitSystem->isFeatureActive( 'wiki_section_edit' ) && $gBitUser->hasPermission( 'p_wiki_update_page' ) ) {
 							if( $hdrlevel == $gBitSystem->getConfig( 'wiki_section_edit' ) ) {
 								$edit_url = WIKI_PKG_URL."edit.php?content_id=".$contentId."&amp;section=".$section_count++;
-								$edit_link = '<span class="editsection" style="float:right;margin-left:5px;">[<a href="'.$edit_url.'">'.tra( "edit" ).'</a>]</span>';
+								$edit_link = '<span class="editsection" style="float:right;margin-left:5px;">[<a href="'.$edit_url.'">'.KernelTools::tra( "edit" ).'</a>]</span>';
 							}
 						}
 						$hTagLevel = $hdrlevel + 1; // there should only be 1 <h1> per html document
@@ -694,5 +692,3 @@ class TikiWikiParser extends BitBase {
 		return $data;
 	}
 }
-
-?>

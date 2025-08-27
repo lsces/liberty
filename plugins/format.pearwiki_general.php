@@ -1,4 +1,7 @@
 <?php
+
+namespace Bitweaver\Liberty;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -9,8 +12,8 @@
  * definitions
  */
 global $gLibertySystem;
-if( @include_once( 'PEAR/Registry.php' )) {
-	if( @include_once( 'Text/Wiki.php' )) {
+if( @include_once 'PEAR/Registry.php' ) {
+	if( @include_once 'Text/Wiki.php' ) {
 
 $genPluginParams = array (
 	'store_function' => 'pearwiki_general_save_data',
@@ -19,7 +22,7 @@ $genPluginParams = array (
 	'linebreak' => "\r\n"
 );
 
-$reg = new PEAR_Registry();
+$reg = new \PEAR_Registry();
 
 foreach( $reg->listPackages() as $package ) {
 	if( preg_match( '!^text_wiki!', $package )) {
@@ -53,14 +56,14 @@ foreach( $reg->listPackages() as $package ) {
 		if (strlen($guid)>16) {
 			$guid = substr($guid,0,16);
 		}
-		$insPluginParams =  array(
+		$insPluginParams =  [
 			'load_function' => $f,
 			'edit_field' => "<input type=\"radio\" name=\"format_guid\" value=\"$guid\"",
 			'description' => "Pear Wiki Parser for $parser Syntax.",
 			'edit_label' => "$parser Syntax, parsed by Pear::Text_Wiki$p",
 			'help_page' => "{$parser}Syntax",
 			'auto_activate' => true,
-		);
+		];
 		$gLibertySystem->registerPlugin( $guid, array_merge($genPluginParams,$insPluginParams) );
 
 	}
@@ -74,7 +77,7 @@ function pearwiki_general_save_data( &$pParamHash ) {
 
 function pearwiki_general_verify_data( &$pParamHash ) {
 	$pParamHash['content_store']['data'] = $pParamHash['edit'];
-	return( NULL );
+	return null;
 }
 
 function pearwiki_general_parse_data( $parser_fmt, &$pParseHash, &$pCommonObject ) {
@@ -83,19 +86,18 @@ function pearwiki_general_parse_data( $parser_fmt, &$pParseHash, &$pCommonObject
 	if (!defined('PAGE_SEP')) {
 		define('PAGE_SEP', 'PAGE MARKER HERE*&^%$#^$%*PAGEMARKERHERE');
 	}
-	$parser = Text_Wiki::singleton($parser_fmt);
-	if (PEAR::isError($parser)) {
+	$parser = \Text_Wiki::singleton($parser_fmt);
+	if (\PEAR::isError($parser)) {
 		$gBitSystem->fatalError( "There was an unknown error while constructing the PEAR parser." );
 	}
 	global $gBitSystem;
 	if ($gBitSystem->isPackageActive('wiki')) {
-		$parser->setRenderConf('xhtml', 'wikilink', 'exists_callback', array( &$pCommonObject, 'pageExists' ) );
-		$parser->setRenderConf('xhtml', 'wikilink', 'view_url', WIKI_PKG_URL.'index.php?page=');
-		$parser->setRenderConf('xhtml', 'wikilink', 'new_url', WIKI_PKG_URL.'edit.php?page=');
+		$parser->setRenderConf('xhtml', 'wikilink', 'exists_callback', [ &$pCommonObject, 'pageExists' ] );
+		$parser->setRenderConf('xhtml', 'wikilink', 'view_url', [ TIKI_PKG_URL.'index.php?page=' ] );
+		$parser->setRenderConf('xhtml', 'wikilink', 'new_url', [ TIKI_PKG_URL.'edit.php?page=' ] );
 	}
-	$parser->setRenderConf('xhtml', 'table', 'css_table', 'wikitable');
+	$parser->setRenderConf('xhtml', 'table', 'css_table', [ 'wikitable' ] );
 	$xhtml = $parser->transform( $pParseHash['data'], 'Xhtml' );
 
 	return $xhtml;
 }
-?>

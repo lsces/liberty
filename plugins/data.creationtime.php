@@ -1,4 +1,8 @@
 <?php
+
+namespace Bitweaver;
+use Bitweaver\KernelTools;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -23,28 +27,27 @@ global $gBitSystem;
 // this executes before all packages are registered so can't reliably check isPackageActive here!
 define( 'PLUGIN_GUID_DATA_CREATIONTIME', 'datacreationtime' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams = [
 	'tag'           => 'CREATIONTIME',
-	'auto_activate' => TRUE,
-	'requires_pair' => FALSE,
-	'load_function' => 'data_creationtime',
+	'auto_activate' => true,
+	'requires_pair' => false,
+	'load_function' => '\data_creationtime',
 	'title'         => 'Creation Time',
 	'help_page'     => 'DataPluginCreationTime',
-	'description'   => tra("This plugin will display the creation time of a page."),
-	'help_function' => 'data_creationtime_help',
+	'description'   => KernelTools::tra("This plugin will display the creation time of a page."),
+	'help_function' => '\data_creationtime_help',
 	'syntax'        => "{creationtime}",
 	'plugin_type'   => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATA_CREATIONTIME, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATA_CREATIONTIME );
 
 // Help Routine
 function data_creationtime_help() {
-	return tra( "Example: " )."{creationtime}<br />";
+	return KernelTools::tra( "Example: " )."{creationtime}<br />";
 }
 
 //The actual handler for the plugin 
 function data_creationtime( $data, $params, &$pCommonObject ) {
-	return smarty_modifier_bit_short_datetime( $pCommonObject->mInfo['created'] );
+	return \Bitweaver\Liberty\smarty_modifier_bit_short_datetime( $pCommonObject->mInfo['created'] );
 }
-?>

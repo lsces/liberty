@@ -1,4 +1,7 @@
 <?php
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+
 /**
  * @version  $Header$
  * @package  liberty
@@ -28,23 +31,22 @@
 
 /**
  * definitions ( guid character limit is 16 chars )
- * /
+ */
 define( 'PLUGIN_GUID_FILTERURLCACHE', 'filterurlcache' );
 
 global $gLibertySystem;
 
-$pluginParams = array (
+$pluginParams = [
 	'title'              => 'External Links Cache',
 	'description'        => 'If you insert a link to an external page, this filter will proceede to cache that page to ensure that you can view the page, even if it moves or gets removed from the original location.',
-	'auto_activate'      => FALSE,
+	'auto_activate'      => false,
 	'plugin_type'        => FILTER_PLUGIN,
 
 	// filter functions
-	'presplit_function'  => 'urlcache_postparsefilter',
-	'postparse_function' => 'urlcache_postparsefilter',
-);
+	'presplit_function'  => '\Bitweaver\Liberty\urlcache_postparsefilter',
+	'postparse_function' => '\Bitweaver\Liberty\urlcache_postparsefilter',
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_FILTERURLCACHE, $pluginParams );
- * /
 
 function urlcache_links( $links, &$pCommonObject ) {
 	global $gBitSystem;
@@ -63,14 +65,14 @@ function urlcache_links( $links, &$pCommonObject ) {
  * @param string URL to check
  * @return integer Id of the cached item
  * @todo LEGACY FUNCTIONS that need to be cleaned / moved / or deprecated & deleted
- * /
+ */
 function urlcache_is_cached($url) {
 	// return false until this is fixed
-	return FALSE;
+	return false;
 
 	$query = "select `cache_id`  from `".BIT_DB_PREFIX."liberty_link_cache` where `url`=?";
 	// sometimes we can have a cache_id of 0(?!) - seen it with my own eyes, spiderr
-	$ret = $this->mDb->getOne($query, array( $url ) );
+	$ret = $this->mDb->getOne($query, [ $url ] );
 	return $ret;
 }
 
@@ -83,7 +85,7 @@ function urlcache_is_cached($url) {
  * @param string Data to be cached
  * @return bool True if item was successfully cached
  * @todo LEGACY FUNCTIONS that need to be cleaned / moved / or deprecated & deleted
- * /
+ */
 function urlcache_store($url, $data = '') {
 	// Avoid caching internal references... (only if $data not present)
 	// (cdx) And avoid other protocols than http...
@@ -109,10 +111,10 @@ function urlcache_store($url, $data = '') {
 		global $gBitSystem;
 		$refresh = $gBitSystem->getUTCTime();
 		$query = "insert into `".BIT_DB_PREFIX."liberty_link_cache`(`url`,`data`,`refresh`) values(?,?,?)";
-		$result = $this->mDb->query($query, array($url,BitDb::db_byte_encode($data),$refresh) );
+		$result = $this->mDb->query($query, [ $url,BitDb::db_byte_encode($data),$refresh ] );
 		return !isset( $error );
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
@@ -137,12 +139,7 @@ function urlcache_postparsefilter( $pData, $pFilterHash ) {
 	$data = preg_replace($pattern, "<a $class href='$link'>$link</a> $cosa", $data);
 }
 
-
-
-
-
 // functions pulled from BitSystem
-
 function list_cache($offset, $max_records, $sort_mode, $find) {
 
 	if ($find) {
@@ -152,20 +149,20 @@ function list_cache($offset, $max_records, $sort_mode, $find) {
 	$bindvars=array($findesc);
 	} else {
 	$mid = "";
-	$bindvars=array();
+	$bindvars=[];
 	}
 
 	$query = "select `cache_id` ,`url`,`refresh` from `".BIT_DB_PREFIX."liberty_link_cache` $mid order by ".$this->mDb->convertSortmode($sort_mode);
 	$query_cant = "select count(*) from `".BIT_DB_PREFIX."liberty_link_cache` $mid";
 	$result = $this->mDb->query($query,$bindvars,$max_records,$offset);
 	$cant = $this->mDb->getOne($query_cant,$bindvars);
-	$ret = array();
+	$ret = [];
 
 	while ($res = $result->fetchRow()) {
 	$ret[] = $res;
 	}
 
-	$retval = array();
+	$retval = [];
 	$retval["data"] = $ret;
 	$retval["cant"] = $cant;
 	return $retval;
@@ -176,20 +173,20 @@ function refresh_cache($cache_id) {
 	$query = "select `url`  from `".BIT_DB_PREFIX."liberty_link_cache`
 	where `cache_id`=?";
 
-	$url = $this->mDb->getOne($query, array( $cache_id ) );
-	$data = bit_http_request($url);
+	$url = $this->mDb->getOne($query, [ $cache_id ] );
+	$data = KernelTools::bit_http_request($url);
 	$refresh = $gBitSystem->getUTCTime();
 	$query = "update `".BIT_DB_PREFIX."liberty_link_cache`
 	set `data`=?, `refresh`=?
 	where `cache_id`=? ";
-	$result = $this->mDb->query($query, array( $data, $refresh, $cache_id) );
+	$result = $this->mDb->query($query, [ $data, $refresh, $cache_id ] );
 	return true;
 }
 
 function remove_cache($cache_id) {
 	$query = "delete from `".BIT_DB_PREFIX."liberty_link_cache` where `cache_id`=?";
 
-	$result = $this->mDb->query($query, array( $cache_id ) );
+	$result = $this->mDb->query($query, [ $cache_id ] );
 	return true;
 }
 
@@ -197,9 +194,7 @@ function get_cache($cache_id) {
 	$query = "select * from `".BIT_DB_PREFIX."liberty_link_cache`
 	where `cache_id`=?";
 
-	$result = $this->mDb->query($query, array( $cache_id ) );
+	$result = $this->mDb->query($query, [ $cache_id ] );
 	$res = $result->fetchRow();
 	return $res;
 }
-/* */
-?>

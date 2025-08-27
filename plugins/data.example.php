@@ -1,4 +1,8 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -22,17 +26,18 @@
  ******************/
 define( 'PLUGIN_GUID_DATAEXAMPLE', 'dataexample' );
 global $gLibertySystem;
-$pluginParams = array ( 'tag' => 'EXAM',
-	'auto_activate' => FALSE,
-	'requires_pair' => FALSE,
-	'load_function' => 'data_example',
+$pluginParams = [
+	'tag' => 'EXAM',
+	'auto_activate' => false,
+	'requires_pair' => false,
+	'load_function' => '\data_example',
 	'title' => 'Example',
 	'help_page' => 'DataPluginExample',
-	'description' => tra("This Plugin is an Example that does nothing. It functions as a template for the creation of new plugins."),
-	'help_function' => 'data_example_help',
+	'description' => KernelTools::tra("This Plugin is an Example that does nothing. It functions as a template for the creation of new plugins."),
+	'help_function' => '\data_example_help',
 	'syntax' => "{EXAM x1= x2= }",
 	'plugin_type' => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAEXAMPLE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAEXAMPLE );
 /*****************
@@ -42,27 +47,27 @@ function data_example_help() {
 	$help =
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>x1</td>'
-				.'<td>' . tra( "string") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "Specifies something / probably to be displayed.")
-					.'<br />' . tra( "The Default = <strong>Sorry About That</strong>")
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "Specifies something / probably to be displayed.")
+					.'<br />' . KernelTools::tra( "The Default = <strong>Sorry About That</strong>")
 				.'</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>XXX</td>'
-				.'<td>' . tra( "number") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "Specifies something / probably to be displayed.")
-					.'<br />' . tra( "The Default =") . ' <strong>3</strong> ' . tra( "Which means - What")
+				.'<td>' . KernelTools::tra( "number") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "Specifies something / probably to be displayed.")
+					.'<br />' . KernelTools::tra( "The Default =") . ' <strong>3</strong> ' . KernelTools::tra( "Which means - What")
 				.'</td>'
 			.'</tr>'
  		.'</table>'
-		. tra("Example: ") . "{EXAM x1=' ' x2=5 }<br />"
-		. tra("This will display");
+		. KernelTools::tra("Example: ") . "{EXAM x1=' ' x2=5 }<br />"
+		. KernelTools::tra("This will display");
 	return $help;
 }
 /****************
@@ -74,4 +79,3 @@ function data_example($data, $params) {
 
 	return $ret;
 }
-?>

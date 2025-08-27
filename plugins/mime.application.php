@@ -1,4 +1,7 @@
 <?php
+
+namespace Bitweaver\Liberty;
+
 /**
  * @version     $Header$
  *
@@ -28,7 +31,7 @@ global $gLibertySystem;
  */
 define( 'PLUGIN_MIME_GUID_APPLICATION', 'mimeapplication' );
 
-$pluginParams = array (
+$pluginParams = [
 	// Set of functions and what they are called in this paricular plugin
 	// Use the GUID as your namespace
 	'verify_function'    => 'mime_default_verify',
@@ -44,8 +47,8 @@ $pluginParams = array (
 	'view_tpl'           => 'bitpackage:liberty/mime/application/view.tpl',
 	// This should be the same for all mime plugins
 	'plugin_type'        => MIME_PLUGIN,
-	// Set this to TRUE if you want the plugin active right after installation
-	'auto_activate'      => FALSE,
+	// Set this to true if you want the plugin active right after installation
+	'auto_activate'      => false,
 	// Help page on bitweaver.org
 	//'help_page'          => 'MimeHelpPage',
 
@@ -55,7 +58,7 @@ $pluginParams = array (
 	'mimetypes'           => array(
 		'#application/.*#i',
 	),
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_APPLICATION, $pluginParams );
 
 /**
@@ -63,12 +66,12 @@ $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_APPLICATION, $pluginParams );
  * 
  * @param array $pStoreRow File data needed to store details in the database - sanitised and generated in the verify function
  * @access public
- * @return TRUE on success, FALSE on failure - $pStoreRow[errors] will contain reason
+ * @return bool true on success, false on failure - $pStoreRow[errors] will contain reason
  */
 function mime_application_store( &$pStoreRow ) {
 	// this will set the correct pluign guid, even if we let default handle the store process
 	$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_APPLICATION;
-	$pStoreRow['log'] = array();
+	$pStoreRow['log'] = [];
 
 	// if storing works, we process the image
 	if( $ret = mime_default_store( $pStoreRow )) {
@@ -82,10 +85,10 @@ function mime_application_store( &$pStoreRow ) {
  * 
  * @param array $pStoreRow File data needed to update details in the database
  * @access public
- * @return TRUE on success, FALSE on failure - $pStoreRow[errors] will contain reason
+ * @return bool true on success, false on failure - $pStoreRow[errors] will contain reason
  */
-function mime_application_update( &$pStoreRow, $pParams = NULL ) {
-	$ret = FALSE;
+function mime_application_update( &$pStoreRow, $pParams = null ) {
+	$ret = false;
 
 	// this will set the correct pluign guid, even if we let default handle the store process
 	$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_APPLICATION;
@@ -96,5 +99,3 @@ function mime_application_update( &$pStoreRow, $pParams = NULL ) {
 	}
 	return $ret;
 }
-
-?>

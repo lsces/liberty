@@ -1,4 +1,6 @@
 <?php
+namespace Bitweaver\Liberty;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -9,14 +11,14 @@ global $gLibertySystem;
 /**
  * run 'pear install Text_Wiki_BBCode-alpha' to install the library,
  */ 
-if( @include_once( 'doc/Text_Wiki_BBCode/doc/BBCodeParser.php' ) ) {
+if( @include_once 'doc/Text_Wiki_BBCode/doc/BBCodeParser.php' ) {
 
 /**
  * definitions
  */
 define( 'PLUGIN_GUID_BBCODE', 'bbcode' );
 
-$pluginParams = array (
+$pluginParams = [
 	'load_function'   => 'bbcode_parse_data',
 	'verify_function' => 'bbcode_verify_data',
 	'description'     => 'BBCode Syntax Format Parser',
@@ -25,7 +27,7 @@ $pluginParams = array (
 	'help_page'       => 'BBCodeSyntax',
 	'plugin_type'     => FORMAT_PLUGIN,
 	'linebreak'       => "\r\n"
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_BBCODE, $pluginParams );
 
 function bbcode_verify_data( &$pParamHash ) {
@@ -55,5 +57,3 @@ function bbcode_parse_data( &$pParseHash, &$pCommonObject ) {
 }
 
 } // PEAR check
-
-?>

@@ -1,4 +1,10 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
+use Holiday\Metadata;
+
 /**
  * @version		$Header$
  *
@@ -12,6 +18,7 @@
 /**
  * setup
  */
+
 global $gLibertySystem, $gBitSystem;
 
 /**
@@ -21,7 +28,7 @@ global $gLibertySystem, $gBitSystem;
  */
 define( 'PLUGIN_MIME_GUID_IMAGE', 'mimeimage' );
 
-$pluginParams = array (
+$pluginParams = [
 	// Set of functions and what they are called in this paricular plugin
 	// Use the GUID as your namespace
 	'verify_function'     => 'mime_default_verify',
@@ -43,15 +50,15 @@ $pluginParams = array (
 	'file_name'          => 'mime.image.php',
 	// This should be the same for all mime plugins
 	'plugin_type'         => MIME_PLUGIN,
-	// Set this to TRUE if you want the plugin active right after installation
-	'auto_activate'       => FALSE,
+	// Set this to true if you want the plugin active right after installation
+	'auto_activate'       => false,
 	// Help page on bitweaver.org
 	//'help_page'           => 'LibertyMime+Image+Plugin',
 	// this should pick up all image
-	'mimetypes'           => array(
+	'mimetypes'           => [
 		'#image/.*#i',
-	),
-);
+	],
+];
 // currently, there's only one option in the image edit file - panorama image setting
 if( $gBitSystem->isFeatureActive( 'mime_image_panoramas' )) {
 	$pluginParams['edit_tpl'] =  'bitpackage:liberty/mime/image/edit.tpl';
@@ -63,19 +70,19 @@ $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_IMAGE, $pluginParams );
  *
  * @param array $pStoreRow File data needed to store details in the database - sanitised and generated in the verify function
  * @access public
- * @return TRUE on success, FALSE on failure - $pStoreRow[errors] will contain reason
+ * @return bool true on success, false on failure - $pStoreRow[errors] will contain reason
  */
 function mime_image_store( &$pStoreRow ) {
 	// this will set the correct pluign guid, even if we let default handle the store process
 	$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_IMAGE;
-	$pStoreRow['log'] = array();
+	$pStoreRow['log'] = [];
 
 	// if storing works, we process the image
 	if( $ret = mime_default_store( $pStoreRow )) {
 		if( !mime_image_store_exif_data( $pStoreRow )) {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
-			$ret = FALSE;
+			$ret = false;
 		}
 	}
 	return $ret;
@@ -86,12 +93,12 @@ function mime_image_store( &$pStoreRow ) {
  *
  * @param array $pStoreRow File data needed to update details in the database
  * @access public
- * @return TRUE on success, FALSE on failure - $pStoreRow[errors] will contain reason
+ * @return bool true on success, false on failure - $pStoreRow[errors] will contain reason
  */
-function mime_image_update( &$pStoreRow, $pParams = NULL ) {
+function mime_image_update( &$pStoreRow, $pParams = null ) {
 	global $gThumbSizes, $gBitSystem;
 
-	$ret = TRUE;
+	$ret = true;
 
 	// this will set the correct pluign guid, even if we let default handle the store process
 	$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_IMAGE;
@@ -101,11 +108,11 @@ function mime_image_update( &$pStoreRow, $pParams = NULL ) {
 		if( !mime_image_store_exif_data( $pStoreRow )) {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
-			$ret = FALSE;
+			$ret = false;
 		}
 	} elseif( $gBitSystem->isFeatureActive( 'mime_image_panoramas' ) && !empty( $pParams['preference']['is_panorama'] ) && empty( $pStoreRow['thumbnail_url']['panorama'] )) {
 		if( !mime_image_create_panorama( $pStoreRow )) {
-			$ret = FALSE;
+			$ret = false;
 		}
 	}
 
@@ -119,12 +126,12 @@ function mime_image_update( &$pStoreRow, $pParams = NULL ) {
  * @param array $pPrefs Attachment preferences taken liberty_attachment_prefs
  * @param array $pParams Parameters for loading the plugin - e.g.: might contain values such as thumbnail size from the view page
  * @access public
- * @return TRUE on success, FALSE on failure - $pStoreRow[errors] will contain reason
+ * @return bool true on success, false on failure - $pStoreRow[errors] will contain reason
  */
-function mime_image_load( &$pFileHash, &$pPrefs, $pParams = NULL ) {
+function mime_image_load( &$pFileHash, &$pPrefs, $pParams = null ) {
 	global $gBitSystem;
 	// don't load a mime image if we don't have an image for this file
-	if( $ret = mime_default_load( $pFileHash, $pPrefs, $pParams )) {
+	if( $ret = mime_default_load( $pFileHash, $pPrefs )) {
 		// fetch meta data from the db
 		$ret['meta'] = LibertyMime::getMetaData( $ret['attachment_id'], "EXIF" );
 
@@ -169,7 +176,7 @@ function mime_image_load( &$pFileHash, &$pPrefs, $pParams = NULL ) {
 					$ret['pano']['pa'] = 0;
 				}
 			}
-			$ret['thumbnail_url']['panorama'] = storage_path_to_url( dirname( $ret['source_file'] )."/thumbs/panorama.jpg" );
+			$ret['thumbnail_url']['panorama'] = KernelTools::storage_path_to_url( dirname( $ret['source_file'] )."/thumbs/panorama.jpg" );
 		}
 	}
 	return $ret;
@@ -181,7 +188,7 @@ function mime_image_load( &$pFileHash, &$pPrefs, $pParams = NULL ) {
  * @param array $pFileHash file details.
  * @param array $pFileHash[upload] should contain a complete hash from $_FILES
  * @access public
- * @return TRUE on success, FALSE on failure
+ * @return bool true on success, false on failure
  */
 function mime_image_store_exif_data( $pFileHash ) {
 	global $gBitSystem;
@@ -189,18 +196,18 @@ function mime_image_store_exif_data( $pFileHash ) {
 		$upload = &$pFileHash['upload'];
 	}
 
-	if( @BitBase::verifyId( $pFileHash['attachment_id'] ) && $exifHash = mime_image_get_exif_data( $upload ) ) {
+	if( BitBase::verifyId( $pFileHash['attachment_id'] ) && $exifHash = mime_image_get_exif_data( $upload ) ) {
 		// only makes sense to store the GPS data if we at least have latitude and longitude
 		if( !empty( $exifHash['GPS'] )) {
-			LibertyMime::storeMetaData( $pFileHash['attachment_id'], 'GPS', $exifHash['GPS'] );
+		    LibertyMime::storeMetaData( $pFileHash['attachment_id'], $exifHash['GPS'], 'GPS' );
 		}
 
 		if( !empty( $exifHash['EXIF'] )) {
-//			LibertyMime::storeMetaData( $pFileHash['attachment_id'], 'EXIF', $exifHash['EXIF'] );
+		    //			LibertyMime::storeMetaData( $pFileHash['attachment_id'], $exifHash['EXIF'], 'EXIF' );
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 
 /**
@@ -211,30 +218,34 @@ function mime_image_store_exif_data( $pFileHash ) {
  * @return array filled with exif goodies
  */
 function mime_image_get_exif_data( $pUpload ) {
-	$exifHash = array();
+	$exifHash = [];
 	if( function_exists( 'exif_read_data' ) && !empty( $pUpload['source_file'] ) && is_file( $pUpload['source_file'] ) && preg_match( "#/(jpe?g|tiff)#i", $pUpload['type'] )) {
 		// exif_read_data can be noisy due to crappy files, e.g. "Incorrect APP1 Exif Identifier Code" etc...
-		$exifHash = @exif_read_data( $pUpload['source_file'], 0, TRUE );
+		$exifHash = @exif_read_data( $pUpload['source_file'], 0, true );
 
 		// extract more information if we can find it
-		if( ini_get( 'short_open_tag' )) {
-			require_once UTIL_PKG_INCLUDE_PATH.'jpeg_metadata_tk/JPEG.php';
-			require_once UTIL_PKG_INCLUDE_PATH.'jpeg_metadata_tk/JFIF.php';
-			require_once UTIL_PKG_INCLUDE_PATH.'jpeg_metadata_tk/PictureInfo.php';
-			require_once UTIL_PKG_INCLUDE_PATH.'jpeg_metadata_tk/XMP.php';
-			require_once UTIL_PKG_INCLUDE_PATH.'jpeg_metadata_tk/EXIF.php';
+//		if( ini_get( 'short_open_tag' )) {
+//			require_once UTIL_PKG_CLASS_PATH.'metadata/src/Metadata.php';
+//			require_once UTIL_PKG_INCLUDE_PATH.'jpeg_metadata_tk/JPEG.php';
+//			require_once UTIL_PKG_INCLUDE_PATH.'jpeg_metadata_tk/JFIF.php';
+//			require_once UTIL_PKG_INCLUDE_PATH.'jpeg_metadata_tk/PictureInfo.php';
+//			require_once UTIL_PKG_INCLUDE_PATH.'jpeg_metadata_tk/XMP.php';
+//			require_once UTIL_PKG_INCLUDE_PATH.'jpeg_metadata_tk/EXIF.php';
 
-			// Retrieve the header information from the JPEG file
-			$jpeg_header_data = get_jpeg_header_data( $pUpload['source_file'] );
+//			$exifReader = new Metadata();
+//			$exifHash2 = $exifReader->read( $pUpload['source_file'], true, true ); // All data, read only
+
+/*			// Retrieve the header information from the JPEG file
+			$jpeg_header_data = \get_jpeg_header_data( $pUpload['source_file'] );
 
 			// Retrieve EXIF information from the JPEG file
-			$Exif_array = get_EXIF_JPEG( $pUpload['source_file'] );
+			$Exif_array = \get_EXIF_JPEG( $pUpload['source_file'] );
 
 			// Retrieve XMP information from the JPEG file
 			$XMP_array = read_XMP_array_from_text( get_XMP_text( $jpeg_header_data ) );
 
 			// Retrieve Photoshop IRB information from the JPEG file
-			$IRB_array = get_Photoshop_IRB( $jpeg_header_data );
+			$IRB_array = \get_Photoshop_IRB( $jpeg_header_data );
 			if( !empty( $exifHash['IFD0']['Software'] ) && preg_match( '/photoshop/i', $exifHash['IFD0']['Software'] ) ) {
 				require_once UTIL_PKG_INCLUDE_PATH.'jpeg_metadata_tk/Photoshop_File_Info.php';
 				// Retrieve Photoshop File Info from the three previous arrays
@@ -249,11 +260,12 @@ function mime_image_get_exif_data( $pUpload ) {
 				}
 			}
 		}
+*/
 
 		// only makes sense to store the GPS data if we at least have latitude and longitude
 		if( !empty( $exifHash['GPS'] )) {
 			// store GPS coordinates as deg decimal float
-			$gpsConv = array( 'GPSLatitude', 'GPSDestLatitude', 'GPSLongitude', 'GPSDestLongitude' );
+			$gpsConv = [ 'GPSLatitude', 'GPSDestLatitude', 'GPSLongitude', 'GPSDestLongitude' ];
 			foreach( $gpsConv as $conv ) {
 				if( !empty( $exifHash['GPS'][$conv] ) && is_array( $exifHash['GPS'][$conv] )) {
 					$exifHash['GPS'][$conv] = mime_image_convert_exifgps( $exifHash['GPS'][$conv] );
@@ -261,7 +273,6 @@ function mime_image_get_exif_data( $pUpload ) {
 			}
 		}
 	}
-
 	return $exifHash;
 }
 
@@ -280,9 +291,9 @@ function mime_image_convert_exifgps( $pParams ) {
 			list( $dividend, $divisor ) = explode( "/", $fraction );
 			$num = $dividend / $divisor;
 			if( $key == 'min' ) {
-				$num = $num / 60;
+				$num /= 60;
 			} elseif( $key == 'sec' ) {
-				$num = $num / 3600;
+				$num /= 3600;
 			}
 			$ret += $num;
 		}
@@ -295,7 +306,7 @@ function mime_image_convert_exifgps( $pParams ) {
  *
  * @param array $pStoreRow
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
 function mime_image_create_panorama( &$pStoreRow ) {
 	global $gBitSystem, $gThumbSizes;
@@ -304,21 +315,21 @@ function mime_image_create_panorama( &$pStoreRow ) {
 		// the panorama has to be a jpg
 		$gBitSystem->setConfig( 'liberty_thumbnail_format', 'jpg' );
 		$width = $gBitSystem->getConfig( 'mime_image_panorama_width', 3000 );
-		$gThumbSizes['panorama'] = array( $width, $width / 2 );
+		$gThumbSizes['panorama'] = [ $width, $width / 2 ];
 
 		// for the panorama, we will force a quality lower than 75 to reduce image size
 		if( $gBitSystem->getConfig( 'liberty_thumbnail_quality', 85 ) > 75 ) {
 			$gBitSystem->setConfig( 'liberty_thumbnail_quality', 75 );
 		}
 
-		$genHash = array(
+		$genHash = [
 			'attachment_id'   => $pStoreRow['attachment_id'],
-			'dest_branch'	  => liberty_mime_get_storage_branch( array( 'sub_dir' => $pStoreRow['attachment_id'], 'user_id' =>$pStoreRow['user_id'], 'package' => liberty_mime_get_storage_sub_dir_name( $pStoreRow ) ) ),
+			'dest_branch'	  => liberty_mime_get_storage_branch( [ 'sub_dir' => $pStoreRow['attachment_id'], 'user_id' =>$pStoreRow['user_id'], 'package' => \Bitweaver\Liberty\liberty_mime_get_storage_sub_dir_name( $pStoreRow ) ] ),
 			'file_name'       => dirname( $pStoreRow['file_name'] )."/",
 			'source_file'     => $pStoreRow['source_file'],
 			'type'            => $pStoreRow['mime_type'],
-			'thumbnail_sizes' => array( 'panorama' ),
-		);
+			'thumbnail_sizes' => [ 'panorama' ],
+		];
 		if( liberty_generate_thumbnails( $genHash )) {
 			// we want to modify the panorama
 			$genHash['source_file'] = $genHash['icon_thumb_path'];
@@ -326,9 +337,8 @@ function mime_image_create_panorama( &$pStoreRow ) {
 				$pStoreRow['errors']['panorama'] = $genHash['error'];
 			}
 		}
-
-		return( empty( $pStoreRow['errors'] ));
 	}
+	return empty( $pStoreRow['errors'] );
 }
 
 /**
@@ -337,36 +347,37 @@ function mime_image_create_panorama( &$pStoreRow ) {
  * @param array $pFileHash File hash - souce_file is required
  * @param array $pOptions
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
-function liberty_magickwand_panorama_image( &$pFileHash, $pOptions = array() ) {
-	$magickWand = NewMagickWand();
-	$pFileHash['error'] = NULL;
+/* MagicWand is no longer activly available?
+function liberty_magickwand_panorama_image( &$pFileHash, $pOptions = [] ) {
+	$magickWand = new NewMagickWand();
+	$pFileHash['error'] = null;
 	if( !empty( $pFileHash['source_file'] ) && is_file( $pFileHash['source_file'] )) {
 		if( !$pFileHash['error'] = liberty_magickwand_check_error( MagickReadImage( $magickWand, $pFileHash['source_file'] ), $magickWand )) {
 			// calculate border width
 			$iwidth  = round( MagickGetImageWidth( $magickWand ));
 			$iheight = round( MagickGetImageHeight( $magickWand ));
 			$aspect  = $iwidth / $iheight;
-			$metaHash = array(
+			$metaHash = [
 				'width'  => $iwidth,
 				'height' => $iheight,
 				'aspect' => $aspect,
-			);
+			];
 			// store original file information that we can adjust the viewer
-			LibertyMime::storeMetaData( $pFileHash['attachment_id'], 'PANO', $metaHash );
+			LibertyMime::storeMetaData( $pFileHash['attachment_id'], $metaHash, 'PANO' );
 			// we need to pad the image if the aspect ratio is not 2:1 (give it a wee bit of leeway that we don't add annoying borders if not really needed)
 			if( $aspect > 2.1 || $aspect < 1.9 ) {
 				$bwidth = $bheight = 0;
 				if( $aspect > 2 ) {
-					$bheight = round((( $iwidth / 2 ) - $iheight ) / 2 );
+					$bheight = round(( $iwidth / 2 - $iheight ) / 2 );
 				} else {
-					$bwidth = round((( $iheight / 2 ) - $iwidth ) / 2 );
+					$bwidth = round(( $iheight / 2 - $iwidth ) / 2 );
 				}
 				// if the ratio has nothing to do with a panorama image - i.e. gives us a negative number here, we won't generate a panorama image
 				if( $bheight > 0 ) {
 					$pixelWand = NewPixelWand();
-					PixelSetColor( $pixelWand, ( !empty( $pOptions['background'] ) ? $pOptions['background'] : 'black' ));
+					PixelSetColor( $pixelWand, !empty( $pOptions['background'] ) ? $pOptions['background'] : 'black' );
 					if( !$pFileHash['error'] = liberty_magickwand_check_error( MagickBorderImage( $magickWand, $pixelWand, $bwidth, $bheight ), $magickWand )) {
 						if( !$pFileHash['error'] = liberty_magickwand_check_error( MagickWriteImage( $magickWand, $pFileHash['source_file'] ), $magickWand )) {
 							// yay!
@@ -378,8 +389,9 @@ function liberty_magickwand_panorama_image( &$pFileHash, $pOptions = array() ) {
 		}
 	}
 	DestroyMagickWand( $magickWand );
-	return( empty( $pFileHash['error'] ));
+	return empty( $pFileHash['error'] );
 }
+*/
 
 /**
  * mime_image_help
@@ -389,8 +401,7 @@ function liberty_magickwand_panorama_image( &$pFileHash, $pOptions = array() ) {
  */
 function mime_image_help() {
 	$help =
-		tra( "If you have a panoramic image and you are using <strong>{attachment}</strong> to insert it, you can use <strong>panosize</strong> as you would with the size parameter to specify the size." )."<br />"
-		.tra( "Example:" ).' '."{attachment id='13' panosize='small'}";
+	KernelTools::tra( "If you have a panoramic image and you are using <strong>{attachment}</strong> to insert it, you can use <strong>panosize</strong> as you would with the size parameter to specify the size." )."<br />"
+		.KernelTools::tra( "Example:" ).' '."{attachment id='13' panosize='small'}";
 	return $help;
 }
-?>

@@ -1,30 +1,38 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+use Bitweaver\BitBase;
+use Bitweaver\Liberty\LibertyContent;
+use Bitweaver\Wiki\BitPage;
+
 /**
  * @version  $Header$
  * @package  liberty
  */
 
-/**
+
+ /**
  * definitions ( guid character limit is 16 chars )
  */
 define( 'PLUGIN_GUID_FILTERWIKILINKS', 'filterbitlinks' );
 
 global $gLibertySystem;
 
-$pluginParams = array (
+$pluginParams = [
 	'title'               => 'WikiLinks',
 	'description'         => 'If you use links of the format ((Wiki Page)) this filter will convert that to a link to a wiki page entitled <em>Wiki Page</em>',
-	'auto_activate'       => TRUE,
+	'auto_activate'       => true,
 	'plugin_type'         => FILTER_PLUGIN,
 
 	// filter functions
-	'presplit_function'   => 'bitlinks_prefilter',
-	'preparse_function'   => 'bitlinks_prefilter',
-	'postsplit_function'  => 'bitlinks_postfilter',
-	'postparse_function'  => 'bitlinks_postfilter',
-	'poststore_function'  => 'bitlinks_storefilter',
+	'presplit_function'   => '\Bitweaver\Liberty\bitlinks_prefilter',
+	'preparse_function'   => '\Bitweaver\Liberty\bitlinks_prefilter',
+	'postsplit_function'  => '\Bitweaver\Liberty\bitlinks_postfilter',
+	'postparse_function'  => '\Bitweaver\Liberty\bitlinks_postfilter',
+	'poststore_function'  => '\Bitweaver\Liberty\bitlinks_storefilter',
 	'expunge_function'    => 'bitlinks_expungefilter',
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_FILTERWIKILINKS, $pluginParams );
 
 define( 'WIKI_WORDS_REGEX', '[A-z0-9]{2}[\w\d_\-]+[A-Z_][\w\d_\-]+[A-z0-9]+' );
@@ -32,8 +40,8 @@ define( 'WIKI_WORDS_REGEX', '[A-z0-9]{2}[\w\d_\-]+[A-Z_][\w\d_\-]+[A-z0-9]+' );
 /**
  * bitlinks_prefilter
  *
- * @param array $pData
- * @param array $pFilterHash
+ * @param string $pData
+ * @param string $pFilterHash
  * @param array $pObject
  * @access public
  * @return void
@@ -46,7 +54,7 @@ function bitlinks_prefilter( &$pData, &$pFilterHash, $pObject ) {
 
 	// extract ((Page|Description)) type links that they don't enter the parser.
 	// these can cause problems in various places such as tiki tables due to the |
-	preg_match_all( "/\({2}({$sBitLinks->mWikiWordRegex})\|(.+?)\){2}/", $pData, $protected );
+	preg_match_all( "@\({2}({$sBitLinks->mWikiWordRegex})\|(.+?)\){2}@", $pData, $protected );
 
 	if( !empty( $protected )) {
 		foreach( $protected[0] as $i => $prot ) {
@@ -62,11 +70,11 @@ function bitlinks_prefilter( &$pData, &$pFilterHash, $pObject ) {
  *
  * @param string $pData
  * @param array $pFilterHash
- * @param object $pObject
+ * @param bool $pCase
  * @access public
- * @return updated data string
+ * @return void
  */
-function bitlinks_postfilter( &$pData, &$pFilterHash, $pObject ) {
+function bitlinks_postfilter( &$pData, &$pFilterHash, $pCase ) {
 	static $sBitLinks;
 	if( empty( $sBitLinks )) {
 		$sBitLinks = new BitLinks();
@@ -78,8 +86,8 @@ function bitlinks_postfilter( &$pData, &$pFilterHash, $pObject ) {
 			$pData = str_replace( $key, $replace, $pData );
 		}
 	}
-
-	$pData = $sBitLinks->parseLinks( $pData, $pFilterHash, $pObject );
+	$pFilterHash['data'] = $pData;
+	$pData = $sBitLinks->parseLinks( $pData, $pFilterHash, $pCase );
 }
 
 /**
@@ -89,7 +97,7 @@ function bitlinks_postfilter( &$pData, &$pFilterHash, $pObject ) {
  * @param array $pFilterHash
  * @param object $pObject
  * @access public
- * @return data string
+ * @return void
  */
 function bitlinks_storefilter( &$pData, &$pFilterHash, $pObject ) {
 	global $gBitSystem;
@@ -118,7 +126,7 @@ function bitlinks_storefilter( &$pData, &$pFilterHash, $pObject ) {
  * @param array $pFilterHash
  * @param object $pObject
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return void
  */
 function bitlinks_expungefilter( &$pData, &$pFilterHash, $pObject ) {
 	static $sBitLinks;
@@ -145,26 +153,32 @@ class BitLinks extends BitBase {
 	 * @var array of links pointing to this page
 	 * @access public
 	 */
-	var $mLinks = NULL;
+	public $mLinks = null;
+
+	public $mWikiWordRegex = '';
 
 	/**
 	 * Initiate class
 	 *
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return bool true on success, false on failure - mErrors will contain reason for failure
 	 */
-	function __construct() {
+	public function __construct() {
 		parent::__construct();
 
 		global $gBitSystem;
-		if( $gBitSystem->getConfig( 'wiki_page_regex', 'strict' ) == 'strict' ) {
-			$this->mWikiWordRegex = '([A-Za-z0-9_])([\'\.: A-Za-z0-9_\-])*([\.:A-Za-z0-9_])';
-		} elseif( $gBitSystem->getConfig( 'wiki_page_regex', 'strict' ) == 'full' ) {
-			$this->mWikiWordRegex = '([A-Za-z0-9_]|[\x80-\xFF])([\'\.: A-Za-z0-9_\-]|[\x80-\xFF])*([\.:A-Za-z0-9_]|[\x80-\xFF])';
-		} else {
-			// This is just evil. The middle section means "anything, as long
-			// as it's not a | and isn't followed by ))". -rlpowell
-			$this->mWikiWordRegex = '([^|\(\)])([^|](?!\)\)))*?([^|\(\)])';
+		$mode = $gBitSystem->getConfig( 'wiki_page_regex', 'strict' );
+		switch ( $mode ) {
+			case 'strict':
+				$this->mWikiWordRegex = "([A-Za-z0-9_])([\'\.: A-Za-z0-9_\-])*([\.:A-Za-z0-9_])";
+			break;
+			case 'full':
+				$this->mWikiWordRegex = "([A-Za-z0-9_]|[\x80-\xFF])([\'\.: A-Za-z0-9_\-]|[\x80-\xFF])*([\.:A-Za-z0-9_]|[\x80-\xFF])";
+			break;
+			default:
+				// This is just evil. The middle section means "anything, as long
+				// as it's not a | and isn't followed by ))". -rlpowell
+				$this->mWikiWordRegex = "([^|\(\)])([^|](?!\)\)))*?([^|\(\)])";
 		}
 
 		// append anchor to regex
@@ -174,25 +188,25 @@ class BitLinks extends BitBase {
 	/**
 	 * Get all pages linking to a given content id
 	 *
-	 * @param array $pContentId
+	 * @param int $pContentId
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return array
 	 */
-	function getAllPages( $pContentId ) {
+	public function getAllPages( $pContentId ) {
 		global $gBitSystem;
-		$ret = array();
-		if( $gBitSystem->isPackageActive( 'wiki' ) && @BitBase::verifyId( $pContentId )) {
+		$ret = [];
+		if( $gBitSystem->isPackageActive( 'wiki' ) && BitBase::verifyId( $pContentId )) {
 			$query = "SELECT `page_id`, lc.`content_id`, lc.`last_modified`, lc.`title`, lcds.`data` AS `summary`
 				FROM `".BIT_DB_PREFIX."liberty_content_links` lcl
 				INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON( lcl.`to_content_id`=lc.`content_id` )
 				INNER JOIN `".BIT_DB_PREFIX."wiki_pages` wp ON( wp.`content_id`=lc.`content_id` )
 				LEFT OUTER JOIN `".BIT_DB_PREFIX."liberty_content_data` lcds ON (lc.`content_id` = lcds.`content_id` AND lcds.`data_type`='summary')
 				WHERE lcl.`from_content_id`=? ORDER BY lc.`title`";
-			if( $result = $this->mDb->query( $query, array( $pContentId ))) {
+			if( $result = $this->mDb->query( $query, [ $pContentId ] ) ) {
 				$lastTitle = '';
 				while( $row = $result->fetchRow() ) {
 					if( array_key_exists( strtolower( $row['title'] ), $ret )) {
-						$row['description'] = tra( 'Multiple pages with this name' );
+						$row['description'] = KernelTools::tra( 'Multiple pages with this name' );
 					}
 					$ret[strtolower( $row['title'] )] = $row;
 				}
@@ -204,21 +218,21 @@ class BitLinks extends BitBase {
 	/**
 	 * see if page has already been created and stored
 	 *
-	 * @param array $pTitle title of the page
-	 * @param array $pObject current object
-	 * @param array $pContentId content_id of the current page - sometimes we don't have the object but a content_id to work with
+	 * @param string $pTitle title of the page
+	 * @param bool $pCaseSensitive
+	 * @param int $pContentId content_id of the current page - sometimes we don't have the object but a content_id to work with
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return bool true on success, false on failure - mErrors will contain reason for failure
 	 */
-	function pageExists( $pTitle, $pObject, $pContentId ) {
+	public function pageExists( $pTitle, $pCaseSensitive, $pContentId ) {
 		global $gBitSystem;
 
-		// only update this hash once - this is initiated as NULL and will be set to at least array after first call
-		if( $this->mLinks === NULL ) {
+		// only update this hash once - this is initiated as null and will be set to at least array after first call
+		if( $this->mLinks === null ) {
 			$this->mLinks = $this->getAllPages( $pContentId );
 		}
 
-		$ret = FALSE;
+		$ret = false;
 		if( !empty( $pTitle ) && !empty( $this->mLinks )) {
 			if( array_key_exists( strtolower( $pTitle ), $this->mLinks )) {
 				$ret = $this->mLinks[strtolower( $pTitle )];
@@ -226,11 +240,10 @@ class BitLinks extends BitBase {
 		}
 
 		// final attempt to get page details
-		if( empty( $ret ) && !empty( $pObject ) && $gBitSystem->isPackageActive( 'wiki' ) ) {
-			require_once( WIKI_PKG_CLASS_PATH.'BitPage.php' );
-			if( $ret = BitPage::pageExists( $pTitle, FALSE, $pContentId )) {
+		if( empty( $ret ) && $gBitSystem->isPackageActive( 'wiki' ) ) {
+			if( $ret = BitPage::pageExists( $pTitle, false, $pContentId )) {
 				if( count( $ret ) > 1 ) {
-					$ret[0]['description'] = tra( 'Multiple pages with this name' );
+					$ret[0]['description'] = KernelTools::tra( 'Multiple pages with this name' );
 				}
 				$ret = $ret[0];
 			}
@@ -245,18 +258,18 @@ class BitLinks extends BitBase {
 	 * @access public
 	 * @return array of wiki words in the data string
 	 */
-	function extractWikiWords( $pData ) {
+	public function extractWikiWords( $pData ) {
 		global $gBitSystem;
 		// we need to remove text that might contain unexpected wiki words
-		$protect = array(
+		$protect = [
 			"!<a\b[^>]*>.*?</a>!si", // links
 			"!<[^>]*>!",             // any html tags
-		);
+		];
 		$tmpData = preg_replace( $protect, "", $pData );
 
-		$words1[1] = $words2[1] = $words3[1] = array();
-		preg_match_all( "/\({2}($this->mWikiWordRegex)\){2}/", $tmpData, $words2 );
-		preg_match_all( "/\({2}($this->mWikiWordRegex)\|(.+?)\){2}/", $tmpData, $words3 );
+		$words1[1] = $words2[1] = $words3[1] = [];
+		preg_match_all( "@\({2}($this->mWikiWordRegex)\){2}@", $tmpData, $words2 );
+		preg_match_all( "@\({2}($this->mWikiWordRegex)\|(.+?)\){2}@", $tmpData, $words3 );
 		if( $gBitSystem->isFeatureActive( 'wiki_words' )) {
 			preg_match_all( '/\b('.WIKI_WORDS_REGEX.')\b/', $tmpData, $words1 );
 		}
@@ -268,11 +281,11 @@ class BitLinks extends BitBase {
 	 *
 	 * @param string $pData
 	 * @param array $pParamHash
-	 * @param object $pObject
+	 * @param bool $pCase
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return string
 	 */
-	function parseLinks( $pData, $pParamHash, $pObject ) {
+	public function parseLinks( $pData, $pParamHash, $pCase ) {
 		global $gBitSystem, $gLibertySystem;
 
 		// if wiki isn't active, there isn't much we can do here
@@ -286,10 +299,10 @@ class BitLinks extends BitBase {
 		// We need to remove ))WikiWords(( before links get made.
 		// users just need to be strict about not inserting spaces between
 		// words and brackets
-		preg_match_all( "!\){2}(".WIKI_WORDS_REGEX.")\({2}!", $pData, $protected );
+		preg_match_all( "@\){2}(".WIKI_WORDS_REGEX.")\({2}@", $pData, $protected );
 
 		// this array is used to fill the text with temporary placeholders that get replaced back in further down
-		$replacements = array();
+		$replacements = [];
 
 		if( !empty( $protected )) {
 			foreach( $protected[0] as $i => $prot ) {
@@ -302,17 +315,15 @@ class BitLinks extends BitBase {
 		// Process ((Wiki Page|Wiki Page Description)) type links first. Here 
 		// we don't handle plurals and the like since the user should know what 
 		// he's linking to when using these links
-		preg_match_all( "/\({2}({$this->mWikiWordRegex})\|(.+?)\){2}/", $pData, $pages );
+		preg_match_all( "@\({2}({$this->mWikiWordRegex})\|(.+?)\){2}@", $pData, $pages );
 		for( $i = 0; $i < count( $pages[1] ); $i++ ) {
 			$page = str_replace( $pages[5][$i], "", $pages[1][$i] );
-			$exists = $this->pageExists( $page, $pObject, $pParamHash['content_id'] );
+			$exists = $this->pageExists( $page, $pCase, $pParamHash['content_id'] );
 
 			// anchor
-			if( !empty( $pages[5][$i] )) {
-				$repl = preg_replace( '!href="([^"]*)"!', "href=\"$1{$pages[5][$i]}\"", BitPage::getPageLink( $page, $exists ));
-			} else {
-				$repl = BitPage::getPageLink( $page, $exists );
-			}
+			$repl = !empty( $pages[5][$i] )
+				? preg_replace( '!href="([^"]*)"!', "href=\"$1{$pages[5][$i]}\"", BitPage::getPageLink( $page, $exists ))
+				: BitPage::getPageLink( $page, $exists );
 
 			// alternate title
 			if( strlen( trim( $pages[6][$i] )) > 0 ) {
@@ -325,16 +336,14 @@ class BitLinks extends BitBase {
 		}
 
 		// Process the simpler ((Wiki Page)) type links without the description
-		preg_match_all( "/\({2}({$this->mWikiWordRegex})\){2}/", $pData, $pages );
+		preg_match_all( "@\({2}({$this->mWikiWordRegex})\){2}@", $pData, $pages );
 		foreach( array_unique( $pages[1] ) as $i => $page ) {
 			$page = str_replace( $pages[5][$i], "", $pages[1][$i] );
-			$exists = $this->pageExists( $page, $pObject, $pParamHash['content_id'] );
+			$exists = $this->pageExists( $page, $pCase, $pParamHash['content_id'] );
 
-			if( !empty( $pages[5][$i] )) {
-				$repl = preg_replace( '!href="([^"]*)"!', "href=\"$1{$pages[5][$i]}\"", BitPage::getPageLink( $page, $exists ));
-			} else {
-				$repl = BitPage::getPageLink( $page, $exists );
-			}
+			$repl = !empty( $pages[5][$i] )
+				?  preg_replace( '!href="([^"]*)"!', "href=\"$1{$pages[5][$i]}\"", BitPage::getPageLink( $page, $exists ))
+				: BitPage::getPageLink( $page, $exists );
 
 			$key = md5( mt_rand() );
 			$replacements[$key] = $repl;
@@ -345,7 +354,7 @@ class BitLinks extends BitBase {
 		if( $gBitSystem->isFeatureActive( 'wiki_words' )) {
 			$pages = $this->extractWikiWords( $pData );
 			foreach( $pages as $page) {
-				if( $exists = $this->pageExists( $page, $pObject, $pParamHash['content_id'] )) {
+				if( $exists = $this->pageExists( $page, $pCase, $pParamHash['content_id'] )) {
 					$repl = BitPage::getPageLink( $page, $exists );
 				} elseif( $gBitSystem->isFeatureActive( 'wiki_plurals' ) && $this->getLocale() == 'en_US' ) {
 					// Link plural topic names to singular topic names if the plural
@@ -361,7 +370,7 @@ class BitLinks extends BitBase {
 					$plural_tmp = preg_replace( "/([A-Za-rt-z])s$/", "$1", $plural_tmp );
 					// prevent redundant pageExists calls if plurals are on, and plural is same as original word
 					if( $page != $plural_tmp ) {
-						$exists = $this->pageExists( $plural_tmp, $pObject, $pParamHash['content_id'] );
+						$exists = $this->pageExists( $plural_tmp, $pCase, $pParamHash['content_id'] );
 					}
 					$repl = BitPage::getPageLink( $plural_tmp, $exists );
 				} else {
@@ -391,10 +400,10 @@ class BitLinks extends BitBase {
 	 * getLocale
 	 *
 	 * @access public
-	 * @return locale
+	 * @return string locale
 	 */
-	function getLocale() {
-		static $locales = array(
+	public function getLocale() {
+		static $locales = [
 			'cs' => 'cs_CZ',
 			'de' => 'de_DE',
 			'dk' => 'da_DK',
@@ -408,7 +417,7 @@ class BitLinks extends BitBase {
 			'es' => 'es_ES',
 			'sw' => 'sw_SW', # swahili
 			'tw' => 'tw_TW',
-		);
+		];
 
 		if( empty( $locale )) {
 			$locale = '';
@@ -424,18 +433,16 @@ class BitLinks extends BitBase {
 	 * getLanguage
 	 *
 	 * @access public
-	 * @return language
+	 * @return string language
 	 */
-	function getLanguage() {
-		static $sBitLanguage = FALSE;
+	public function getLanguage() {
+		static $sBitLanguage = false;
 		global $gBitUser, $gBitSystem;
 
 		if( empty( $sBitLanguage )) {
-			if( $gBitUser->isValid() ) {
-				$sBitLanguage = $gBitUser->getPreference( 'bitLanguage', 'en' );
-			} else {
-				$sBitLanguage = $this->getPreference( 'bitLanguage', 'en' );
-			}
+			$sBitLanguage = $gBitUser->isValid()
+				? $gBitUser->getPreference( 'bitLanguage', 'en' )
+				: $gBitSystem->getPreference( 'bitLanguage', 'en' );
 		}
 
 		return $sBitLanguage;
@@ -447,22 +454,22 @@ class BitLinks extends BitBase {
 	 * @param string $pData
 	 * @param array $pFilterHash
 	 * @access public
-	 * @return store wiki links in database
+	 * @return bool store wiki links in database
 	 */
-	function storeLinks( $pData, $pFilterHash ) {
+	public function storeLinks( $pData, $pFilterHash ) {
 		global $gBitSystem;
 
 		// if we don't have a content_id or wiki isn't active, get out of here.
 		if( empty( $pFilterHash['content_id'] ) || !$gBitSystem->isPackageActive( 'wiki' )) {
-			return FALSE;
+			return false;
 		}
 
 		$from_content_id = $pFilterHash['content_id'];
-		$from_title = isset( $pFilterHash['title'] ) ? $pFilterHash['title'] : '';
+		$from_title = $pFilterHash['title'] ?? '';
 
 		// we need to remove the cache of any pages pointing to this one
-		$query = "SELECT `from_content_id` FROM `".BIT_DB_PREFIX."liberty_content_links` WHERE ( `to_content_id` = ? OR `to_content_id` IS NULL ) AND `to_title` = ?";
-		$clearCache = $gBitSystem->mDb->getCol( $query, array( $from_content_id, $from_title ));
+		$query = "SELECT `from_content_id` FROM `".BIT_DB_PREFIX."liberty_content_links` WHERE ( `to_content_id` = ? OR `to_content_id` IS null ) AND `to_title` = ?";
+		$clearCache = $gBitSystem->mDb->getCol( $query, [ $from_content_id, $from_title ] );
 		if( is_array( $clearCache )) {
 			foreach( $clearCache as $content_id ) {
 				LibertyContent::expungeCacheFile( $content_id );
@@ -470,25 +477,25 @@ class BitLinks extends BitBase {
 		}
 
 		// if this is a new page, fix up any links that may already point to it
-		$query = "UPDATE `".BIT_DB_PREFIX."liberty_content_links` SET `to_content_id` = ? WHERE ( `to_content_id` = ? OR `to_content_id` IS NULL ) AND `to_title` = ?";
-		$gBitSystem->mDb->query( $query, array( $from_content_id, 0, $from_title ));
+		$query = "UPDATE `".BIT_DB_PREFIX."liberty_content_links` SET `to_content_id` = ? WHERE ( `to_content_id` = ? OR `to_content_id` IS null ) AND `to_title` = ?";
+		$gBitSystem->mDb->query( $query, [ $from_content_id, 0, $from_title ] );
 
 		// get all the current links from this page
 		$query = "SELECT LOWER( `to_title` ), `to_content_id` FROM `".BIT_DB_PREFIX."liberty_content_links` WHERE `from_content_id` = ?";
-		$oldLinks = $gBitSystem->mDb->getAssoc( $query, array( $from_content_id ));
+		$oldLinks = $gBitSystem->mDb->getAssoc( $query, [ $from_content_id ] );
 
 		// get list of all wiki links on this page
 		$extractedWikiWords = $this->extractWikiWords( $pData );
 
 		// wiki links with anchors are pulled out as well. we'll make copies of the wiki pagenames without the anchor to process these correctly as well
 		foreach( $extractedWikiWords as $link ) {
-			if( strstr( $link, '#' ) !== FALSE ) {
+			if( strstr( $link, '#' ) !== false ) {
 				$extractedWikiWords[] = preg_replace( "!#.*!", "", $link );
 			}
 		}
 
 		// create list of unique new wiki links on this page
-		$uniqueNewWikiLinks = array();
+		$uniqueNewWikiLinks = [];
 		foreach( $extractedWikiWords as $to_title ) {
 			if( !empty( $to_title ) && !isset( $oldLinks[strtolower($to_title)] )) {
 				$uniqueNewWikiLinks[] = $to_title;
@@ -501,7 +508,7 @@ class BitLinks extends BitBase {
 		if( !empty( $uniqueNewWikiLinks )) {
 			$inSql = '?'.str_repeat( ',?', count( $uniqueNewWikiLinks ) - 1 );
 			// All arguments to MySQL in() function have to be passed as strings or it doesn't work correctly
-			$bindVars = array();
+			$bindVars = [];
 			foreach( $uniqueNewWikiLinks as $var ) {
 				$bindVars[] = ( string )$var;
 			}
@@ -513,7 +520,7 @@ class BitLinks extends BitBase {
 			// insert all new links pointing to existing content
 			if( !empty( $newLinksPointingToExistingContent )) {
 				// All arguments to MySQL in() function have to be passed as strings or it doesn't work correctly
-				$bindVars = array();
+				$bindVars = [];
 				foreach( $newLinksPointingToExistingContent as $var ) {
 					$bindVars[] = ( string )$var;
 				}
@@ -531,7 +538,7 @@ class BitLinks extends BitBase {
 			foreach( $uniqueNewWikiLinks as $to_title ) {
 				if( !isset( $newLinksPointingToExistingContent[strtolower( $to_title )] ) && !in_array( strtolower( $to_title ), array_keys( $oldLinks ))) {
 					$query = "INSERT INTO `".BIT_DB_PREFIX."liberty_content_links` ( `from_content_id`, `to_title` ) VALUES( ?, ? )";
-					$result = $gBitSystem->mDb->query( $query, array( $from_content_id, $to_title ));
+					$result = $gBitSystem->mDb->query( $query, [ $from_content_id, $to_title ] );
 				}
 			}
 		}
@@ -544,65 +551,63 @@ class BitLinks extends BitBase {
 		foreach( array_keys( $oldLinks ) as $to_title ) {
 			if( !isset( $obsoleteLinks[$to_title] )) {
 				$query = "DELETE FROM `".BIT_DB_PREFIX."liberty_content_links` WHERE `from_content_id`=? AND LOWER( `to_title` ) = ?";
-				$result = $gBitSystem->mDb->query( $query, array( $from_content_id, $to_title ));
+				$result = $gBitSystem->mDb->query( $query, [ $from_content_id, $to_title ] );
 			}
 		}
 
-		return TRUE;
+		return true;
 	}
 
 	/**
 	 * renameLinks
 	 *
-	 * @param array $pContentId
-	 * @param array $pOldName
-	 * @param array $pNewName
+	 * @param int $pContentId
+	 * @param string $pOldName
+	 * @param string $pNewName
 	 * @access public
 	 * @return void
 	 */
-	function renameLinks( $pContentId, $pOldName, $pNewName ) {
+	public function renameLinks( $pContentId, $pOldName, $pNewName ) {
 		$query = "
 			SELECT `from_content_id`, `data`
 			FROM `".BIT_DB_PREFIX."liberty_content_links` lcl
 				INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON( lcl.`from_content_id`=lc.`content_id` )
 			WHERE `to_content_id` = ?";
 
-		if( $result = $this->mDb->query( $query, array( $pContentId ) ) ) {
+		if( $result = $this->mDb->query( $query, [ $pContentId ] ) ) {
 			while( $row = $result->fetchRow() ) {
 				// check if there are occasions of the old name with alternate display link name
 				// --- ((Wiki Page|Description))
-				// \({2}              # check for ((
+				// \([2]              # check for ((
 				// \b$pOldName\b      # make sure the old name is on it's own
 				// \|                 # the seperating deliminator
 				// ([^\)]*)           # get as many characters as possible up to the next ) - put this in $1
-				// \){2}              # closing brackets ))
-				$pattern[] = "!\({2}\b$pOldName\b\|([^\)]*)\){2}!";
+				// \)[2]              # closing brackets ))
+				$pattern[] = "!\([2]\b$pOldName\b\|([^\)]*)\)[2]!";
 
 				// - replace with new name leaving description in tact
 				$replace[] = "(($pNewName|$1))";
 
 
 				// --- ((Wiki Page)) or WikiPage
-				// (\({2})?           # check for (( - optional - put this in $1
+				// (\([2])?           # check for (( - optional - put this in $1
 				// \b$pOldName\b      # make sure the old name is on it's own
-				// (\){2})?           # closing brackets )) - optional - put this in $2
-				$pattern[] = "!(\({2})?\b$pOldName\b(\){2})?!";
+				// (\)[2])?           # closing brackets )) - optional - put this in $2
+				$pattern[] = "!(\([2])?\b$pOldName\b(\)[2])?!";
 
 				// - the replacement depends on the new name
-				if( preg_match( "! !", $pNewName )) {
+				$replace[] = preg_match( "! !", $pNewName )
 					// since we have a space in the final name, we need to have ((
 					// and )) to make the link work
-					$replace[] = "(($pNewName))";
-				} else {
+					?  "(($pNewName))"
 					// no spaces in the new name either, so we only insert the ((
 					// and )) if the author used them to start off with
-					$replace[] = "$1$pNewName$2";
-				}
+					: "$1$pNewName$2";
 
 				$data = preg_replace( $pattern, $replace, $row['data'] );
 				if( md5( $data ) != md5( $row['data'] ) ) {
 					$query = "UPDATE `".BIT_DB_PREFIX."liberty_content` SET `data`=? WHERE `content_id`=?";
-					$this->mDb->query( $query, array( $data, $row['from_content_id'] ) );
+					$this->mDb->query( $query, [ $data, $row['from_content_id'] ] );
 
 					// remove any chached files pointing here
 					LibertyContent::expungeCacheFile( $row['from_content_id'] );
@@ -612,7 +617,7 @@ class BitLinks extends BitBase {
 
 		# Fix up titles in the link table
 		$query = "UPDATE `".BIT_DB_PREFIX."liberty_content_links` SET `to_title`=? WHERE `to_content_id`=?";
-		$this->mDb->query( $query, array( $pNewName, $pContentId ) );
+		$this->mDb->query( $query, [ $pNewName, $pContentId ] );
 	}
 
 	/**
@@ -622,15 +627,14 @@ class BitLinks extends BitBase {
 	 * @access public
 	 * @return void
 	 */
-	function expungeLinks( $pContentId ) {
+	public function expungeLinks( $pContentId ) {
 		if( !empty( $pContentId )) {
 			// remove any cached file pointing to this page
-			$links = $this->mDb->getCol( "SELECT `from_content_id` FROM `".BIT_DB_PREFIX."liberty_content_links` WHERE to_content_id=?", array( $pContentId ));
+			$links = $this->mDb->getCol( "SELECT `from_content_id` FROM `".BIT_DB_PREFIX."liberty_content_links` WHERE to_content_id=?", [ $pContentId ] );
 			foreach( $links as $content_id ) {
 				LibertyContent::expungeCacheFile( $content_id );
 			}
-			$this->mDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_content_links` WHERE from_content_id=? OR to_content_id=?", array( $pContentId, $pContentId ));
+			$this->mDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_content_links` WHERE from_content_id=? OR to_content_id=?", [ $pContentId, $pContentId ] );
 		}
 	}
 }
-?>

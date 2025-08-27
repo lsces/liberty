@@ -1,4 +1,11 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+use Imagick;
+use ImagickPixel;
+use ImagickException;
+
 /**
  * $Header$
  *
@@ -11,20 +18,18 @@
 /**
  * liberty_imagick_can_thumbnail_image 
  * 
- * @param array $pMimeType 
+ * @param string $pMimeType
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return string|bool true on success, false on failure - mErrors will contain reason for failure
  */
 function liberty_imagick_can_thumbnail_image( $pMimeType ) {
 	global $gBitSystem;
-	$ret = FALSE;
+	$ret = false;
 	if( !empty( $pMimeType ) ) {
 		// allow images, pdf, and postscript thumbnailing (eps, ai, etc...)
-		if( $gBitSystem->isFeatureActive( 'liberty_thumbnail_pdf' )) {
-			$ret = preg_match( '/(^image|pdf$|postscript$)/i', $pMimeType );
-		} else {
-			$ret = preg_match( '/^image/i', $pMimeType );
-		}
+		$ret = $gBitSystem->isFeatureActive( 'liberty_thumbnail_pdf' )
+			? preg_match( '/(^image|pdf$|postscript$)/i', $pMimeType )
+			: preg_match( '/^image/i', $pMimeType );
 	}
 	return $ret;
 }
@@ -34,15 +39,14 @@ function liberty_imagick_can_thumbnail_image( $pMimeType ) {
 // ============================================
 function liberty_imagick_resize_image( &$pFileHash ) {
 	global $gBitSystem;
-	$pFileHash['error'] = NULL;
-	$ret = NULL;
-	clearstatcache( true, $pFileHash['source_file'] );
+	$pFileHash['error'] = null;
+	$ret = null;
 	if( !empty( $pFileHash['source_file'] ) && file_exists( $pFileHash['source_file'] ) && is_file( $pFileHash['source_file'] ) && (filesize( $pFileHash['source_file'] ) > 0) ) {
 		try { 
 			$im = new Imagick();
 			$im->readImage( $pFileHash['source_file'] );
 			if( !$im->valid()) {
-				$destFile = liberty_process_generic( $pFileHash, FALSE );
+				$destFile = \Bitweaver\Liberty\liberty_process_generic( $pFileHash, false );
 			} else {
 				$im->setCompressionQuality( $gBitSystem->getConfig( 'liberty_thumbnail_quality', 85 ));
 				$iwidth = $im->getImageWidth();
@@ -96,23 +100,21 @@ function liberty_imagick_resize_image( &$pFileHash ) {
 				}
 
 				if( !empty( $pFileHash['max_width'] ) && !empty( $pFileHash['max_height'] ) && (( $pFileHash['max_width'] < $iwidth || $pFileHash['max_height'] < $iheight ) || $mimeExt != $targetType )) {
-					if( !empty( $pFileHash['dest_file'] ) ) {
-						$destFile = $pFileHash['dest_file'];
-					} else {
-						$destFile = STORAGE_PKG_PATH.$pFileHash['dest_branch'].$pFileHash['dest_base_name'].$destExt;
-					}
+					$destFile = !empty( $pFileHash['dest_file'] )
+						? $pFileHash['dest_file']
+						: STORAGE_PKG_PATH.$pFileHash['dest_branch'].$pFileHash['dest_base_name'].$destExt;
 
 					if( !empty( $pFileHash['dest_base_name'] ) ) {
 						$pFileHash['name'] = $pFileHash['dest_base_name'].$destExt;
 					}
 
 					// create thumb and write
-					$im->thumbnailImage( (int)$pFileHash['max_width'], (int)$pFileHash['max_height'], TRUE );
+					$im->thumbnailImage( (int)$pFileHash['max_width'], (int)$pFileHash['max_height'], true );
 					$im->writeImage( $destFile );
 
 					$pFileHash['size'] = filesize( $destFile );
 				} else {
-					$destFile = liberty_process_generic( $pFileHash, FALSE );
+					$destFile = \Bitweaver\Liberty\liberty_process_generic( $pFileHash, false );
 				}
 			}
 
@@ -121,8 +123,8 @@ function liberty_imagick_resize_image( &$pFileHash ) {
 
 			$ret = $destFile;
 		} catch( ImagickException $e ) {
-			bit_error_log( $e->getMessage().' '.$pFileHash['source_file'] );
-			$ret = NULL;
+			\Bitweaver\bit_error_log( $e->getMessage().' '.$pFileHash['source_file'] );
+			$ret = null;
 		}
 	} else {
 		$pFileHash['error'] = "No source file to resize";
@@ -132,27 +134,27 @@ function liberty_imagick_resize_image( &$pFileHash ) {
 }
 
 function liberty_imagick_rotate_image( &$pFileHash ) {
-	$ret = FALSE;
+	$ret = false;
 	if( !empty( $pFileHash['source_file'] ) && is_file( $pFileHash['source_file'] )) {
 		try {
 			$im = new Imagick();
 			$im->readImage( $pFileHash['source_file'] );
 			if( !$im->valid()) {
-				$destFile = liberty_process_generic( $pFileHash, FALSE );
+				$destFile = \Bitweaver\Liberty\liberty_process_generic( $pFileHash, false );
 			} elseif( empty( $pFileHash['degrees'] ) || !is_numeric( $pFileHash['degrees'] )) {
-				$pFileHash['error'] = tra( 'Invalid rotation amount' );
+				$pFileHash['error'] = KernelTools::tra( 'Invalid rotation amount' );
 			} else {
 				$im->rotateImage( new ImagickPixel(), $pFileHash['degrees'] );
 				$im->writeImage( $pFileHash['source_file'] );
 			}
 		} catch( ImagickException $e ) {
-			bit_error_log( $e->getMessage().' '.$pFileHash['source_file'] );
+			\Bitweaver\bit_error_log( $e->getMessage().' '.$pFileHash['source_file'] );
 			$pFileHash['error'] = $e->getMessage();
 		}
 	} else {
 		$pFileHash['error'] = "No source file to resize";
 	}
 
-	return( empty( $pFileHash['error'] ));
+	return empty( $pFileHash['error'] );
 }
 

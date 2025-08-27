@@ -1,4 +1,7 @@
 <?php
+
+namespace Bitweaver\Liberty;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -11,7 +14,7 @@ global $gLibertySystem;
  */
 define( 'PLUGIN_GUID_SIMPLETEXT', 'simpletext' );
 
-$pluginParams = array (
+$pluginParams = [
 	'load_function'   => 'simpletext_parse_data',
 	'verify_function' => 'simpletext_verify_data',
 	'description'     => 'Simple Syntax Format Parser',
@@ -20,7 +23,7 @@ $pluginParams = array (
 	'help_page'       => 'SimpleTextSyntax',
 	'plugin_type'     => FORMAT_PLUGIN,
 	'linebreak'       => '<br />'
-);
+];
 
 $gLibertySystem->registerPlugin( PLUGIN_GUID_SIMPLETEXT, $pluginParams );
 
@@ -31,4 +34,3 @@ function simpletext_verify_data( &$pParamHash ) {
 function simpletext_parse_data( &$pParseHash, &$pCommonObject ) {
 	return nl2br( htmlentities( $pParseHash['data'] ) );
 }
-?>

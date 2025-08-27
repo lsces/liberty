@@ -1,4 +1,7 @@
 <?php
+
+namespace Bitweaver\Liberty;
+
 /**
  * @version  $Header$
  * @package  liberty
@@ -12,7 +15,7 @@ define( 'PLUGIN_GUID_FILTERSTYLEPURIFIER', 'filterstylepure' );
 
 global $gLibertySystem;
 
-$pluginParams = array (
+$pluginParams = [
 	// plugin title
 	'title'             => 'Style Purification',
 	// help page on bitweaver org that explains this plugin
@@ -20,12 +23,12 @@ $pluginParams = array (
 	// brief description of the plugin
 	'description'       => 'Strips out both inline and attribute style for users who don\'t have p_liberty_edit_html_style.',
 	// should this plugin be active or not when loaded for the first time
-	'auto_activate'     => TRUE,
+	'auto_activate'     => true,
 	// type of plugin
 	'plugin_type'       => FILTER_PLUGIN,
 	// filter hooks
 	'prestore_function' => 'stylepure_filter',
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_FILTERSTYLEPURIFIER, $pluginParams );
 
 /*
@@ -37,14 +40,12 @@ function stylepure_filter( &$pData, &$pFilterHash ) {
 
 	// strip_tags has doesn't recognize that css within the style tags are not document text. To fix this do something similar to the following:
 	if( !$gBitUser->hasPermission( 'p_liberty_edit_html_style' )) {
-		$pattern = array(
+		$pattern = [
             "!<style[^>]*>.*</style>!siU",             // <style>...</style>
             '![\s\n]*(style|class)\s*=\s*"[^">]*"?!i', // style="..." | class="..."
             "![\s\n]*(style|class)\s*=\s*'[^'>]*'?!i", // style='...' | class='...'
             "![\s\n]*(style|class)\s*=\s*[^\s>]*!i",   // style=...   | class=...
-		);
+		];
 		$pData = preg_replace( $pattern, '', $pData );
 	}
 }
-
-?>

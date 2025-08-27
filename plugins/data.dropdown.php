@@ -1,4 +1,8 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -22,18 +26,18 @@
  */
 global $gLibertySystem;
 define( 'PLUGIN_GUID_DATADROPDOWN', 'datadropdown' );
-$pluginParams = array (
+$pluginParams = [
 	'tag' => 'DD',
-	'auto_activate' => FALSE,
-	'requires_pair' => TRUE,
-	'load_function' => 'data_dropdown',
+	'auto_activate' => false,
+	'requires_pair' => true,
+	'load_function' => '\data_dropdown',
 	'title' => 'DropDown',
 	'help_page' => 'DataPluginDropDown',
-	'description' => tra("This plugin creates a expandable box of text. All text should be entered between the ") . "{DD} " . tra("blocks."),
-	'help_function' => 'data_dropdown_help',
-	'syntax' => "{DD title= width= }" . tra("Text in the Drop-Down box.") . "{DD}",
+	'description' => KernelTools::tra("This plugin creates a expandable box of text. All text should be entered between the ") . "{DD} " . KernelTools::tra("blocks."),
+	'help_function' => '\data_dropdown_help',
+	'syntax' => "{DD title= width= }" . KernelTools::tra("Text in the Drop-Down box.") . "{DD}",
 	'plugin_type' => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATADROPDOWN, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATADROPDOWN );
 
@@ -44,23 +48,23 @@ function data_dropdown_help() {
 	$help =
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>title</td>'
-				.'<td>' . tra( "string") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( 'String used as the link to Expand / Contract the text box. <br />The Default = <strong>"For More Information"</strong></td>')
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( 'String used as the link to Expand / Contract the text box. <br />The Default = <strong>"For More Information"</strong></td>')
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>width</td>'
-				.'<td>' . tra( "numeric") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "Controls the width of the title area in pixels. This is a percentage value but the % character should not be added.<br />The Default = ") . '<strong>20</strong></td>'
+				.'<td>' . KernelTools::tra( "numeric") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "Controls the width of the title area in pixels. This is a percentage value but the % character should not be added.<br />The Default = ") . '<strong>20</strong></td>'
 			.'</tr>'
 		.'</table>'
-		. tra("Example: ") . '{DD}' . tra("Text in the Drop-Down box.") . '{DD}<br />'
-		. tra("Example: ") . "{DD title='" . tra("Explaining the Lines #1 #3 &amp; #7'} Text in the Drop-Down box") . '{DD}';
+		. KernelTools::tra("Example: ") . '{DD}' . KernelTools::tra("Text in the Drop-Down box.") . '{DD}<br />'
+		. KernelTools::tra("Example: ") . "{DD title='" . KernelTools::tra("Explaining the Lines #1 #3 &amp; #7'} Text in the Drop-Down box") . '{DD}';
 	return $help;
 }
 
@@ -69,7 +73,7 @@ function data_dropdown_help() {
 */
 function data_dropdown($data, $params) {
 	extract ($params, EXTR_SKIP);
-	$title = (isset($title)) ? $title : tra( 'For More Information, click me.' );
+	$title = isset($title) ? $title : KernelTools::tra( 'For More Information, click me.' );
 	$id = 'dropdown'.(microtime() * 1000000);
 	$ret = 	'<div style="text-align:center;font-weight:bold;">'
 				.'<a title="Click to Expand or Contract" href="javascript:flip(\''.$id.'\')">'.$title.'</a>'
@@ -77,4 +81,3 @@ function data_dropdown($data, $params) {
 			.'<div class="help box" style="display:none" id="'.$id.'">'.$data.'</div>';
 	return $ret;
 }
-?>

@@ -1,4 +1,8 @@
 <?php
+
+namespace Bitweaver;
+use Bitweaver\KernelTools;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -24,37 +28,37 @@
  */
 define( 'PLUGIN_GUID_DATACODE', 'datacode' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams = [
 	'tag'                 => 'CODE',
-	'auto_activate'       => TRUE,
-	'requires_pair'       => TRUE,
+	'auto_activate'       => true,
+	'requires_pair'       => true,
 	'load_function'       => 'data_code',
 	'title'               => 'Code',
 	'help_page'           => 'DataPluginCode',
-	'description'         => tra( "Displays the Source Code Snippet between {code} blocks." ),
+	'description'         => KernelTools::tra( "Displays the Source Code Snippet between {code} blocks." ),
 	'help_function'       => 'data_code_help',
-	'syntax'              => "{code source= num= }". tra( "Sorce Code Snippet" ) . "{/code}",
+	'syntax'              => "{code source= num= }". KernelTools::tra( "Sorce Code Snippet" ) . "{/code}",
 	'plugin_type'         => DATA_PLUGIN,
 	'plugin_settings_url' => LIBERTY_PKG_URL.'admin/plugins/data_code.php',
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATACODE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATACODE );
 
 // Help Function
-function data_code_help() {
+function data_code_help(): string {
 	$help =
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>source</td>'
-				.'<td>' . tra( "key-word") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "Defines the format of the Source Code Snippet. Possible values are:");
+				.'<td>' . KernelTools::tra( "key-word") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "Defines the format of the Source Code Snippet. Possible values are:");
 	if( file_exists( UTIL_PKG_INCLUDE_PATH.'geshi/geshi.php' ) ) {
-		$help = $help . '<br />
+		$help .= '<br />
 			<strong>ActionScript</strong> &bull;
 			<strong>Ada</strong> &bull;
 			Apache Log File = <strong>Apache</strong> &bull;
@@ -110,28 +114,28 @@ function data_code_help() {
 			<strong>VisualFoxPro</strong> &bull;
 			<strong>XML</strong>';
 	} else {
-		$help = $help .'<strong>HTML</strong> or <strong>PHP</strong>. ';
+		$help .= '<strong>HTML</strong> or <strong>PHP</strong>. ';
 	}
-	$help = $help . '<br />' . tra("The Default = ") . '<strong>PHP</strong></td>'
+	$help = $help . '<br />' . KernelTools::tra("The Default = ") . '<strong>PHP</strong></td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>title</td>'
-				.'<td>'.tra( "string").'<br />'.tra("(optional)").'</td>'
-				.'<td>'.tra( "Give the codelisting a title.").'</td>'
+				.'<td>'.KernelTools::tra( "string").'<br />'.KernelTools::tra("(optional)").'</td>'
+				.'<td>'.KernelTools::tra( "Give the codelisting a title.").'</td>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>num</td>'
-				.'<td>' .tra( "boolean/number") .'<br />'. tra("(optional)") . '</td>'
-				.'<td>' .tra( "Determins if Line Numbers are displayed with the code. Specifing:")
-					.'<strong>TRUE / ON / YES /</strong> or a <strong>Number</strong> '
-					.tra("will turn <strong>Line Numbering On</strong>. When a Number is specified - the Number is used for the first ")
-					.tra("line instead of <strong>1</strong>. Any other value will turn <strong>Line Numbering OFF</strong> ")
-					.tra("and only the <strong>Code</strong> will be displayed.")
-					.'<br />' . tra("The Default =") .' <strong>FALSE</strong> ' .tra("Line Numbers are <strong>Not</strong> displayed.")
+				.'<td>' .KernelTools::tra( "boolean/number") .'<br />'. KernelTools::tra("(optional)") . '</td>'
+				.'<td>' .KernelTools::tra( "Determins if Line Numbers are displayed with the code. Specifing:")
+					.'<strong>true / ON / YES /</strong> or a <strong>Number</strong> '
+					.KernelTools::tra("will turn <strong>Line Numbering On</strong>. When a Number is specified - the Number is used for the first ")
+					.KernelTools::tra("line instead of <strong>1</strong>. Any other value will turn <strong>Line Numbering OFF</strong> ")
+					.KernelTools::tra("and only the <strong>Code</strong> will be displayed.")
+					.'<br />' . KernelTools::tra("The Default =") .' <strong>false</strong> ' .KernelTools::tra("Line Numbers are <strong>Not</strong> displayed.")
 				.'</td>'
 			.'</tr>'
 		.'</table>'
-		. tra("Example: ") . "{code source='php' num='on'}" . tra("Sorce Code Snippet") . "{/code}";
+		. KernelTools::tra("Example: ") . "{code source='php' num='on'}" . KernelTools::tra("Sorce Code Snippet") . "{/code}";
 	return $help;
 }
 
@@ -169,7 +173,7 @@ function data_code( $pData, $pParams ) { // Pre-Clyde Changes
 
 	if( !empty( $num ) && !is_numeric( $num )) {
 		switch( strtoupper( $num )) {
-		case 'TRUE': case 'ON': case 'YES':
+		case 'true': case 'ON': case 'YES':
 			$num = 1;
 			break;
 		default:
@@ -177,7 +181,7 @@ function data_code( $pData, $pParams ) { // Pre-Clyde Changes
 			break;
 		}
 	}
-	$num = ( isset( $num )) ? $num : FALSE;
+	$num = isset( $num ) ? $num : false;
 
 	// trim any trailing spaces
 	$code = '';
@@ -191,16 +195,14 @@ function data_code( $pData, $pParams ) { // Pre-Clyde Changes
 	// Trim any leading blank lines
 	$code = preg_replace( '/^[\n\r]+/', "", $code );
 	// Trim any trailing blank lines
-	if( file_exists( UTIL_PKG_INCLUDE_PATH.'geshi/geshi.php' )) {
-		$code = preg_replace('/[\n\r]+$/', "", $code );
-	} else {
-		$code = preg_replace('/[\n\r]+$/', "\n", $code );
-	}
+	$code = file_exists( UTIL_PKG_INCLUDE_PATH.'geshi/geshi.php' )
+		? preg_replace('/[\n\r]+$/', "", $code )
+		: preg_replace('/[\n\r]+$/', "\n", $code );
 
 	if( file_exists( UTIL_PKG_INCLUDE_PATH.'geshi/geshi.php' ) ) {
 		// Include the GeSHi library
-		include_once( UTIL_PKG_INCLUDE_PATH.'geshi/geshi.php' );
-		$geshi = new GeSHi($code, $source, UTIL_PKG_INCLUDE_PATH.'geshi/geshi' );
+		include_once UTIL_PKG_INCLUDE_PATH.'geshi/geshi.php';
+		$geshi = new \GeSHi($code, $source, UTIL_PKG_INCLUDE_PATH.'geshi/geshi' );
 		if( $num ) { // Line Numbering has been requested
 			$geshi->enable_line_numbers( GESHI_FANCY_LINE_NUMBERS );
 			if( is_numeric( $num )) {
@@ -225,10 +227,10 @@ function data_code( $pData, $pParams ) { // Pre-Clyde Changes
 
 		switch( strtoupper( $source )) {
 			case 'HTML':
-				$code = highlight_string( deCodeHTML( $code ), TRUE );
+				$code = highlight_string( deCodeHTML( $code ), true );
 				// Remove the first <code>" tags
 				if( substr( $code, 0, 6 ) == '<code>') {
-					$code = substr( $code, 6, ( strlen( $code ) - 13 ));
+					$code = substr( $code, 6, strlen( $code ) - 13);
 				}
 				break;
 			case 'PHP':
@@ -237,7 +239,7 @@ function data_code( $pData, $pParams ) { // Pre-Clyde Changes
 					// The require these tags to function
 					$code = "<?php\n".$code."?>";
 				}
-				$code = highlight_string( $code, TRUE );
+				$code = highlight_string( $code, true );
 				// Replacement-map to replace Colors
 				$convmap = array(
 					// The Default Color
@@ -257,7 +259,7 @@ function data_code( $pData, $pParams ) { // Pre-Clyde Changes
 				$code = strtr( $code, $convmap );
 				break;
 			default:
-				$code = highlight_string( $code, TRUE );
+				$code = highlight_string( $code, true );
 				break;
 		}
 
@@ -266,4 +268,3 @@ function data_code( $pData, $pParams ) { // Pre-Clyde Changes
 
 	return ( !empty( $title ) ? '<p class="codetitle">'.$title.'</p>' : "" )."<div class='codelisting'>".$code."</div>";
 }
-?>

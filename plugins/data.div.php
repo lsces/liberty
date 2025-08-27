@@ -1,4 +1,9 @@
 <?php
+
+namespace Bitweaver;
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyContent;
+
 /**
  * assigned_modules
  *
@@ -14,18 +19,18 @@
  */
 define( 'PLUGIN_GUID_DATADIV', 'datadiv' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams = [
 	'tag'           => 'DIV',
-	'auto_activate' => TRUE,
-	'requires_pair' => TRUE,
-	'load_function' => 'data_div',
+	'auto_activate' => true,
+	'requires_pair' => true,
+	'load_function' => '\data_div',
 	'title'         => 'Div',
 	'help_page'     => 'DataPluginDiv',
-	'description'   => tra( "This plugin allows you to easily create a div with a number of optional CSS parameters." ),
-	'help_function' => 'data_div_help',
+	'description'   => KernelTools::tra( "This plugin allows you to easily create a div with a number of optional CSS parameters." ),
+	'help_function' => '\data_div_help',
 	'syntax'        => "{div border='3px solid blue'}",
 	'plugin_type'   => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATADIV, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATADIV );
 
@@ -33,22 +38,22 @@ function data_div_help() {
 	$help =
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
-				.'<td>' . tra( "CSS rules" ) . '</td>'
-				.'<td>' . tra( "string") . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "This can be any CSS style rule. e.g.: ") . "border='3px solid blue'" .'</td>'
+				.'<td>' . KernelTools::tra( "CSS rules" ) . '</td>'
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "This can be any CSS style rule. e.g.: ") . "border='3px solid blue'" .'</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>preset</td>'
-				.'<td>' . tra( "string") . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "There are a few presets, which you can use to style with. Presets include: dark, orange, red, blue, centered.") .'</td>'
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "There are a few presets, which you can use to style with. Presets include: dark, orange, red, blue, centered.") .'</td>'
 			.'</tr>'
 		.'</table>'
-		. tra( "Example: " ) . "{div preset=centered border='3px solid blue'}";
+		. KernelTools::tra( "Example: " ) . "{div preset=centered border='3px solid blue'}";
 	return $help;
 }
 
@@ -84,9 +89,8 @@ function data_div( $pData, $pParams, $pCommonObject, $pParseHash ) {
 	}
 	$parseHash['content_id'] = $pParseHash['content_id'];
 	$parseHash['user_id'] = $pParseHash['user_id'];
-	$parseHash['no_cache'] = TRUE;
+	$parseHash['no_cache'] = true;
 	$parseHash['data'] = $pData;
 	$ret = '<div '.( !empty( $class ) ? 'class="'.$class.'" ' : '' ).'style="'.$style.'">'.LibertyContent::parseDataHash( $parseHash, $pCommonObject ).'</div>';
 	return $ret;
 }
-?>

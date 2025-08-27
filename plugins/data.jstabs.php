@@ -1,4 +1,9 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyContent;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -10,33 +15,31 @@
  */
 define( 'PLUGIN_GUID_DATAJSTABS', 'datajstabs' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams = [
 	'tag'           => 'jstabs',
 	'title'         => 'Javascript Tabs',
-	'description'   => tra( "Allow tabbing of content using a simple syntax." ),
+	'description'   => KernelTools::tra( "Allow tabbing of content using a simple syntax." ),
 	//'help_page'     => 'DataPluginJstabs',
 
-	'auto_activate' => FALSE,
-	'requires_pair' => TRUE,
+	'auto_activate' => false,
+	'requires_pair' => true,
 	'syntax'        => '{jstabs}',
 	'plugin_type'   => DATA_PLUGIN,
 
 	// display icon in quicktags bar
-	'booticon'       => '{booticon iname="fa-folder" iexplain="Javascript Tabs"}',
+	'booticon'       => '{booticon iname="icon-folder-closed-alt" iexplain="Javascript Tabs"}',
 	'taginsert'     => '{jstabs}text{/jstabs}',
 
 	// functions
-	'help_function' => 'data_jstabs_help',
-	'load_function' => 'data_jstabs',
-);
+	'help_function' => '\data_jstabs_help',
+	'load_function' => '\data_jstabs',
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAJSTABS, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAJSTABS );
 
 
 function data_jstabs( $pData, $pParams, $pCommonObject ) {
 	global $gBitSmarty;
-	$gBitSmarty->loadPlugin( 'smarty_block_jstab' );
-	$gBitSmarty->loadPlugin( 'smarty_block_jstabs' );
 
 	// collect all tabs
 	$tabs = preg_split( "!\n---tab:\s*!i", $pData );
@@ -54,16 +57,16 @@ function data_jstabs( $pData, $pParams, $pCommonObject ) {
 				$params['title'] = trim( $split[1] );
 
 				$parseHash = $pCommonObject->mInfo;
-				$parseHash['no_cache'] = TRUE;
+				$parseHash['no_cache'] = true;
 				$parseHash['data'] = $split[2];
 
-				$html .= smarty_block_jstab( $params, LibertyContent::parseDataHash( $parseHash, $pCommonObject ), $gBitSmarty, '' );
+				$html .= \Bitweaver\Liberty\smarty_block_jstab( $params, LibertyContent::parseDataHash( $parseHash, $pCommonObject ), $gBitSmarty, '' );
 			}
 		}
 	}
 
 	if( !empty( $html )) {
-		return smarty_block_jstabs( array(), $html, $gBitSmarty, '' );
+		return \Bitweaver\Liberty\smarty_block_jstabs( [], $html, $gBitSmarty, '' );
 	} else {
 		return ' ';
 	}
@@ -71,7 +74,6 @@ function data_jstabs( $pData, $pParams, $pCommonObject ) {
 
 function data_jstabs_help() {
 	return
-		'<p class="data help">'.tra( "This plugin does not take any arguments but you need to use a particular syntax to add tabs. You need to insert something like: <strong>---tab: Title of the tab</strong> on a separate line. This will start a new tab with the title: <em>Title of the tab</em>." ).'</p>'
-		. tra( "Example: ") . "<br />{jstabs}<br />---tab:First Tab<br />Some content<br />---tab:Second Tab<br />Some content in the second tab.<br />{/jstabs}";
+		'<p class="data help">'.KernelTools::tra( "This plugin does not take any arguments but you need to use a particular syntax to add tabs. You need to insert something like: <strong>---tab: Title of the tab</strong> on a separate line. This will start a new tab with the title: <em>Title of the tab</em>." ).'</p>'
+		. KernelTools::tra( "Example: ") . "<br />{jstabs}<br />---tab:First Tab<br />Some content<br />---tab:Second Tab<br />Some content in the second tab.<br />{/jstabs}";
 }
-?>

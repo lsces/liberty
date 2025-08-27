@@ -1,4 +1,8 @@
 <?php
+
+namespace Bitweaver;
+use Bitweaver\KernelTools;
+
 /**
  * @version  $Revision$
  * $Header$
@@ -11,20 +15,20 @@
  */
 define( 'PLUGIN_GUID_DATAIMG', 'dataimg' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams = [
 	'tag'           => 'img',
-	'auto_activate' => TRUE,
-	'requires_pair' => FALSE,
-	'load_function' => 'data_img',
+	'auto_activate' => true,
+	'requires_pair' => false,
+	'load_function' => '\data_img',
 	'title'         => 'Image',
 	'help_page'     => 'DataPluginImg',
-	'description'   => tra( "Allows you to insert an image into your page with little effort and a multitude of styling options." ),
-	'help_function' => 'data_img_help',
+	'description'   => KernelTools::tra( "Allows you to insert an image into your page with little effort and a multitude of styling options." ),
+	'help_function' => '\data_img_help',
 	'syntax'        => "{img src=http://www.google.at/logos/olympics06_ski_jump.gif}",
 	'plugin_type'   => DATA_PLUGIN,
-	'booticon'       => '{booticon iname="fa-image-landscape" iexplain="Web Image"}',
+	'booticon'       => '{booticon iname="icon-picture" iexplain="Web Image"}',
 	'taginsert'     => '{img src= width= height= align= description= link=}'
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAIMG, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAIMG );
 
@@ -32,27 +36,27 @@ function data_img_help() {
 	return
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>'.tra( "Key" ).'</th>'
-				.'<th>'.tra( "Type" ).'</th>'
-				.'<th>'.tra( "Comments" ).'</th>'
+				.'<th>'.KernelTools::tra( "Key" ).'</th>'
+				.'<th>'.KernelTools::tra( "Type" ).'</th>'
+				.'<th>'.KernelTools::tra( "Comments" ).'</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>src</td>'
-				.'<td>'.tra( "string").'<br />'.tra("(required)").'</td>'
-				.'<td>'.tra( "Specify where the path to the image.").'</td>'
+				.'<td>'.KernelTools::tra( "string").'<br />'.KernelTools::tra("(required)").'</td>'
+				.'<td>'.KernelTools::tra( "Specify where the path to the image.").'</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>link</td>'
-				.'<td>'.tra( "string").'<br />'.tra("(optional)").'</td>'
-				.'<td>'.tra( "If you want your image to link to a web address, use link='link/to/page'." ).'</td>'
+				.'<td>'.KernelTools::tra( "string").'<br />'.KernelTools::tra("(optional)").'</td>'
+				.'<td>'.KernelTools::tra( "If you want your image to link to a web address, use link='link/to/page'." ).'</td>'
 			.'</tr>'
 			.'<tr class="odd">'
-				.'<td>'.tra( "styling" ).'</td>'
-				.'<td>'.tra( "string").'<br />'.tra("(optional)").'</td>'
-				.'<td>'.tra( "Multiple styling options available: padding, margin, background, border, text-align, color, font, font-size, font-weight, font-family, align. Please view CSS guidelines on what values these settings take.").'</td>'
+				.'<td>'.KernelTools::tra( "styling" ).'</td>'
+				.'<td>'.KernelTools::tra( "string").'<br />'.KernelTools::tra("(optional)").'</td>'
+				.'<td>'.KernelTools::tra( "Multiple styling options available: padding, margin, background, border, text-align, color, font, font-size, font-weight, font-family, align. Please view CSS guidelines on what values these settings take.").'</td>'
 			.'</tr>'
 		.'</table>'
-		. tra( "Example: ")."{img src=http://www.google.at/logos/olympics06_ski_jump.gif float=right border=\"3px solid blue\"}";
+		. KernelTools::tra( "Example: ")."{img src=http://www.google.at/logos/olympics06_ski_jump.gif float=right border=\"3px solid blue\"}";
 }
 
 function data_img( $pData, $pParams ) {
@@ -71,7 +75,7 @@ function data_img( $pData, $pParams ) {
 						$cssStyle .= $key.':'.$value.'px;';
 					}
 					// remove values from the hash that they don't get used in the div as well
-					$pParams[$key] = NULL;
+					$pParams[$key] = null;
 					break;
 				case 'class':
 					$cssClass .= $value.' ';
@@ -83,12 +87,12 @@ function data_img( $pData, $pParams ) {
 		}
 	}
 
-	$wrapper = liberty_plugins_wrapper_style( $pParams );
+	$wrapper = \Bitweaver\Liberty\liberty_plugins_wrapper_style( $pParams );
 
 	// check if we have a source to load an image from
 	if( !empty( $pParams['src'] ) ) {
 		// set up image first
-		$alt = ( !empty( $wrapper['description'] ) ? $wrapper['description'] : tra( 'Image' ) );
+		$alt = !empty( $wrapper['description'] ) ? $wrapper['description'] : KernelTools::tra( 'Image' );
 		$ret = '<img alt="'.$alt.'" title="'.$alt.'" src="'.$pParams['src'].'" style="'.$cssStyle.'" class="img-responsive '.$cssClass.' '.( !empty( $wrapper['class'] ) ? $wrapper['class'] : '').'"/>';
 
 		// if this image is linking to something, wrap the image with the <a>
@@ -101,9 +105,8 @@ function data_img( $pData, $pParams ) {
 			$ret = '<'.$wrapper['wrapper'].' class="img-plugin" style="'.$wrapper['style'].'">'.$ret.( !empty( $wrapper['description'] ) ? '<br />'.$wrapper['description'] : '' ).'</'.$wrapper['wrapper'].'>';
 		}
 	} else {
-		$ret = '<span class="warning">'.tra( 'When using <strong>{img}</strong> the <strong>src</strong> parameter is required.' ).'</span>';
+		$ret = '<span class="warning">'.KernelTools::tra( 'When using <strong>{img}</strong> the <strong>src</strong> parameter is required.' ).'</span>';
 	}
 
 	return $ret;
 }
-?>

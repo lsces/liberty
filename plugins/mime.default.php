@@ -19,6 +19,10 @@
 /**
  * setup
  */
+namespace Bitweaver\Liberty;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
+
 global $gLibertySystem;
 
 /**
@@ -28,7 +32,7 @@ global $gLibertySystem;
  */
 define( 'PLUGIN_MIME_GUID_DEFAULT', 'mimedefault' );
 
-$pluginParams = array (
+$pluginParams = [
 	// Set of functions and what they are called in this paricular plugin
 	// Use the GUID as your namespace
 	'verify_function'    => 'mime_default_verify',
@@ -50,16 +54,16 @@ $pluginParams = array (
 	'plugin_type'        => MIME_PLUGIN,
 	// This needs to be specified by plugins that are included by other plugins
 	'file_name'          => 'mime.default.php',
-	// Set this to TRUE if you want the plugin active right after installation
-	'auto_activate'      => TRUE,
+	// Set this to true if you want the plugin active right after installation
+	'auto_activate'      => true,
 	// Help page on bitweaver.org
 	//'help_page'          => 'MimeHelpPage',
 
 	// Here you can use a perl regular expression to pick out file extensions you want to handle
 	// e.g.: Some image types: '#^image/(jpe?g|gif|png)#i'
 	// This plugin will be picked if nothing matches.
-	//'mimetypes'          => array( '/.*/' ),
-);
+	//'mimetypes'          => [ '/.*/' ],
+];
 $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_DEFAULT, $pluginParams );
 
 /**
@@ -68,56 +72,52 @@ $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_DEFAULT, $pluginParams );
  * @param array $pStoreRow Hash of data that needs to be stored
  * @param array $pStoreRow['upload'] Hash passed in by $_FILES upload
  * @access public
- * @return TRUE on success, FALSE on failure - $pStoreRow['errors'] will contain reason
+ * @return bool true on success, false on failure - $pStoreRow['errors'] will contain reason
  */
-if( !function_exists( 'mime_default_verify' )) {
+if( !function_exists( '\Bitweaver\Liberty\mime_default_verify' )) {
 	function mime_default_verify( &$pStoreRow ) {
 		global $gBitSystem, $gBitUser;
-		$ret = FALSE;
+		$ret = false;
 
 		// if we have a user_id set, we use that.
 		if( !empty( $pStoreRow['upload']['user_id'] )) {
 			$pStoreRow['user_id'] = $pStoreRow['upload']['user_id'];
 		} else {
 			// storage is always owned by the user that uploaded it!
-			// er... or at least admin if somehow we have a NULL mUserId
-			$pStoreRow['user_id'] = @BitBase::verifyId( $gBitUser->mUserId ) ? $gBitUser->mUserId : ROOT_USER_ID;
+			// er... or at least admin if somehow we have a null mUserId
+			$pStoreRow['user_id'] = BitBase::verifyId( $gBitUser->mUserId ) ? $gBitUser->mUserId : ROOT_USER_ID;
 			if( $pStoreRow['user_id'] < 2 ) {
-				bit_error_log( 'The user_id for the upload was not set. Defaulted to user_id = '.$pStoreRow['user_id'].' where 1 = ROOT_USER_ID, -1 = ANONYMOUS_USER_ID, other values = big problem.' );
+				\Bitweaver\bit_error_log( 'The user_id for the upload was not set. Defaulted to user_id = '.$pStoreRow['user_id'].' where 1 = ROOT_USER_ID, -1 = ANONYMOUS_USER_ID, other values = big problem.' );
 			}
 		}
 
 		if( !empty( $pStoreRow['upload']['tmp_name'] ) && is_file( $pStoreRow['upload']['tmp_name'] )) {
 			// attachment_id is only set when we are updating the file
-			if( @BitBase::verifyId( $pStoreRow['upload']['attachment_id'] )) {
+			if( BitBase::verifyId( $pStoreRow['upload']['attachment_id'] )) {
 				// if a new file has been uploaded, we need to get some information from the database for the file update
 				$fileInfo = $gBitSystem->mDb->getRow( "
 					SELECT la.`attachment_id`, lf.`file_id`, lf.`file_name`
 					FROM `".BIT_DB_PREFIX."liberty_attachments` la
 					INNER JOIN `".BIT_DB_PREFIX."liberty_files` lf ON ( lf.`file_id` = la.`foreign_id` )
-					WHERE la.`attachment_id` = ?", array( $pStoreRow['upload']['attachment_id'] ));
+					WHERE la.`attachment_id` = ?", [ $pStoreRow['upload']['attachment_id'] ] );
 				$pStoreRow = array_merge( $pStoreRow, $fileInfo );
 			} else {
 				$pStoreRow['attachment_id'] = $gBitSystem->mDb->GenID( 'liberty_attachments_id_seq' );
 			}
 			// try to generate thumbnails for the upload
-			if( isset( $pStoreRow['upload']['thumbnail'] ) ) {
-				$pStoreRow['upload']['thumbnail'] = $pStoreRow['upload']['thumbnail'];
-			} else {
-				$pStoreRow['upload']['thumbnail'] = TRUE;
-			}
+			$pStoreRow['upload']['thumbnail'] = isset( $pStoreRow['upload']['thumbnail'] ) ? $pStoreRow['upload']['thumbnail'] : true;
 
 			// Generic values needed by the storing mechanism
 			$pStoreRow['upload']['source_file'] = $pStoreRow['upload']['tmp_name'];
 
 			// Store all uploaded files in the users storage area
 			if( empty( $pStoreRow['upload']['dest_branch'] )) {
-				$pStoreRow['upload']['dest_branch'] = liberty_mime_get_storage_branch( array( 'sub_dir'=>$pStoreRow['attachment_id'], 'user_id'=>$pStoreRow['user_id'], 'package'=>liberty_mime_get_storage_sub_dir_name( $pStoreRow['upload'] ) ) );
+				$pStoreRow['upload']['dest_branch'] = liberty_mime_get_storage_branch( [ 'sub_dir'=>$pStoreRow['attachment_id'], 'user_id'=>$pStoreRow['user_id'], 'package'=>\Bitweaver\Liberty\liberty_mime_get_storage_sub_dir_name( $pStoreRow['upload'] ) ] );
 			}
 
-			$ret = TRUE;
+			$ret = true;
 		} else {
-			$pStoreRow['errors']['upload'] = tra( 'There was a problem verifying the uploaded file.' );
+			$pStoreRow['errors']['upload'] = KernelTools::tra( 'There was a problem verifying the uploaded file.' );
 		}
 
 		return $ret;
@@ -129,9 +129,9 @@ if( !function_exists( 'mime_default_verify' )) {
  *
  * @param array $pStoreRow File data needed to store details in the database - sanitised and generated in the verify function
  * @access public
- * @return TRUE on success, FALSE on failure - $pStoreRow['errors'] will contain reason
+ * @return bool true on success, false on failure - $pStoreRow['errors'] will contain reason
  */
-if( !function_exists( 'mime_default_update' )) {
+if( !function_exists( '\Bitweaver\Liberty\mime_default_update' )) {
 	function mime_default_update( &$pStoreRow ) {
 		global $gBitSystem;
 
@@ -139,7 +139,7 @@ if( !function_exists( 'mime_default_update' )) {
 		if( BitBase::verifyId( $pStoreRow['attachment_id'] ) && !empty( $pStoreRow['upload'] )) {
 			// Store all uploaded files in the users storage area
 			if( empty( $pStoreRow['dest_branch'] )) {
-				$pStoreRow['dest_branch'] = liberty_mime_get_storage_branch( array( 'sub_dir'=>$pStoreRow['attachment_id'], 'user_id'=>$pStoreRow['user_id'], 'package'=>liberty_mime_get_storage_sub_dir_name( $pStoreRow['upload'] ) ) );
+				$pStoreRow['dest_branch'] = liberty_mime_get_storage_branch( [ 'sub_dir'=>$pStoreRow['attachment_id'], 'user_id'=>$pStoreRow['user_id'], 'package'=>\Bitweaver\Liberty\liberty_mime_get_storage_sub_dir_name( $pStoreRow['upload'] ) ] );
 			}
 
 			if( !empty( $pStoreRow['dest_branch'] ) && !empty( $pStoreRow['file_name'] ) ) {
@@ -148,7 +148,7 @@ if( !function_exists( 'mime_default_update' )) {
 				$file = $path.liberty_mime_get_default_file_name( $pStoreRow['file_name'], $pStoreRow['mime_type'] );
 				if(( $nuke = LibertyMime::validateStoragePath( $path )) && is_dir( $nuke )) {
 					if( !empty( $pStoreRow['unlink_dir'] )) {
-						@unlink_r( $path );
+						@KernelTools::unlink_r( $path );
 						mkdir( $path );
 					} else {
 						@unlink( $file );
@@ -167,7 +167,7 @@ if( !function_exists( 'mime_default_update' )) {
 				// Now we process the uploaded file
 				if( $storagePath = liberty_process_upload( $pStoreRow['upload'] )) {
 					$sql = "UPDATE `".BIT_DB_PREFIX."liberty_files` SET `file_name` = ?, `mime_type` = ?, `file_size` = ?, `user_id` = ? WHERE `file_id` = ?";
-					$gBitSystem->mDb->query( $sql, array( $pStoreRow['upload']['name'], $pStoreRow['upload']['type'], $pStoreRow['upload']['size'], $pStoreRow['user_id'], $pStoreRow['file_id'] ));
+					$gBitSystem->mDb->query( $sql, [ $pStoreRow['upload']['name'], $pStoreRow['upload']['type'], $pStoreRow['upload']['size'], $pStoreRow['user_id'], $pStoreRow['file_id'] ] );
 				}
 
 				// ensure we have the correct guid in the db
@@ -182,7 +182,7 @@ if( !function_exists( 'mime_default_update' )) {
 				);
 			}
 		}
-		return TRUE;
+		return true;
 	}
 }
 
@@ -191,36 +191,36 @@ if( !function_exists( 'mime_default_update' )) {
  *
  * @param array $pStoreRow File data needed to store details in the database - sanitised and generated in the verify function
  * @access public
- * @return TRUE on success, FALSE on failure - $pStoreRow['errors'] will contain reason
+ * @return bool true on success, false on failure - $pStoreRow['errors'] will contain reason
  */
-if( !function_exists( 'mime_default_store' )) {
+if( !function_exists( '\Bitweaver\Liberty\mime_default_store' )) {
 	function mime_default_store( &$pStoreRow ) {
 		global $gBitSystem, $gLibertySystem;
-		$ret = FALSE;
+		$ret = false;
 
 		// take care of the uploaded file and insert it into the liberty_files and liberty_attachments tables
 		if( $storagePath = liberty_process_upload( $pStoreRow['upload'], empty( $pStoreRow['upload']['copy_file'] ))) {
 			// add row to liberty_files
-			$storeHash = array(
-				"file_name"    => substr( $pStoreRow['upload']['name'], 0, 250 ),
+			$storeHash = [
+				"file_name"    => $pStoreRow['upload']['name'],
 				"file_id"      => $gBitSystem->mDb->GenID( 'liberty_files_id_seq' ),
 				"mime_type"    => $pStoreRow['upload']['type'],
 				"file_size"    => (int)$pStoreRow['upload']['size'],
 				"user_id"      => $pStoreRow['user_id'],
-			);
+			];
 			$gBitSystem->mDb->associateInsert( BIT_DB_PREFIX."liberty_files", $storeHash );
 
 			// add the data into liberty_attachments to make this file available as attachment
-			$storeHash = array(
+			$storeHash = [
 				"attachment_plugin_guid" => !empty( $pStoreRow['attachment_plugin_guid'] ) ? $pStoreRow['attachment_plugin_guid'] : PLUGIN_MIME_GUID_DEFAULT,
 				"attachment_id"          => $pStoreRow['attachment_id'],
 				"content_id"             => $pStoreRow['content_id'],
 				"foreign_id"             => $storeHash['file_id'],
 				"user_id"                => $pStoreRow['user_id'],
-			);
+			];
 			$gBitSystem->mDb->associateInsert( BIT_DB_PREFIX."liberty_attachments", $storeHash );
 
-			$ret = TRUE;
+			$ret = true;
 		} else {
 			$pStoreRow['errors']['liberty_process'] = "There was a problem processing the file.";
 		}
@@ -233,29 +233,29 @@ if( !function_exists( 'mime_default_store' )) {
  *
  * @param array $pFileHash contains all file information
  * @access public
- * @return TRUE on success, FALSE on failure - ['errors'] will contain reason for failure
+ * @return bool true on success, false on failure - ['errors'] will contain reason for failure
  */
-if( !function_exists( 'mime_default_load' )) {
+if( !function_exists( '\Bitweaver\Liberty\mime_default_load' )) {
 	function mime_default_load( $pFileHash, &$pPrefs ) {
 		global $gBitSystem, $gLibertySystem;
-		$ret = FALSE;
-		if( @BitBase::verifyId( $pFileHash['attachment_id'] )) {
+		$ret = false;
+		if( BitBase::verifyId( $pFileHash['attachment_id'] )) {
 			$query = "
 				SELECT la.`attachment_id`, la.`content_id`, la.`attachment_plugin_guid`, la.`foreign_id`, la.`user_id`, la.`is_primary`, la.`pos`, la.`error_code`, la.`caption`, la.`hits` AS `downloads`,
 					lf.`file_id`, lf.`user_id`, lf.`file_name`, lf.`file_size`, lf.`mime_type`
 				FROM `".BIT_DB_PREFIX."liberty_attachments` la
 				LEFT OUTER JOIN `".BIT_DB_PREFIX."liberty_files` lf ON( la.`foreign_id` = lf.`file_id` )
 				WHERE la.`attachment_id`=?";
-			if( $row = $gBitSystem->mDb->getRow( $query, array( $pFileHash['attachment_id'] ))) {
+			if( $row = $gBitSystem->mDb->getRow( $query, [ $pFileHash['attachment_id'] ] ) ) {
 				$ret = array_merge( $pFileHash, $row );
 				$storageName = basename( $row['file_name'] );
 				// compatibility with _FILES hash
 				$row['name'] = $storageName;
 				$defaultFileName = liberty_mime_get_default_file_name( $row['file_name'], $row['mime_type'] );
-				$storageBranchPath = liberty_mime_get_storage_branch( array( 'sub_dir' => $row['attachment_id'], 'user_id' =>$row['user_id'], 'package' => liberty_mime_get_storage_sub_dir_name( $row ) ) );
+				$storageBranchPath = liberty_mime_get_storage_branch( [ 'sub_dir' => $row['attachment_id'], 'user_id' =>$row['user_id'], 'package' => \Bitweaver\Liberty\liberty_mime_get_storage_sub_dir_name( $row ) ] );
 				$storageBranch = $storageBranchPath.$defaultFileName;
 				if( !file_exists( STORAGE_PKG_PATH.$storageBranch ) ) {
-					$storageBranch = liberty_mime_get_storage_branch( array( 'sub_dir' => $row['attachment_id'], 'user_id' =>$row['user_id'], 'package' => liberty_mime_get_storage_sub_dir_name( $row ) ) ).$storageName;
+					$storageBranch = liberty_mime_get_storage_branch( [ 'sub_dir' => $row['attachment_id'], 'user_id' =>$row['user_id'], 'package' => \Bitweaver\Liberty\liberty_mime_get_storage_sub_dir_name( $row ) ] ).$storageName;
 				}
 
 				// this will fetch the correct thumbnails
@@ -268,15 +268,13 @@ if( !function_exists( 'mime_default_load' )) {
 				$ret['thumbnail_url'] = liberty_fetch_thumbnails( $thumbHash );
 				// indicate that this is a mime thumbnail
 				if( !empty( $ret['thumbnail_url']['medium'] ) && strpos( $ret['thumbnail_url']['medium'], '/mime/' )) {
-					$ret['thumbnail_is_mime'] = TRUE;
+					$ret['thumbnail_is_mime'] = true;
 				}
 
 				// pretty URLs
-				if( $gBitSystem->isFeatureActive( "pretty_urls" ) || $gBitSystem->isFeatureActive( "pretty_urls_extended" )) {
-					$ret['display_url'] = LIBERTY_PKG_URL."view/file/".$row['attachment_id'];
-				} else {
-					$ret['display_url'] = LIBERTY_PKG_URL."view_file.php?attachment_id=".$row['attachment_id'];
-				}
+				$ret['display_url'] = $gBitSystem->isFeatureActive( "pretty_urls" ) || $gBitSystem->isFeatureActive( "pretty_urls_extended" )
+					? LIBERTY_PKG_URL."view/file/".$row['attachment_id']
+					: LIBERTY_PKG_URL."view_file.php?attachment_id=".$row['attachment_id'];
 
 				// legacy table data was named storage path and included a partial path. strip out any path just in case
 				$ret['file_name']    = $storageName;
@@ -310,12 +308,12 @@ if( !function_exists( 'mime_default_load' )) {
  *
  * @param array $pFileHash Basically the same has as returned by the load function
  * @access public
- * @return TRUE on success, FALSE on failure - $pParamHash['errors'] will contain reason for failure
+ * @return bool true on success, false on failure - $pParamHash['errors'] will contain reason for failure
  */
-if( !function_exists( 'mime_default_download' )) {
+if( !function_exists( '\Bitweaver\Liberty\mime_default_download' )) {
 	function mime_default_download( &$pFileHash ) {
 		global $gBitSystem;
-		$ret = FALSE;
+		$ret = false;
 
 		// Check to see if the file actually exists
 		if( !empty( $pFileHash['source_file'] ) && is_readable( $pFileHash['source_file'] )) {
@@ -335,8 +333,8 @@ if( !function_exists( 'mime_default_download' )) {
 			header( "Expires: 0" );
 			header( "Accept-Ranges: bytes" );
 			header( "Pragma: public" );
-			header( "Last-Modified: ".gmdate( "D, d M Y H:i:s T", $pFileHash['last_modified'] ), TRUE, 200 );
-			header( "Content-Disposition: attachment; filename*=UTF-8''".rawurlencode( $pFileHash['file_name'] ) );
+			header( "Last-Modified: ".gmdate( "D, d M Y H:i:s T", $pFileHash['last_modified'] ), true, 200 );
+			header( 'Content-Disposition: attachment; filename="'.$pFileHash['file_name'].'"' );
 			header( "Content-type: ".$pFileHash['mime_type'] );
 			header( "Content-Description: File Transfer" );
 			header( "Content-Length: ".filesize( $pFileHash['source_file'] ));
@@ -346,9 +344,9 @@ if( !function_exists( 'mime_default_download' )) {
 			@ob_clean();
 			flush();
 			readfile( $pFileHash['source_file'] );
-			$ret = TRUE;
+			$ret = true;
 		} else {
-			$pFileHash['errors']['no_file'] = tra( 'No matching file found.' );
+			$pFileHash['errors']['no_file'] = KernelTools::tra( 'No matching file found.' );
 		}
 		return $ret;
 	}
@@ -359,26 +357,25 @@ if( !function_exists( 'mime_default_download' )) {
  *
  * @param array $pParamHash The contents of LibertyMime->mInfo
  * @access public
- * @return TRUE on success, FALSE on failure - $pParamHash['errors'] will contain reason for failure
+ * @return bool true on success, false on failure - $pParamHash['errors'] will contain reason for failure
  */
-if( !function_exists( 'mime_default_expunge' )) {
+if( !function_exists( '\Bitweaver\Liberty\mime_default_expunge' )) {
 	function mime_default_expunge( $pAttachmentId ) {
 		global $gBitSystem, $gBitUser;
-		$ret = FALSE;
-		if( @BitBase::verifyId( $pAttachmentId )) {
+		$ret = false;
+		if( BitBase::verifyId( $pAttachmentId )) {
 			if( $fileHash = LibertyMime::loadAttachment( $pAttachmentId )) {
 				if( $gBitUser->isAdmin() || $gBitUser->mUserId == $fileHash['user_id'] ) {
 					// make sure this is a valid storage directory before removing it
 					if( !empty( $fileHash['source_file'] ) && ($nuke = LibertyMime::validateStoragePath( $fileHash['source_file'] )) && is_file( $nuke )) {
-						unlink_r( dirname( $nuke ));
+						KernelTools::unlink_r( dirname( $nuke ));
 					}
 					$query = "DELETE FROM `".BIT_DB_PREFIX."liberty_files` WHERE `file_id` = ?";
-					$gBitSystem->mDb->query( $query, array( $fileHash['foreign_id'] ));
-					$ret = TRUE;
+					$gBitSystem->mDb->query( $query, [ $fileHash['foreign_id'] ] );
+					$ret = true;
 				}
 			}
 		}
 		return $ret;
 	}
 }
-?>

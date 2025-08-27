@@ -1,4 +1,6 @@
 <?php
+namespace Bitweaver\Liberty;
+
 /**
  * @version  $Header$
  * @package  liberty
@@ -17,7 +19,7 @@ define( 'DEFAULT_ACCEPTABLE_TAGS', '<a><br><blockquote><cite><code><div><dd><dl>
 		.'<it><img><li><ol><p><pre><span><strong><table><tbody><div><tr><td><th><u><ul>'
 		.'<button><fieldset><form><label><input><option><select><textarea>' );
 
-$pluginParams = array (
+$pluginParams = [
 	// plugin title
 	'title'                    => 'Simple HTML Purification',
 	// help page on bitweaver org that explains this plugin
@@ -25,7 +27,7 @@ $pluginParams = array (
 	// brief description of the plugin
 	'description'              => 'Uses some very niece methods to try to protect against cross site scripting (XSS) attacks. It is known not to pass XSS smoke tests but is less invasive than HTMLPurifier.',
 	// should this plugin be active or not when loaded for the first time
-	'auto_activate'            => FALSE,
+	'auto_activate'            => false,
 	// type of plugin
 	'plugin_type'              => FILTER_PLUGIN,
 	// url to page with options for this plugin
@@ -33,16 +35,16 @@ $pluginParams = array (
 
 	// various filter functions and when they are called
 	// called before the data is parsed
-	'preparse_function'  => 'simplepure_filter',
+	'preparse_function'  => '\Bitweaver\Liberty\simplepure_filter',
 	// called after the data has been parsed
-	//	'postparse_function'      => 'simplepure_postfilter',
+	//	'postparse_function'      => '\Bitweaver\Liberty\simplepure_postfilter',
 	// called before the data is parsed if there is a split
-	'presplit_function'  => 'simplepure_filter',
+	'presplit_function'  => '\Bitweaver\Liberty\simplepure_filter',
 	// called after the data has been parsed if there is a split
-	//	'postsplit_function' => 'simplepure_filter',
+	//	'postsplit_function' => '\Bitweaver\Liberty\simplepure_filter',
 	// called before the data is saved
-	//	'prestore_function'		   => 'simplepure_filter',
-);
+	//	'prestore_function'		   => '\Bitweaver\Liberty\simplepure_filter',
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_FILTERSIMPLEPURIFIER, $pluginParams );
 
 function simplepure_filter( &$pData, &$pFilterHash ) {
@@ -78,4 +80,3 @@ function simplepure_filter( &$pData, &$pFilterHash ) {
 	$pData = str_replace("<!--", "&lt;!--", $pData);
 	$pData = preg_replace("/(\<)(.*?)(--\>)/mi", "".nl2br("\\2")."", $pData);
 }
-?>

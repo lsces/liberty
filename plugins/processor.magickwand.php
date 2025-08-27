@@ -1,4 +1,8 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+
 /**
  * $Header$
  *
@@ -13,20 +17,20 @@
  * 
  * @param array $pFileHash 
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
 function liberty_magickwand_resize_image( &$pFileHash ) {
 	global $gBitSystem;
 	// static var here is crucial
-	static $rgbConverts = array();
+	static $rgbConverts = [];
 	$magickWand = NewMagickWand();
-	$pFileHash['error'] = NULL;
-	$ret = NULL;
+	$pFileHash['error'] = null;
+	$ret = null;
 
 	if( !empty( $pFileHash['source_file'] ) && is_file( $pFileHash['source_file'] ) && filesize( $pFileHash['source_file'] ) ) {
 		if( $error = liberty_magickwand_check_error( MagickReadImage( $magickWand, $pFileHash['source_file'] ), $magickWand ) ) {
 			// $pFileHash['error'] = $error;
-			$destFile = liberty_process_generic( $pFileHash, FALSE );
+			$destFile = liberty_process_generic( $pFileHash, false );
 		} else {
 			if( MagickGetImageColorspace( $magickWand ) == MW_CMYKColorspace ) {
 //				These two lines are a hack needed for version of Ghostscript less that 8.60
@@ -34,7 +38,7 @@ function liberty_magickwand_resize_image( &$pFileHash ) {
 				MagickSetImageProfile( $magickWand, 'ICC', file_get_contents( UTIL_PKG_PATH.'icc/USWebCoatedSWOP.icc' ) );
 				MagickProfileImage( $magickWand, 'ICC', file_get_contents( UTIL_PKG_PATH.'icc/srgb.icm' ));
 				MagickSetImageColorspace( $magickWand, MW_RGBColorspace );
-				$pFileHash['colorspace_conversion'] = TRUE;
+				$pFileHash['colorspace_conversion'] = true;
 			}
 			MagickSetImageCompressionQuality( $magickWand, $gBitSystem->getConfig( 'liberty_thumbnail_quality', 85 ));
 			$iwidth = round( MagickGetImageWidth( $magickWand ) );
@@ -71,7 +75,7 @@ function liberty_magickwand_resize_image( &$pFileHash ) {
 			} else {
 				list( $type, $mimeExt ) = preg_split( '#/#', strtolower( $pFileHash['type'] ) );
 			}
-			$replaced = FALSE;
+			$replaced = false;
 			$mimeExt = preg_replace( "!^(x-)?(jpeg|png|gif)$!", "$2", $mimeExt, -1, $replaced );
 			if( $replaced ) {
 				$targetType = $mimeExt;
@@ -82,11 +86,8 @@ function liberty_magickwand_resize_image( &$pFileHash ) {
 				$destExt = '.jpg';
 			}
 
-			if( !empty( $pFileHash['dest_file'] ) ) {
-				$destFile = $pFileHash['dest_file'];
-			} else {
-				$destFile = STORAGE_PKG_PATH.$pFileHash['dest_branch'].$pFileHash['dest_base_name'].$destExt;
-			}
+			$destFile = $pFileHash['dest_file'] ?? STORAGE_PKG_PATH.$pFileHash['dest_branch'].$pFileHash['dest_base_name'].$destExt;
+
 			if( !empty( $pFileHash['max_width'] ) && !empty( $pFileHash['max_height'] ) && ( ($pFileHash['max_width'] < $iwidth || $pFileHash['max_height'] < $iheight ) || $mimeExt != $targetType ) || !empty( $pFileHash['colorspace_conversion'] ) ) {
 				$pFileHash['name'] = basename( $destFile );
 				// Alternate Filter settings can seen here http://www.dylanbeattie.net/magick/filters/result.html
@@ -115,17 +116,17 @@ function liberty_magickwand_resize_image( &$pFileHash ) {
  * 
  * @param array $pFileHash 
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
 function liberty_magickwand_rotate_image( &$pFileHash ) {
-	$ret = FALSE;
+	$ret = false;
 	$magickWand = NewMagickWand();
-	$pFileHash['error'] = NULL;
+	$pFileHash['error'] = null;
 	if( !empty( $pFileHash['source_file'] ) && is_file( $pFileHash['source_file'] ) ) {
 		if( $error = liberty_magickwand_check_error( MagickReadImage( $magickWand, $pFileHash['source_file'] ), $magickWand ) ) {
 			$pFileHash['error'] = $error;
 		} elseif( empty( $pFileHash['degrees'] ) || !is_numeric( $pFileHash['degrees'] ) ) {
-			$pFileHash['error'] = tra( 'Invalid rotation amount' );
+			$pFileHash['error'] = KernelTools::tra( 'Invalid rotation amount' );
 		} else {
 			$bgWand = NewPixelWand('white');
 			if( $error = liberty_magickwand_check_error( MagickRotateImage( $magickWand, $bgWand, $pFileHash['degrees'] ), $magickWand ) ) {
@@ -139,20 +140,20 @@ function liberty_magickwand_rotate_image( &$pFileHash ) {
 		$pFileHash['error'] = "No source file to resize";
 	}
 
-	return( empty( $pFileHash['error'] ) );
+	return empty( $pFileHash['error'] );
 }
 
 /**
  * liberty_magickwand_check_error 
  * 
- * @param array $pResult 
- * @param array $pWand 
+ * @param bool $pResult 
+ * @param bool $pWand 
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return string|bool true on success, false on failure - mErrors will contain reason for failure
  */
 function liberty_magickwand_check_error( $pResult, $pWand ) {
-	$ret = FALSE;
-	if( $pResult === FALSE && WandHasException( $pWand ) ) {
+	$ret = false;
+	if( $pResult === false && WandHasException( $pWand ) ) {
 		$ret = 'An image processing error occurred : '.WandGetExceptionString($pWand);
 	}
 	return $ret;
@@ -161,20 +162,18 @@ function liberty_magickwand_check_error( $pResult, $pWand ) {
 /**
  * liberty_magickwand_can_thumbnail_image 
  * 
- * @param array $pMimeType 
+ * @param string $pMimeType 
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
 function liberty_magickwand_can_thumbnail_image( $pMimeType ) {
 	global $gBitSystem;
-	$ret = FALSE;
+	$ret = false;
 	if( !empty( $pMimeType ) ) {
 		// allow images, pdf, and postscript thumbnailing (eps, ai, etc...)
-		if( $gBitSystem->isFeatureActive( 'liberty_thumbnail_pdf' )) {
-			$ret = preg_match( '/(^image|pdf$|postscript$)/i', $pMimeType );
-		} else {
-			$ret = preg_match( '/^image/i', $pMimeType );
-		}
+		$ret = $gBitSystem->isFeatureActive( 'liberty_thumbnail_pdf' )
+			? preg_match( '/(^image|pdf$|postscript$)/i', $pMimeType )
+			: preg_match( '/^image/i', $pMimeType );
 	}
 	return $ret;
 }
@@ -185,10 +184,10 @@ function liberty_magickwand_can_thumbnail_image( $pMimeType ) {
  * @param array $pFileHash
  * @param string $pColorSpace - target color space, only 'grayscale' is currently supported
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
 function liberty_magickwand_convert_colorspace_image( &$pFileHash, $pColorSpace ) {
-	$ret = FALSE;
+	$ret = false;
 	if( !empty( $pFileHash['source_file'] ) && is_file( $pFileHash['source_file'] ) ) {
 		$magickWand = NewMagickWand();
 		if( $error = liberty_magickwand_check_error( MagickReadImage( $magickWand, $pFileHash['source_file'] ), $magickWand ) ) {
@@ -198,7 +197,7 @@ function liberty_magickwand_convert_colorspace_image( &$pFileHash, $pColorSpace 
 			switch( strtolower( $pColorSpace ) ) {
 				case 'grayscale':
 					if( MagickGetImageColorspace( $magickWand ) == MW_GRAYColorspace ) {
-						$ret = TRUE;
+						$ret = true;
 					} else {
 						MagickSetImageColorspace( $magickWand, MW_GRAYColorspace );
 						if( empty( $pFileHash['dest_file'] ) ) {
@@ -207,7 +206,7 @@ function liberty_magickwand_convert_colorspace_image( &$pFileHash, $pColorSpace 
 						if( $error = liberty_magickwand_check_error( MagickWriteImage( $magickWand, $pFileHash['dest_file'] ), $magickWand ) ) {
 							bit_error_log( "MagickWriteImage Failed:$error ( $pFileHash[source_file] )" );
 						} else {
-							$ret = TRUE;
+							$ret = true;
 						}
 					}
 					break;
@@ -217,4 +216,3 @@ function liberty_magickwand_convert_colorspace_image( &$pFileHash, $pColorSpace 
 	}
 	return $ret;
 }
-?>

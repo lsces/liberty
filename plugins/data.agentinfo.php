@@ -1,4 +1,8 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -24,18 +28,18 @@
  */
 define( 'PLUGIN_GUID_DATAAGENTINFO', 'dataagentinfo' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams = [
 	'tag' => 'AGENTINFO',
-	'auto_activate' => FALSE,
-	'requires_pair' => FALSE,
-	'load_function' => 'data_agentinfo',
+	'auto_activate' => false,
+	'requires_pair' => false,
+	'load_function' => '\data_agentinfo',
 	'title' => 'AgentInfo',
 	'help_page' => 'DataPluginAgentInfo',
-	'description' => tra("This plugin will display the viewer's IP address, the Browser they are using, or the info about the site's Server software."),
-	'help_function' => 'data_agentinfo_help',
+	'description' => KernelTools::tra("This plugin will display the viewer's IP address, the Browser they are using, or the info about the site's Server software."),
+	'help_function' => '\data_agentinfo_help',
 	'syntax' => "{AGENTINFO info= }",
 	'plugin_type' => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAAGENTINFO, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAAGENTINFO );
 
@@ -46,20 +50,20 @@ function data_agentinfo_help() {
 	$help =
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>info</td>'
-				.'<td>' . tra( "string") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "Show information about the Browser being used.") . '<br />'
-				.'<strong>ip</strong>: ' . tra( "To get the client\'s IP address (default)" ) . '<br />'
-				.'<strong>browser</strong>: ' . tra( "To get the clients Browser infromation." ) . '<br />'
-				.'<strong>server</strong>: ' . tra( "To get the site\'s server software" ) . '</td>'
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "Show information about the Browser being used.") . '<br />'
+				.'<strong>ip</strong>: ' . KernelTools::tra( "To get the client\'s IP address (default)" ) . '<br />'
+				.'<strong>browser</strong>: ' . KernelTools::tra( "To get the clients Browser infromation." ) . '<br />'
+				.'<strong>server</strong>: ' . KernelTools::tra( "To get the site\'s server software" ) . '</td>'
 			.'</tr>'
 		.'</table>'
-		. tra("Example: ") . "{AGENTINFO info='browser'}";
+		. KernelTools::tra("Example: ") . "{AGENTINFO info='browser'}";
 	return $help;
 }
 
@@ -81,4 +85,3 @@ function data_agentinfo($data, $params) {
 	}
 
 }
-?>

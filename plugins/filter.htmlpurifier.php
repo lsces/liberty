@@ -5,6 +5,9 @@
  * @subpackage plugins_filter
  */
 
+ namespace Bitweaver\Liberty;
+ use Bitweaver\KernelTools;
+ 
 /**
  * definitions ( guid character limit is 16 chars )
  */
@@ -20,7 +23,7 @@ $pluginParams = array (
 	// brief description of the plugin
 	'description'              => 'Uses <a href="http://htmlpurifier.org">HTMLPurifier</a> to cleanup the HTML submitted to your site and ensure that it is standards compliant and does not contain anything malicious. It is also used to ensure that the various places that input is split for previews does not cause bad markup to break the page. This filter is <strong>highly</strong> recommended if you are allowing HTML but is still good for sites that are not using thse formats for the ability to cleanup markup which has been split for preview properly though this may disable certain plugins that insert non standards compliant code.',
 	// should this plugin be active or not when loaded for the first time
-	'auto_activate'            => FALSE,
+	'auto_activate'            => false,
 	// type of plugin
 	'plugin_type'              => FILTER_PLUGIN,
 	// url to page with options for this plugin
@@ -28,13 +31,13 @@ $pluginParams = array (
 
 	// various filter functions and when they are called
 	// called before the data is parsed
-	//	'pre_function'       => 'htmlpure_filter',
+	//	'pre_function'       => '\Bitweaver\Liberty\htmlpure_filter',
 	// called after the data has been parsed
-	'preparse_function'  => 'htmlpure_filter',
+	'preparse_function'  => '\Bitweaver\Liberty\htmlpure_filter',
 	// called before the data is parsed if there is a split
-	//	'presplit_function'  => 'htmlpure_filter',
+	//	'presplit_function'  => '\Bitweaver\Liberty\htmlpure_filter',
 	// called after the data has been parsed if there is a split
-	'postsplit_function' => 'htmlpure_filter',
+	'postsplit_function' => '\Bitweaver\Liberty\htmlpure_filter',
 );
 $gLibertySystem->registerPlugin( PLUGIN_GUID_FILTERHTMLPURIFIER, $pluginParams );
 
@@ -44,14 +47,14 @@ function htmlpure_filter( &$pString, &$pFilterHash, $pObject ) {
 	if (!isset($gHtmlPurifier)) {
 		$pear_version = false;
 
-		if (@include_once("PEAR.php")) {		
-			if(@include_once("HTMLPurifier.php")) {
+		if (@include_once "PEAR.php") {		
+			if(@include_once UTIL_PKG_INCLUDE_PATH."/htmlpurifier-4.15.0/library/HTMLPurifier.php") {
 				// for backward compatibility checks
-				$htmlp_version = NULL;
+				$htmlp_version = null;
 
 				// If using 3.10+
 				if(!class_exists("HTMLPurifier_Config")) {
-					@include_once("HTMLPurifier.auto.php");
+					@include_once "HTMLPurifier.auto.php";
 					$auto_config = true;
 					$htmlp_version = 3.1;
 				}
@@ -60,7 +63,7 @@ function htmlpure_filter( &$pString, &$pFilterHash, $pObject ) {
 
 
 				// As suggested here:  http://www.bitweaver.org/forums/index.php?t=8554
-				$gHtmlPurifier = new HTMLPurifier($config);
+				$gHtmlPurifier = new \HTMLPurifier($config);
 
 				// how plugins are registered changed in v3.1 
 				// old way of adding plugins before v3.1
@@ -122,16 +125,16 @@ function htmlpure_filter( &$pString, &$pFilterHash, $pObject ) {
 		echo "<br/><hr/><br/>". $renderer->render($diff);
 		 */
 	} else {
-		bit_error_log("HTMLPurifier not installed. Install with: pear channel-discover htmlpurifier.org; pear install hp/HTMLPurifier;");
+		\Bitweaver\bit_error_log("HTMLPurifier not installed. Install with: pear channel-discover htmlpurifier.org; pear install hp/HTMLPurifier;");
 	}
 
 	return $pString;
 }
 
-function htmlpure_getDefaultConfig( &$htmlp_version, $pObject=NULL ){
+function htmlpure_getDefaultConfig( &$htmlp_version, $pObject=null ){
 	global $gBitSystem;
 
-	$config = HTMLPurifier_Config::createDefault();
+	$config = \HTMLPurifier_Config::createDefault();
 	// Necessary setup for custom configuration I think. http://htmlpurifier.org/docs/enduser-customize.html
 	//$config->set( 'HTML.DefinitionID', STORAGE_PKG_PATH );
 	//$config->set('HTML.DefinitionRev', 1);
@@ -155,22 +158,20 @@ function htmlpure_getDefaultConfig( &$htmlp_version, $pObject=NULL ){
 		$config->set('HTML.XHTML', true);
 	}
 
-	$hasAdmin = FALSE;
+	$hasAdmin = false;
 	if( is_a( $pObject, 'LibertyContent' ) ) {
 		// check to see if last editor has ability to admin content, if so, ease up on the purification restraints
-		if( $gBitSystem->isPackageActive( 'protector' )) {
-			$query = "SELECT urp.`role_id` 
+		$query = $gBitSystem->isPackageActive( 'protector' )
+			? "SELECT urp.`role_id` 
 					  FROM `".BIT_DB_PREFIX."users_roles_map` urm 
 						INNER JOIN `".BIT_DB_PREFIX."users_role_permissions` urp ON (urp.`role_id`=urm.`role_id`) 
-					  WHERE urm.`user_id`=? AND (urp.`perm_name`=? OR urp.`perm_name`='p_admin')";
-		} else {
-			$query = "SELECT ugp.`group_id` 
+					  WHERE urm.`user_id`=? AND (urp.`perm_name`=? OR urp.`perm_name`='p_admin')"
+			: "SELECT ugp.`group_id` 
 				  FROM `".BIT_DB_PREFIX."users_groups_map` ugm 
 					INNER JOIN `".BIT_DB_PREFIX."users_group_permissions` ugp ON (ugp.`group_id`=ugm.`group_id`) 
 				  WHERE ugm.`user_id`=? AND (ugp.`perm_name`=? OR ugp.`perm_name`='p_admin')";
-		}
 		// cache for 15 minutes
-		$hasAdmin = $pObject->mDb->getOne( $query, array( $pObject->getField( 'modifier_user_id' ), $pObject->mAdminContentPerm ), NULL, NULL, 900 );
+		$hasAdmin = $pObject->mDb->getOne( $query, array( $pObject->getField( 'modifier_user_id' ), $pObject->mAdminContentPerm ), null, null, 900 );
 	}
 
 	if( $hasAdmin ) {
@@ -178,11 +179,11 @@ function htmlpure_getDefaultConfig( &$htmlp_version, $pObject=NULL ){
 		$config->set( 'CSS.AllowTricky', true );
 
 		$css = $config->getCSSDefinition();
-        $css->info['position'] = new HTMLPurifier_AttrDef_CSS_Composite(array( new HTMLPurifier_AttrDef_Enum(array('absolute', 'fixed', 'relative', 'static', 'inherit')) ) );
-        $css->info['top'] = new HTMLPurifier_AttrDef_CSS_Composite(array( new HTMLPurifier_AttrDef_CSS_Length()));
-        $css->info['left'] = new HTMLPurifier_AttrDef_CSS_Composite(array( new HTMLPurifier_AttrDef_CSS_Length()));
-        $css->info['bottom'] = new HTMLPurifier_AttrDef_CSS_Composite(array( new HTMLPurifier_AttrDef_CSS_Length()));
-        $css->info['right'] = new HTMLPurifier_AttrDef_CSS_Composite(array( new HTMLPurifier_AttrDef_CSS_Length()));
+        $css->info['position'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_Enum(['absolute', 'fixed', 'relative', 'static', 'inherit'] ) ] );
+        $css->info['top'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_CSS_Length() ] );
+        $css->info['left'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_CSS_Length() ] );
+        $css->info['bottom'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_CSS_Length() ] );
+        $css->info['right'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_CSS_Length() ] );
 //$def =& $config->getHTMLDefinition();
 //$def->addAttribute('a', 'target', 'Enum#_blank,_self,_target,_top');
 	} else {
@@ -207,18 +208,18 @@ function htmlpure_getDefaultConfig( &$htmlp_version, $pObject=NULL ){
 		// and check for the right property here
 		// so new plugins are just drop in place.
 		if ( $htmlp_version >= 3.1 ){
-			$custom_filters = array();
+			$custom_filters = [];
 
 			// Disable included YouTube filter, we have our own
 			$config->set('Filter.YouTube', false);
 
 			if ($gBitSystem->isFeatureActive('htmlpure_allow_youtube')) {
-				require_once(UTIL_PKG_INCLUDE_PATH.'htmlpure/Filter/YouTube.php');
-				$custom_filters[] = new HTMLPurifier_Filter_YouTube();
+				require_once UTIL_PKG_INCLUDE_PATH.'htmlpure/Filter/YouTube.php';
+				$custom_filters[] = new \HTMLPurifier_Filter_YouTube();
 			}
 			if ($gBitSystem->isFeatureActive('htmlpure_allow_cnbc')) {
-				require_once(UTIL_PKG_INCLUDE_PATH.'htmlpure/Filter/CNBC.php');
-				$custom_filters[] = new HTMLPurifier_Filter_CNBC();
+				require_once UTIL_PKG_INCLUDE_PATH.'htmlpure/Filter/CNBC.php';
+				$custom_filters[] = new \HTMLPurifier_Filter_CNBC();
 			}
 
 			if( !empty( $custom_filters ) ){
@@ -239,14 +240,14 @@ function htmlpure_getDefaultConfig( &$htmlp_version, $pObject=NULL ){
 
 		if ($gBitSystem->getConfig('htmlpure_force_nofollow', 'y') == 'y') {
 			if( !class_exists("HTMLPurifier_AttrTransform_ForceValue") ){
-				class HTMLPurifier_AttrTransform_ForceValue extends HTMLPurifier_AttrTransform
+				class HTMLPurifier_AttrTransform_ForceValue extends \HTMLPurifier_AttrTransform
 				{
-					var $name, $value;
-					function HTMLPurifier_AttrTransform_ForceValue($name, $value) {
+					public $name, $value;
+					public function __construct($name, $value) {
 						$this->name  = $name;
 						$this->value = $value;
 					}
-					function transform($attr, $config, $context) {
+					public function transform($attr, $config, $context) {
 						$attr[$this->name] = $this->value;
 						return $attr;
 					}
@@ -263,13 +264,13 @@ function htmlpure_legacyAddFilters(){
 	global $gHtmlPurifier, $gBitSystem;
 
 	if ( $gBitSystem->isFeatureActive('htmlpure_allow_youtube') ) {
-		require_once(UTIL_PKG_INCLUDE_PATH.'htmlpure/Filter/YouTube.php');
+		require_once UTIL_PKG_INCLUDE_PATH.'htmlpure/Filter/YouTube.php';
 
-		$gHtmlPurifier->addFilter(new HTMLPurifier_Filter_YouTube());
+		$gHtmlPurifier->addFilter(new \HTMLPurifier_Filter_YouTube());
 	}
 	if ($gBitSystem->isFeatureActive('htmlpure_allow_cnbc')) {
-		require_once(UTIL_PKG_INCLUDE_PATH.'htmlpure/Filter/CNBC.php');
-		$gHtmlPurifier->addFilter(new HTMLPurifier_Filter_CNBC());
+		require_once UTIL_PKG_INCLUDE_PATH.'htmlpure/Filter/CNBC.php';
+		$gHtmlPurifier->addFilter(new \HTMLPurifier_Filter_CNBC());
 	}
 }
 
@@ -299,4 +300,3 @@ function htmlpure_cleanupPeeTags( $pee ) {
 	return $pee;
 }
 
-?>

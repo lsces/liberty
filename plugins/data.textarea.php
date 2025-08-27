@@ -1,4 +1,9 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyContent;
+
 /**
  * assigned_modules
  *
@@ -14,18 +19,18 @@
  */
 define( 'PLUGIN_GUID_DATAtextarea', 'datatextarea' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams = [
 	'tag' => 'textarea',
-	'auto_activate' => TRUE,
-	'requires_pair' => TRUE,
-	'load_function' => 'data_textarea',
+	'auto_activate' => true,
+	'requires_pair' => true,
+	'load_function' => '\data_textarea',
 	'title' => 'Textarea',
 	'help_page' => 'DataPlugintextarea',
-	'description' => tra( "This plugin allows you to easily create a textarea with a number of optional CSS parameters." ),
-	'help_function' => 'data_textarea_help',
+	'description' => KernelTools::tra( "This plugin allows you to easily create a textarea with a number of optional CSS parameters." ),
+	'help_function' => '\data_textarea_help',
 	'syntax' => "{textarea}",
 	'plugin_type' => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAtextarea, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAtextarea );
 
@@ -33,22 +38,22 @@ function data_textarea_help() {
 	$help =
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
-				.'<td>' . tra( "CSS rules or class" ) . '</td>'
-				.'<td>' . tra( "string") . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "This can be any CSS style rule. e.g.: ") . "font='small-caps 250% serif'" .'</td>'
+				.'<td>' . KernelTools::tra( "CSS rules or class" ) . '</td>'
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "This can be any CSS style rule. e.g.: ") . "font='small-caps 250% serif'" .'</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>preset</td>'
-				.'<td>' . tra( "string") . '<br />' . tra( "(optional)" ) . '</td>'
-				.'<td>' . tra( "There are a few presets, which you can use to style with. Presets include: caps, smallcaps, big, small, strikethrough, overline, spaced, nodecor.") .'</td>'
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra( "(optional)" ) . '</td>'
+				.'<td>' . KernelTools::tra( "There are a few presets, which you can use to style with. Presets include: caps, smallcaps, big, small, strikethrough, overline, spaced, nodecor.") .'</td>'
 			.'</tr>'
 		.'</table>'
-		. tra( "Example: " ) . "{span preset=overline font='small-caps 250% serif'}";
+		. KernelTools::tra( "Example: " ) . "{span preset=overline font='small-caps 250% serif'}";
 	return $help;
 }
 
@@ -59,10 +64,10 @@ function  data_textarea( $pData, $pParams, $pCommonObject ) {
 	$style = '';
 	$class = 'form-control ';
 	if (empty($pParams['rows'])) {
-		$pParams['rows'] = (empty($_COOKIE['rows']) ? $gBitSystem->getConfig('liberty_textarea_height', 20) : $_COOKIE['rows']);
+		$pParams['rows'] = empty($_COOKIE['rows']) ? $gBitSystem->getConfig('liberty_textarea_height', 20) : $_COOKIE['rows'];
 	}
 	if (empty($pParams['cols'])) {
-		$pParams['cols'] = (empty($_COOKIE['cols']) ? $gBitSystem->getConfig('liberty_textarea_width', 35) : $_COOKIE['rows']);
+		$pParams['cols'] = empty($_COOKIE['cols']) ? $gBitSystem->getConfig('liberty_textarea_width', 35) : $_COOKIE['rows'];
 	}
 	if (empty($pParams['id'])) {
 		$pParams['id'] = LIBERTY_TEXT_AREA;
@@ -98,9 +103,8 @@ function  data_textarea( $pData, $pParams, $pCommonObject ) {
 
 	// we need to parse the data. we shouldn't cache this to avoid problems with the regular cache file
 	$parseHash = $pCommonObject->mInfo;
-	$parseHash['no_cache'] = TRUE;
+	$parseHash['no_cache'] = true;
 	$parseHash['data'] = $pData;
 	$parsedData = LibertyContent::parseDataHash( $parseHash, $pCommonObject );
-	return( '<textarea '.$attributes.( !empty( $class ) ? 'class="'.$class.'" ' : '' ).'style="'.$style.'">'.$parsedData.'</textarea>' );
+	return '<textarea '.$attributes.( !empty( $class ) ? 'class="'.$class.'" ' : '' ).'style="'.$style.'">'.$parsedData.'</textarea>';
 }
-?>

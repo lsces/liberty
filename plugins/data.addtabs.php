@@ -1,4 +1,9 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\Liberty\LibertyBase;
+use Bitweaver\KernelTools;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -23,18 +28,18 @@
 define( 'PLUGIN_GUID_DATAADDTABS', 'dataaddtabs' );
 global $gLibertySystem;
 global $gContent;
-$pluginParams = array (
+$pluginParams = [
 	'tag' => 'ADDTABS',
-	'auto_activate' => FALSE,
-	'requires_pair' => FALSE,
-	'load_function' => 'data_addtabs',
+	'auto_activate' => false,
+	'requires_pair' => false,
+	'load_function' => '\data_addtabs',
 	'title' => 'AddTabs',
 	'help_page' => 'DataPluginAddTabs',
-	'description' => tra("Will join the contents from several sources in a Tabbed Interface."),
-	'help_function' => 'data_addtabs_help',
+	'description' => KernelTools::tra("Will join the contents from several sources in a Tabbed Interface."),
+	'help_function' => '\data_addtabs_help',
 	'syntax' => "{ADDTABS tab1= tab2= tab3= . . . tab99= }",
 	'plugin_type' => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAADDTABS, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAADDTABS );
 
@@ -45,20 +50,20 @@ function data_addtabs_help() {
 	$help =
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>tab1 - tab99</td>'
-				.'<td>' . tra( "numeric") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "Will create a Tab interface on a page. The name on each tab is the name given to the imported page.The value sent with the TabX parameter is a Numeric Content Id. This allows blog posts, images, wiki pages . . . (and more) to be added.")
-				. tra("<br /><strong>Note 1:</strong> A listing of Content Id's can be found ")
-				. '<a href="'.LIBERTY_PKG_URL.'list_content.php" title="Launch BitWeaver Content Browser in New Window" onkeypress="javascript:BitBase.popUpWin(this.href,\'standard\',800,800);" onclick="javascript:BitBase.popUpWin(this.href,\'standard\',800,800);return false;">' . tra( "Here" ) . '</a>'
-				. tra("<br /><strong>Note 2:</strong> The order used when the tabs are specified does not matter. The Tabname does - Tab1 is always first and Tab99 will always be last.</td>")
+				.'<td>' . KernelTools::tra( "numeric") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "Will create a Tab interface on a page. The name on each tab is the name given to the imported page.The value sent with the TabX parameter is a Numeric Content Id. This allows blog posts, images, wiki pages . . . (and more) to be added.")
+				. KernelTools::tra("<br /><strong>Note 1:</strong> A listing of Content Id's can be found ")
+				. '<a href="'.LIBERTY_PKG_URL.'list_content.php" title="Launch BitWeaver Content Browser in New Window" onkeypress="javascript:BitBase.popUpWin(this.href,\'standard\',800,800);" onclick="javascript:BitBase.popUpWin(this.href,\'standard\',800,800);return false;">' . KernelTools::tra( "Here" ) . '</a>'
+				. KernelTools::tra("<br /><strong>Note 2:</strong> The order used when the tabs are specified does not matter. The Tabname does - Tab1 is always first and Tab99 will always be last.</td>")
 			.'</tr>'
 		.'</table>'
-		. tra("Example: ") . '{ADDTABS tab1=15 tab2=12 tab3=11}';
+		. KernelTools::tra("Example: ") . '{ADDTABS tab1=15 tab2=12 tab3=11}';
 	return $help;
 }
 
@@ -82,8 +87,7 @@ function data_addtabs($data, $params) {
 	}
 	$ret .= "</div><script type=\"text/javascript\">//<![CDATA[\nsetupAllTabs()\n//]]></script>";
 	if( !$good ) {
-		$ret = tra("The plugin AddTabs requires valid parameters. Numeric content id numbers can use the parameter names 'tab1' thru 'tab99'");
+		$ret = KernelTools::tra("The plugin AddTabs requires valid parameters. Numeric content id numbers can use the parameter names 'tab1' thru 'tab99'");
 	}
 	return $ret;
 }
-?>

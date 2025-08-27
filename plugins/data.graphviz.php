@@ -1,4 +1,8 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -23,17 +27,18 @@
 
 define( 'PLUGIN_GUID_DATAGRAPHVIZ', 'graphviz' );
 global $gLibertySystem;
-$pluginParams = array ( 'tag' => 'GRAPHVIZ',
-	'auto_activate' => FALSE,
-	'requires_pair' => TRUE,
-	'load_function' => 'data_graphviz',
+$pluginParams = [
+	'tag' => 'GRAPHVIZ',
+	'auto_activate' => false,
+	'requires_pair' => true,
+	'load_function' => '\data_graphviz',
 	'title' => 'GraphViz',
 	'help_page' => 'DataPluginExample',
-	'description' => tra("This plugin renders it's content as a graphviz image (dot or neato). It requies the Image_GraphViz pear plugin and graphviz to be installed: pear install Image_GraphViz"),
-	'help_function' => 'data_graphviz_help',
+	'description' => KernelTools::tra("This plugin renders it's content as a graphviz image (dot or neato). It requies the Image_GraphViz pear plugin and graphviz to be installed: pear install Image_GraphViz"),
+	'help_function' => '\data_graphviz_help',
 	'syntax' => "{GRAPHVIZ}digraph  ... {/GRAPHVIZ}",
 	'plugin_type' => DATA_PLUGIN
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAGRAPHVIZ, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAGRAPHVIZ );
 /*****************
@@ -43,27 +48,27 @@ function data_graphviz_help() {
 	$help =
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>x1</td>'
-				.'<td>' . tra( "string") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "Specifies something / probably to be displayed.")
-					.'<br />' . tra( "The Default = <strong>Sorry About That</strong>")
+				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "Specifies something / probably to be displayed.")
+					.'<br />' . KernelTools::tra( "The Default = <strong>Sorry About That</strong>")
 				.'</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>XXX</td>'
-				.'<td>' . tra( "number") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "Specifies something / probably to be displayed.")
-					.'<br />' . tra( "The Default =") . ' <strong>3</strong> ' . tra( "Which means - What")
+				.'<td>' . KernelTools::tra( "number") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "Specifies something / probably to be displayed.")
+					.'<br />' . KernelTools::tra( "The Default =") . ' <strong>3</strong> ' . KernelTools::tra( "Which means - What")
 				.'</td>'
 			.'</tr>'
  		.'</table>'
-		. tra("Example: ") . "{EXAM x1=' ' x2=5 }<br />"
-		. tra("This will display");
+		. KernelTools::tra("Example: ") . "{EXAM x1=' ' x2=5 }<br />"
+		. KernelTools::tra("This will display");
 	return $help;
 }
 /****************
@@ -77,10 +82,10 @@ function data_graphviz($data, $params) {
 	$temppath = TEMP_PKG_PATH.'GraphViz/';
 			
 	if( !is_dir( $temppath ) ) {
-		mkdir_p( $temppath );
+		KernelTools::mkdir_p( $temppath );
 	}
 	if( !is_dir( $storagepath ) ) {
-		mkdir_p( $storagepath );
+		KernelTools::mkdir_p( $storagepath );
 	}
 	
 	$file = md5( $data );
@@ -89,10 +94,10 @@ function data_graphviz($data, $params) {
 	$pngURL = $storageurl . $file . '.png';
 	
 	if( !file_exists( $pngFile ) ) {
-		if( @include_once('PEAR.php') ) {
-			if(@include_once( 'Image/GraphViz.php' ) ) {
-				$graph = new Image_GraphViz;
-				$error = '<div class=error>'.tra("Unable to write temporary file. Please check your server configuration.").'</div>';	
+		if( @include_once 'PEAR.php' ) {
+			if(@include_once UTIL_PKG_INCLUDE_PATH.'pear/Image/GraphViz.php' ) {
+				$graph = new \Image_GraphViz;
+				$error = '<div class=error>'.KernelTools::tra("Unable to write temporary file. Please check your server configuration.").'</div>';	
 				if (!$fp = fopen($dotFile, 'w')) {
 					return $error;
 				}
@@ -106,18 +111,17 @@ function data_graphviz($data, $params) {
 				
 				// If it still isn't there....
 				if (!file_exists($pngFile)) {
-					return '<div class=error>'.tra("Unable to generate graphviz image file. Please check your data.").'</div>';
+					return '<div class=error>'.KernelTools::tra("Unable to generate graphviz image file. Please check your data.").'</div>';
 				}
 			}
 			else {
-				return "<div class=error>".tra("The Image_Graphviz pear plugin is not installed. Install with `pear install Image_Graphviz`.")."</div>";
+				return "<div class=error>".KernelTools::tra("The Image_Graphviz pear plugin is not installed. Install with `pear install Image_Graphviz`.")."</div>";
 			}
 		}
 		else {		   
-			return "<div class=error>".tra("PEAR and the Image_Graphviz pear plugin are not installed.")."</div>";
+			return "<div class=error>".KernelTools::tra("PEAR and the Image_Graphviz pear plugin are not installed.")."</div>";
 		}
 	}
 	return "<img src=\"$pngURL\"/> ";
 
 }
-?>

@@ -1,4 +1,6 @@
 <?php
+namespace Bitweaver\Liberty;
+
 /**
  * @version  $Revision$
  * @package  liberty
@@ -11,7 +13,7 @@ global $gLibertySystem;
  */
 define( 'PLUGIN_GUID_BITHTML', 'bithtml' );
 
-$pluginParams = array (
+$pluginParams = [
 	'load_function'   => 'bithtml_parse_data',
 	'verify_function' => 'bithtml_verify_data',
 	'description'     => 'HTML Syntax Format Parser',
@@ -20,7 +22,7 @@ $pluginParams = array (
 	'help_page'       => 'HTMLSyntax',
 	'plugin_type'     => FORMAT_PLUGIN,
 	'linebreak'       => '<br />'
-);
+];
 
 $gLibertySystem->registerPlugin( PLUGIN_GUID_BITHTML, $pluginParams );
 
@@ -31,4 +33,3 @@ function bithtml_verify_data( &$pParamHash ) {
 function bithtml_parse_data( &$pParseHash, &$pCommonObject ) {
 	return $pParseHash['data'];
 }
-?>

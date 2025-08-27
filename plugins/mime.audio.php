@@ -1,4 +1,9 @@
 <?php
+
+namespace Bitweaver\Liberty;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
+
 /**
  * @version		$Header$
  *
@@ -21,7 +26,7 @@ global $gLibertySystem;
  */
 define( 'PLUGIN_MIME_GUID_AUDIO', 'mimeaudio' );
 
-$pluginParams = array (
+$pluginParams = [
 	// Set of functions and what they are called in this paricular plugin
 	// Use the GUID as your namespace
 	'preload_function'    => 'mime_audio_preload',
@@ -44,26 +49,26 @@ $pluginParams = array (
 	'plugin_settings_url' => LIBERTY_PKG_URL.'admin/plugins/mime_audio.php',
 	// This should be the same for all mime plugins
 	'plugin_type'         => MIME_PLUGIN,
-	// Set this to TRUE if you want the plugin active right after installation
-	'auto_activate'       => FALSE,
+	// Set this to true if you want the plugin active right after installation
+	'auto_activate'       => false,
 	// Help page on bitweaver.org
 	//'help_page'           => 'LibertyMime+Audio+Plugin',
 	// this should pick up all audio
-	'mimetypes'           => array(
+	'mimetypes'           => [
 		'#audio/.*#i',
-	),
-);
+	],
+];
 $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_AUDIO, $pluginParams );
 
 /**
  * mime_audio_preload This function is loaded on every page load before anything happens and is used to load required scripts.
  * 
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return void
  */
 function mime_audio_preload() {
 	global $gBitThemes;
-	$gBitThemes->loadJavascript( UTIL_PKG_PATH."javascript/flv_player/swfobject.js", FALSE, 25 );
+	$gBitThemes->loadJavascript( UTIL_PKG_PATH."javascript/flv_player/swfobject.js", false, 25 );
 }
 
 /**
@@ -71,19 +76,19 @@ function mime_audio_preload() {
  * 
  * @param array $pStoreRow File data needed to store details in the database - sanitised and generated in the verify function
  * @access public
- * @return TRUE on success, FALSE on failure - $pStoreRow['errors'] will contain reason
+ * @return bool true on success, false on failure - $pStoreRow['errors'] will contain reason
  */
 function mime_audio_store( &$pStoreRow ) {
 	// this will set the correct pluign guid, even if we let default handle the store process
 	$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_AUDIO;
-	$pStoreRow['log'] = array();
+	$pStoreRow['log'] = [];
 
 	// if storing works, we process the audio
 	if( $ret = mime_default_store( $pStoreRow )) {
 		if( !mime_audio_converter( $pStoreRow )) {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
-			$ret = FALSE;
+			$ret = false;
 		}
 	}
 	return $ret;
@@ -92,26 +97,27 @@ function mime_audio_store( &$pStoreRow ) {
 /**
  * mime_audio_update 
  * 
- * @param array $pStoreRow 
+ * @param array $pStoreRow
+ * @param array $pParams
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
-function mime_audio_update( &$pStoreRow, $pParams = NULL ) {
-	$ret = FALSE;
+function mime_audio_update( &$pStoreRow, $pParams = null ) {
+	$ret = false;
 	if( BitBase::verifyId( $pStoreRow['attachment_id'] )) {
-		$pStoreRow['log'] = array();
+		$pStoreRow['log'] = [];
 
 		// set the correct pluign guid, even if we let default handle the store process
 		$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_AUDIO;
 		// remove the entire directory
-		$pStoreRow['unlink_dir'] = TRUE;
+		$pStoreRow['unlink_dir'] = true;
 
 		// if storing works, we process the audio
 		if( !empty( $pStoreRow['upload'] ) && $ret = mime_default_update( $pStoreRow )) {
 			if( !mime_audio_converter( $pStoreRow )) {
 				// if it all goes tits up, we'll know why
 				$pStoreRow['errors'] = $pStoreRow['log'];
-				$ret = FALSE;
+				$ret = false;
 			}
 		}
 
@@ -130,12 +136,12 @@ function mime_audio_update( &$pStoreRow, $pParams = NULL ) {
 			mime_audio_update_tags( $file, $pParams['meta'] );
 
 			// finally we update the meta table data
-			if( !LibertyMime::storeMetaData( $pStoreRow['attachment_id'], 'ID3', $pParams['meta'] )) {
+			if( !LibertyMime::storeMetaData( $pStoreRow['attachment_id'], $pParams['meta'], 'ID3' )) {
 				$log['store_meta'] = "There was a problem storing the meta data in the database";
 			}
 
 			if( empty( $log )) {
-				$ret = TRUE;
+				$ret = true;
 			} else {
 				$pStoreRow['errors'] = $log;
 			}
@@ -151,22 +157,22 @@ function mime_audio_update( &$pStoreRow, $pParams = NULL ) {
  * @param array $pPrefs Attachment preferences taken liberty_attachment_prefs
  * @param array $pParams Parameters for loading the plugin - e.g.: might contain values from the view page
  * @access public
- * @return TRUE on success, FALSE on failure - ['errors'] will contain reason for failure
+ * @return array
  */
-function mime_audio_load( &$pFileHash, &$pPrefs, $pParams = NULL ) {
+function mime_audio_load( &$pFileHash, &$pPrefs, $pParams = null ) {
 	global $gLibertySystem, $gBitThemes;
 
 	// don't load a mime image if we don't have an image for this file
-	if( $ret = mime_default_load( $pFileHash, $pPrefs, $pParams )) {
+	if( $ret = mime_default_load( $pFileHash, $pPrefs )) {
 		// fetch meta data from the db
 		$ret['meta'] = LibertyMime::getMetaData( $pFileHash['attachment_id'], "ID3" );
 
 		if( !empty( $ret['storage_path'] )) {
 			if( is_file( dirname( STORAGE_PKG_PATH.$ret['storage_path'] ).'/bitverted.mp3' )) {
-				$ret['media_url'] = storage_path_to_url( dirname( $ret['storage_path'] )).'/bitverted.mp3';
+				$ret['media_url'] = KernelTools::storage_path_to_url( dirname( $ret['storage_path'] )).'/bitverted.mp3';
 				// we need some javascript for the player:
 			} elseif( is_file( dirname( STORAGE_PKG_PATH.$ret['storage_path'] ).'/bitverted.m4a' )) {
-				$ret['media_url'] = storage_path_to_url( dirname( $ret['storage_path'] )).'/bitverted.m4a';
+				$ret['media_url'] = KernelTools::storage_path_to_url( dirname( $ret['storage_path'] )).'/bitverted.m4a';
 			}
 		}
 	}
@@ -178,7 +184,7 @@ function mime_audio_load( &$pFileHash, &$pPrefs, $pParams = NULL ) {
  * 
  * @param array $pParamHash 
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
 function mime_audio_converter( &$pParamHash ) {
 	global $gBitSystem;
@@ -186,13 +192,13 @@ function mime_audio_converter( &$pParamHash ) {
 	// audio conversion can take a while
 	ini_set( "max_execution_time", "1800" );
 
-	$ret = FALSE;
-	$log = array();
+	$ret = false;
+	$log = [];
 
 	$source = STORAGE_PKG_PATH.$pParamHash['upload']['dest_branch'].$pParamHash['upload']['name'];
 	$destPath = dirname( $source );
 
-	if( @BitBase::verifyId( $pParamHash['attachment_id'] )) {
+	if( BitBase::verifyId( $pParamHash['attachment_id'] ?? 0 )) {
 		$pattern = "#.*\.(mp3|m4a)$#i";
 		if( !$gBitSystem->isFeatureActive( 'mime_audio_force_encode' ) && preg_match( $pattern, $pParamHash['upload']['name'] )) {
 			// make a copy of the original maintaining the original extension
@@ -200,7 +206,7 @@ function mime_audio_converter( &$pParamHash ) {
 			if( !is_file( $dest_file ) && !link( $source, $dest_file )) {
 				copy( $source, $dest_file );
 			}
-			$ret = TRUE;
+			$ret = true;
 		} else {
 			// TODO: have a better mechanism of converting audio to mp3. ffmpeg works well as long as the source is 'perfect'
 			//       there are many audiofiles that can't be read by ffmpeg but by other tools like flac, faac, oggenc
@@ -216,15 +222,16 @@ function mime_audio_converter( &$pParamHash ) {
 		}
 
 		// if the conversion was successful, we'll copy the tags to the new mp3 file and import data to meta tables
-		if( $ret == TRUE ) {
+		if( $ret == true ) {
 			$log['success'] = 'Successfully converted to mp3 audio';
 
 			// now that we have a new mp3 file, we might as well copy the tags accross in case someone downloads it
-			require_once( UTIL_PKG_INCLUDE_PATH.'getid3/getid3/getid3.php' );
-			$getID3 = new getID3;
+			require_once UTIL_PKG_INCLUDE_PATH.'getID3/getid3/getid3.php';
+			require_once UTIL_PKG_INCLUDE_PATH.'getID3/getid3/getid3.lib.php';
+			$getID3 = new \getID3;
 			// we silence this since this will spew lots of ugly errors when using UTF-8 and some odd character in the file ID
 			$meta = @$getID3->analyze( $source );
-			getid3_lib::CopyTagsToComments( $meta );
+			\getid3_lib::CopyTagsToComments( $meta );
 
 			// write tags to new mp3 file
 			if( $errors = mime_audio_update_tags( $dest_file, $meta['comments'] )) {
@@ -240,7 +247,7 @@ function mime_audio_converter( &$pParamHash ) {
 
 			// make sure we remove previous entries first
 			LibertyMime::expungeMetaData( $pParamHash['attachment_id'] );
-			if( !LibertyMime::storeMetaData( $pParamHash['attachment_id'], 'ID3', $store )) {
+			if( !LibertyMime::storeMetaData( $pParamHash['attachment_id'], $store, 'ID3' )) {
 				$log['store_meta'] = "There was a problem storing the meta data in the database";
 			}
 
@@ -292,15 +299,15 @@ function mime_audio_converter( &$pParamHash ) {
  * mime_audio_converter_mplayer_lame will decode the audio to wav using mplayer and then encode to mp3 using lame
  * 
  * @param array $pParamHash file information
- * @param array $pSource source file
- * @param array $pDest destination file
+ * @param string $pSource source file
+ * @param string $pDest destination file
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
 function mime_audio_converter_mplayer_lame( &$pParamHash, $pSource, $pDest ) {
 	global $gBitSystem;
-	$ret = FALSE;
-	$log = array();
+	$ret = false;
+	$log = [];
 
 	if( !empty( $pParamHash ) && !empty( $pSource ) && is_file( $pSource ) && !empty( $pDest )) {
 		$mplayer = trim( $gBitSystem->getConfig( 'mplayer_path', shell_exec( 'which mplayer' )));
@@ -319,7 +326,7 @@ function mime_audio_converter_mplayer_lame( &$pParamHash, $pSource, $pDest ) {
 
 			// make sure the conversion was successfull
 			if( is_file( $pDest ) && filesize( $pDest ) > 1 ) {
-				$ret = TRUE;
+				$ret = true;
 			} else {
 				// remove unsuccessfully converted file
 				@unlink( $pDest );
@@ -343,15 +350,15 @@ function mime_audio_converter_mplayer_lame( &$pParamHash, $pSource, $pDest ) {
  * mime_audio_converter_ffmpeg 
  * 
  * @param array $pParamHash file information
- * @param array $pSource source file
- * @param array $pDest destination file
+ * @param string $pSource source file
+ * @param string $pDest destination file
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
 function mime_audio_converter_ffmpeg( &$pParamHash, $pSource, $pDest ) {
 	global $gBitSystem;
-	$ret = FALSE;
-	$log = array();
+	$ret = false;
+	$log = [];
 
 	if( !empty( $pParamHash ) && !empty( $pSource ) && is_file( $pSource ) && !empty( $pDest )) {
 		// these are set in the liberty plugin admin screen
@@ -369,7 +376,7 @@ function mime_audio_converter_ffmpeg( &$pParamHash, $pSource, $pDest ) {
 
 			// make sure the conversion was successfull
 			if( is_file( $pDest ) && filesize( $pDest ) > 1 ) {
-				$ret = TRUE;
+				$ret = true;
 			} else {
 				// remove unsuccessfully converted file
 				@unlink( $pDest );
@@ -392,32 +399,32 @@ function mime_audio_converter_ffmpeg( &$pParamHash, $pSource, $pDest ) {
 /**
  * mime_audio_update_tags will update the tags of a given audio file
  * 
- * @param array $pFile absolute path to file
+ * @param string $pFile absolute path to file
  * @param array $pMetaData Hash of data that should be passed to the file.
  * @access public
- * @return NULL on success, String of errors on failure
+ * @return null on success, String of errors on failure
  */
 function mime_audio_update_tags( $pFile, $pMetaData ) {
-	$ret = NULL;
+	$ret = null;
 	if( !empty( $pFile ) && is_file( $pFile ) && is_array( $pMetaData )) {
 		// we need to initiate getID3 for the writer to work
-		require_once( UTIL_PKG_INCLUDE_PATH.'getid3/getid3/getid3.php' );
-		$getID3 = new getID3;
+		require_once UTIL_PKG_INCLUDE_PATH.'getid3/getid3/getid3.php';
+		$getID3 = new \getID3;
 
-		require_once( UTIL_PKG_INCLUDE_PATH.'getid3/getid3/write.php' );
+		require_once UTIL_PKG_INCLUDE_PATH.'getid3/getid3/write.php';
 		// Initialize getID3 tag-writing module
 		$tagwriter = new getid3_writetags();
 		$tagwriter->filename       = $pFile;
-		$tagwriter->tagformats     = array( 'id3v1', 'id3v2.3' );
+		$tagwriter->tagformats     = [ 'id3v1', 'id3v2.3' ];
 
 		// set various options
-		$tagwriter->overwrite_tags = TRUE;
+		$tagwriter->overwrite_tags = true;
 		$tagwriter->tag_encoding   = "UTF-8";
 
 		// prepare meta data for storing
 		foreach( $pMetaData as $key => $data ) {
 			if( !is_array( $data )) {
-				$data = array( $data );
+				$data = [ $data ];
 			}
 			$write[$key] = $data;
 		}
@@ -432,4 +439,3 @@ function mime_audio_update_tags( $pFile, $pMetaData ) {
 	}
 	return $ret;
 }
-?>

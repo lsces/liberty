@@ -1,4 +1,7 @@
 <?php
+namespace Bitweaver\Liberty;
+use Bitweaver\KernelTools;
+
 /**
  * @version  $Header$
  * @package  liberty
@@ -12,24 +15,24 @@ define( 'PLUGIN_GUID_FILTERMAKETOC', 'filtermaketoc' );
 
 global $gLibertySystem;
 
-$pluginParams = array (
+$pluginParams = [
 	'title'              => 'Table of Contents',
 	'description'        => 'When you insert {maketoc} into a wiki page, it will create a nested table of contents based on the headings in that page.',
-	'auto_activate'      => TRUE,
+	'auto_activate'      => true,
 	'plugin_type'        => FILTER_PLUGIN,
 
 	// filter functions
-	'presplit_function'  => 'maketoc_presplitfilter',
-	'postparse_function' => 'maketoc_postparsefilter',
+	'presplit_function'  => '\Bitweaver\Liberty\maketoc_presplitfilter',
+	'postparse_function' => '\Bitweaver\Liberty\maketoc_postparsefilter',
 
 	// these settings are to get the plugin help working on content edit pages
 	'tag'                => 'maketoc',
 	'help_page'          => 'Maketoc Filter',
 	'help_function'      => 'maketoc_help',
 	'syntax'             => '{maketoc}',
-	'booticon'            => '{booticon iname="fa-list-tree" iexplain="Page Table of Contents"}',
+	'booticon'            => '{booticon iname="icon-list-ul" iexplain="Page Table of Contents"}',
 	'taginsert'          => '{maketoc}',
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_FILTERMAKETOC, $pluginParams );
 
 function maketoc_presplitfilter( &$pData, &$pFilterHash ) {
@@ -43,7 +46,7 @@ function maketoc_postparsefilter( &$pData, &$pFilterHash ) {
 	if( !empty( $maketocs[1] )) {
 		// extract the parameters for maketoc
 		foreach( $maketocs[1] as $string ) {
-			$params[] = parse_xml_attributes( $string );
+			$params[] = KernelTools::parse_xml_attributes( $string );
 		}
 
 		// get all headers into an array
@@ -54,12 +57,12 @@ function maketoc_postparsefilter( &$pData, &$pFilterHash ) {
 		// or nothing.
 		foreach( $params as $p ) {
 			if( empty( $index )) {
-				$index = ( in_array( 'index', array_keys( $p )));
+				$index = in_array( 'index', array_keys( $p ));
 			}
 		}
 
 		if( $index ) {
-			$counter = array();
+			$counter = [];
 			foreach( array_keys( $headers[2] ) as $key ) {
 				$level = $headers[1][$key];
 				if( empty( $counter[$level] )) {
@@ -130,7 +133,7 @@ function maketoc_create_list( $pTocHash, $pParams ) {
 	// previous level
 	$prev = 0;
 	// array that is populated with the items that have to be closed eventually
-	$open = array();
+	$open = [];
 	// contains the actual depth we're at
 	$depth = 0;
 	// maximum header level output uses
@@ -223,12 +226,7 @@ function maketoc_create_list( $pTocHash, $pParams ) {
 		}
 	}
 
-	if( isset( $pParams['backtotop'] ) && $pParams['backtotop'] == 'true' ) {
-		$toplink = '<a href="#content">'.tra( 'back to top' ).'</a>';
-	} else {
-		$toplink = '';
-	}
-
+	$toplink = isset( $pParams['backtotop'] ) && $pParams['backtotop'] == 'true' ? '<a href="#content">'.KernelTools::tra( 'back to top' ).'</a>' : '';
 
 	$width = '';
 	if( !empty( $pParams['width'] ) ) {
@@ -245,7 +243,7 @@ function maketoc_create_list( $pTocHash, $pParams ) {
 		$class .= ' well width33p pull-right';
 	}
 
-	$list = "<nav class='$class' $width><h3>" .( !empty( $pParams['title'] ) ? $pParams['title'] : tra( 'Page Contents' ) ).'</h3>'.$list.$toplink.'</nav>';
+	$list = "<nav class='$class' $width><h3>" .( !empty( $pParams['title'] ) ? $pParams['title'] : KernelTools::tra( 'Page Contents' ) ).'</h3>'.$list.$toplink.'</nav>';
 
 	return $list;
 }
@@ -255,47 +253,46 @@ function maketoc_help() {
 	$help =
 		'<table class="data help">
 			<tr>
-				<th>'.tra( "Key" ).'</th>
-				<th>'.tra( "Type" ).'</th>
-				<th>'.tra( "Comments" ).'</th>
+				<th>'.KernelTools::tra( "Key" ).'</th>
+				<th>'.KernelTools::tra( "Type" ).'</th>
+				<th>'.KernelTools::tra( "Comments" ).'</th>
 			</tr>
 			<tr class="odd">
 				<td>maxdepth</td>
-				<td>'.tra( "numeric").'<br />('.tra("optional").')</td>
-				<td>'.tra( 'If you specify 3 here, MakeTOC will only parse headings to the h3 level.' ).'</td>
+				<td>'.KernelTools::tra( "numeric").'<br />('.KernelTools::tra("optional").')</td>
+				<td>'.KernelTools::tra( 'If you specify 3 here, MakeTOC will only parse headings to the h3 level.' ).'</td>
 			</tr>
 			<tr class="even">
 				<td>include</td>
-				<td>'.tra( "string").'<br />('.tra("optional").')</td>
-				<td>'.tra( 'If you include <strong>all</strong>, it will print a list of the full list of contents, regardless of where in the page {maketoc} is.' ).'</td>
+				<td>'.KernelTools::tra( "string").'<br />('.KernelTools::tra("optional").')</td>
+				<td>'.KernelTools::tra( 'If you include <strong>all</strong>, it will print a list of the full list of contents, regardless of where in the page {maketoc} is.' ).'</td>
 			</tr>
 			<tr class="odd">
 				<td>backtotop</td>
-				<td>'.tra( "boolean").'<br />('.tra("optional").')</td>
-				<td>'.tra( 'If you set backtotop <strong>' ).'true'.( '</strong>, it will insert a "back to the top" link.' ).'</td>
+				<td>'.KernelTools::tra( "boolean").'<br />('.KernelTools::tra("optional").')</td>
+				<td>'.KernelTools::tra( 'If you set backtotop <strong>' ).'true'. '</strong>, it will insert a "back to the top" link.'.'</td>
 			</tr>
 			<tr class="even">
 				<td>class</td>
-				<td>'.tra( "string").'<br />('.tra("optional").')</td>
-				<td>'.tra( 'Override the class of the maketoc div.' ).'</td>
+				<td>'.KernelTools::tra( "string").'<br />('.KernelTools::tra("optional").')</td>
+				<td>'.KernelTools::tra( 'Override the class of the maketoc div.' ).'</td>
 			</tr>
 			<tr class="odd">
 				<td>width</td>
-				<td>'.tra( "string").'<br />('.tra("optional").')</td>
-				<td>'.tra( 'Override the width of the maketoc div.' ).'</td>
+				<td>'.KernelTools::tra( "string").'<br />('.KernelTools::tra("optional").')</td>
+				<td>'.KernelTools::tra( 'Override the width of the maketoc div.' ).'</td>
 			</tr>
 			<tr class="even">
 				<td>type</td>
-				<td>'.tra( "key words").'<br />('.tra("optional").')</td>
-				<td>'.tra( 'Setting this to dropdown will create a dropdown instead of the default nested list of headings.' ).'</td>
+				<td>'.KernelTools::tra( "key words").'<br />('.KernelTools::tra("optional").')</td>
+				<td>'.KernelTools::tra( 'Setting this to dropdown will create a dropdown instead of the default nested list of headings.' ).'</td>
 			</tr>
 			<tr class="odd">
 				<td>index</td>
-				<td>'.tra( "boolean").'<br />('.tra("optional").')</td>
-				<td>'.tra( 'Add index numbers to your headers and the page contents.' ).'</td>
+				<td>'.KernelTools::tra( "boolean").'<br />('.KernelTools::tra("optional").')</td>
+				<td>'.KernelTools::tra( 'Add index numbers to your headers and the page contents.' ).'</td>
 			</tr>
 		</table>'.
-		tra("Example: ").'{maketoc maxdepth=3 include=all backtotop=true index=true}';
+		KernelTools::tra("Example: ").'{maketoc maxdepth=3 include=all backtotop=true index=true}';
 	return $help;
 }
-?>
