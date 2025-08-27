@@ -19,11 +19,11 @@ if( !$gBitUser->isRegistered() ) {
 	$gBitSystem->fatalError( tra( 'You need to be logged in to view this page.' ));
 }
 
-$feedback = array();
+$feedback = [];
 $listHash = &$_REQUEST;
 if( $gBitUser->isAdmin() ) {
 	if( !empty( $listHash['login'] ) && $listHash['login'] == 'all' ) {
-		$listHash['user_id'] = NULL;
+		$listHash['user_id'] = null;
 	} elseif( !empty( $listHash['login'] ) ) {
 		if( $userInfo = $gBitUser->getUserInfo( array( 'login' => $listHash['login'] ) ) ) {
 			$listHash['user_id'] = $userInfo['user_id'];

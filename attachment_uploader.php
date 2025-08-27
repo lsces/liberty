@@ -8,10 +8,10 @@
 /**
  * required setup
  */
-require_once( '../kernel/includes/setup_inc.php' );
+require_once '../kernel/includes/setup_inc.php';
 global $gBitSmarty, $gContent;
 
-$error = NULL;
+$error = null;
 if ( !isset($_FILES['upload'] ) ) {
 	$error = tra( "No upload submitted." );
 }elseif( !empty( $_REQUEST['liberty_attachments']['content_id'] )) {
@@ -33,10 +33,16 @@ if ( !isset($_FILES['upload'] ) ) {
 		// load up the requested content type handler class
 		$contentType = $_REQUEST['liberty_attachments']['content_type_guid'];
 		$contentTypeHash = $gLibertySystem->mContentTypes[$contentType];
-		if( LibertySystem::requireContentType( $contentTypeHash ) ) {
-			$gContent = new $contentTypeHash['handler_class']();
-		} else {
+		$class =  $contentTypeHash['handler_class'];
+		$classFile =  $contentTypeHash['handler_file'];
+		$package = $contentTypeHash['handler_package'];
+		$pathVar = strtoupper($package).'_PKG_PATH';
+
+		if( !defined( $pathVar ) ) {
 			$error = tra( "Undefined handler package path" );
+		}else{
+			require_once( constant( $pathVar ).$classFile );
+			$gContent = new $class();
 		}
 	}
 }else{
@@ -89,8 +95,8 @@ if ( !is_null( $error ) ){
 }
 
 $gBitSmarty->assign( 'gContent', $gContent );
-$gBitSmarty->assign( 'libertyUploader', TRUE );
-$gBitSmarty->assign( 'uploadTab', TRUE );
+$gBitSmarty->assign( 'libertyUploader', true );
+$gBitSmarty->assign( 'uploadTab', true );
 
 if( !empty( $_REQUEST['liberty_attachments']['primary_label'] ) ) {
 	$gBitSmarty->assign('primary_label', $_REQUEST['liberty_attachments']['primary_label']);
@@ -100,5 +106,5 @@ if( isset( $_REQUEST['liberty_attachments']['form_id'] ) ){
 	$gBitSmarty->assign( 'form_id', $_REQUEST['liberty_attachments']['form_id'] );
 }
 
-echo $gBitSystem->display( 'bitpackage:liberty/attachment_uploader.tpl', NULL, array( 'format'=>'none', 'display_mode' => 'display' ));
+echo $gBitSystem->display( 'bitpackage:liberty/attachment_uploader.tpl', null, array( 'format'=>'none', 'display_mode' => 'display' ));
 ?>

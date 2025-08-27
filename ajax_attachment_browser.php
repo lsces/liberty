@@ -8,14 +8,14 @@
 /**
  * required setup
  */
-require_once( '../kernel/includes/setup_inc.php' );
+require_once '../kernel/includes/setup_inc.php';
 global $gContent, $gBitSmarty;
 
 $gContent = new LibertyMime();
 if( isset( $_REQUEST['content_id'] )) {
 	$gContent->mContentId = $_REQUEST['content_id'];
 }
-$gBitSmarty->assign( 'attachmentBrowser', TRUE );
+$gBitSmarty->assign( 'attachmentBrowser', true );
 include_once( LIBERTY_PKG_PATH.'attachment_browser.php' );
 
 if( isset( $_REQUEST['json'] )){

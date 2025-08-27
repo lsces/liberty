@@ -8,13 +8,16 @@
 /**
  * required setup
  */
-require_once( '../kernel/includes/setup_inc.php' );
+namespace Smarty;
+use Bitweaver\Liberty\LibertyBase;
+use Bitweaver\Liberty\LibertyContent;
+require_once '../kernel/includes/setup_inc.php';
 
 $staticContent = new LibertyContent();
-$gContent = LibertyBase::getLibertyObject( $_REQUEST['parent_id'], ( !empty( $_REQUEST['parent_guid'] ) ? $_REQUEST['parent_guid'] : NULL ));
+$gContent = LibertyBase::getLibertyObject( $_REQUEST['parent_id'], !empty( $_REQUEST['parent_guid'] ) ? $_REQUEST['parent_guid'] : null );
 $XMLContent = "";
 
-if( !$gContent->hasUserPermission( 'p_liberty_post_comments', TRUE, TRUE)) {
+if( !$gContent->hasUserPermission( 'p_liberty_post_comments', true, true)) {
 	$statusCode = 401;
 	$XMLContent = tra( "You do not have the required permissions to post new comments" );
 } elseif( $gContent->isCommentable() ) {
@@ -29,7 +32,7 @@ if( !$gContent->hasUserPermission( 'p_liberty_post_comments', TRUE, TRUE)) {
 
 	$commentsParentId = $_REQUEST['parent_id'];
 	$comments_return_url = $_REQUEST['comments_return_url'];
-	include_once( LIBERTY_PKG_INCLUDE_PATH.'comments_inc.php' );
+	include_once LIBERTY_PKG_INCLUDE_PATH.'comments_inc.php';
 
 	if( isset( $_REQUEST['post_comment_submit'] )) {
 		if ($storeComment->loadComment()){
@@ -49,7 +52,6 @@ if( !$gContent->hasUserPermission( 'p_liberty_post_comments', TRUE, TRUE)) {
 	$gBitSmarty->assign( 'commentsParentId', $commentsParentId );
 	if( !empty( $formfeedback )){
 		$statusCode = 400;
-		$gBitSmarty->loadPlugin( 'smarty_modifier_formfeedback' );
 		$XMLContent = smarty_function_formfeedback( $formfeedback, $gBitSmarty );
 	}
 	$XMLContent .= $gBitSmarty->fetch( 'bitpackage:liberty/display_comment.tpl' );
@@ -71,7 +73,7 @@ header( "Expires: Mon, 26 Jul 1997 05:00:00 GMT" );
 header( "Last-Modified: ".gmdate( "D, d M Y H:i:s" )." GMT" );
 // HTTP/1.1
 header( "Cache-Control: no-store, no-cache, must-revalidate" );
-header( "Cache-Control: post-check=0, pre-check=0", FALSE );
+header( "Cache-Control: post-check=0, pre-check=0", false );
 // HTTP/1.0
 header( "Pragma: no-cache" );
 //XML Header

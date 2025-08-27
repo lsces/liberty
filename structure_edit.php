@@ -12,5 +12,5 @@
 
 // wiki books also use structure_edit_inc.php
 
-require_once( '../kernel/includes/setup_inc.php' );
+require_once '../kernel/includes/setup_inc.php';
 include_once( LIBERTY_PKG_INCLUDE_PATH.'structure_edit_inc.php');

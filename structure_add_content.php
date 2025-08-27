@@ -11,13 +11,13 @@
 /**
  * required setup
  */
-$gLiteweightScan = TRUE;
-require_once( '../kernel/includes/setup_inc.php' );
+$gLiteweightScan = true;
+require_once '../kernel/includes/setup_inc.php';
 
 if( !empty( $_REQUEST['modal'] ) ) {
-	$gBitSystem->mConfig['site_top_bar'] = FALSE;
-	$gBitSystem->mConfig['site_left_column'] = FALSE;
-	$gBitSystem->mConfig['site_right_column'] = FALSE;
+	$gBitSystem->mConfig['site_top_bar'] = false;
+	$gBitSystem->mConfig['site_left_column'] = false;
+	$gBitSystem->mConfig['site_right_column'] = false;
 	$gBitSmarty->assign( 'popupPage', '1' );
 }
 
@@ -42,14 +42,14 @@ if( $gBitThemes->isAjaxRequest() ) {
 	foreach( $contentList as $cItem ) {
 		$cList[$contentTypes[$cItem['content_type_guid']]][$cItem['content_id']] = $cItem['title'].' [id: '.$cItem['content_id'].']';
 	}
-	$gBitSmarty->assignByRef( 'contentListHash', $contentList );
+	$gBitSmarty->assign( 'contentListHash', $contentList );
 	$gBitSmarty->assign( 'contentList', $cList );
 	$gBitSmarty->assign( 'contentSelect', $contentSelect );
 	$gBitSmarty->assign( 'contentTypes', $contentTypes );
 
 	$subpages = $gStructure->getStructureNodes($_REQUEST["structure_id"]);
 	$max = count($subpages);
-	$gBitSmarty->assignByRef('subpages', $subpages);
+	$gBitSmarty->assign('subpages', $subpages);
 	if ($max != 0) {
 		$last_child = $subpages[$max - 1];
 		$gBitSmarty->assign('insert_after', $last_child["structure_id"]);

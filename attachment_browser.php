@@ -11,7 +11,9 @@
 /**
  * bit setup
  */
-require_once("../kernel/includes/setup_inc.php");
+use Bitweaver\BitBase;
+use Bitweaver\Liberty\LibertyMime;
+require_once "../kernel/includes/setup_inc.php";
 
 global $gBitSmarty, $gContent, $gBitUser, $gBitSystem, $gLibertySystem;
 
@@ -22,7 +24,7 @@ if (isset($_REQUEST['attachment_id']) && is_numeric($_REQUEST['attachment_id']))
 	}
 	// this is a hack to make it compatible with existing tpls for now
 	$attachment = $gContent->getAttachment($_REQUEST['attachment_id']);
-	$ret = array();
+	$ret = [];
 	$ret[$attachment['attachment_id']] = $attachment;
 	$userAttachments = $ret;
 	$gContent->mStorage = $userAttachments;
@@ -31,7 +33,7 @@ if (isset($_REQUEST['attachment_id']) && is_numeric($_REQUEST['attachment_id']))
 // we want a list of user attachments
 	$listHash = $_REQUEST;
 	$listHash = array(
-		'page' => @BitBase::verifyId( $_REQUEST['pgnPage'] ) ? $_REQUEST['pgnPage'] : NULL,
+	    'page' => BitBase::verifyId( $_REQUEST['pgnPage'] ?? 0 ) ? $_REQUEST['pgnPage'] : null,
 		'load_attached_to' => true,
 	);
 	$userAttachments = $gBitUser->getUserAttachments( $listHash );
@@ -41,8 +43,8 @@ if (isset($_REQUEST['attachment_id']) && is_numeric($_REQUEST['attachment_id']))
 	$gBitSmarty->assign('gContent', $gContent);
 
 	// pagination
-	$offset = @BitBase::verifyId( $_REQUEST['offset'] ) ? $_REQUEST['offset'] : 0;
-	$gBitSmarty->assign( 'curPage', $pgnPage = @BitBase::verifyId( $_REQUEST['pgnPage'] ) ? $_REQUEST['pgnPage'] : 1 );
+	$offset = BitBase::verifyId( $_REQUEST['offset'] ?? 0 ) ? $_REQUEST['offset'] : 0;
+	$gBitSmarty->assign( 'curPage', $pgnPage = BitBase::verifyId( $_REQUEST['pgnPage'] ?? 0 ) ? $_REQUEST['pgnPage'] : 1 );
 	$offset = ( $pgnPage - 1 ) * $gBitSystem->getConfig( 'max_records' );
 
 	// calculate page number
@@ -50,4 +52,3 @@ if (isset($_REQUEST['attachment_id']) && is_numeric($_REQUEST['attachment_id']))
 	$gBitSmarty->assign( 'cant', $listHash['cant'] );
 	$gBitSmarty->assign( 'numPages', $numPages );
 }
-?>

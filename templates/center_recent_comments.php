@@ -1,28 +1,32 @@
 <?php
 
-require_once( LIBERTY_PKG_CLASS_PATH.'LibertyComment.php' );
+use Bitweaver\Liberty\LibertyBase;
+use Bitweaver\Liberty\LibertyComment;
+use Bitweaver\Users\BitUser;
+
 global $gQueryUser, $gBitUser, $gLibertySystem, $moduleParams;
+
 $params = $moduleParams['module_params'];
 $moduleTitle = !empty($moduleParams['title'])? $moduleParams['title'] : 'Recent Activity';
 
-$userId = NULL;
+$userId = null;
 
 if( !empty( $gQueryUser->mUserId ) ) {
 	$userId = $gQueryUser->mUserId;
 }
 
-$listHash = array(
-	'user_id' => $userId,
+$listHash = [
+	'user_id'     => $userId,
 	'max_records' => $moduleParams['module_rows'],
-);
+];
 
 if (!empty($params['full'])) {
-	$listHash['parse'] = TRUE;
+	$listHash['parse'] = true;
 }
 
-$listHash['full'] = (!empty( $params['full'] ) ? $params['full'] : TRUE);
-$listHash['thumb_size'] = (!empty( $params['thumb_size'] ) ? $params['thumb_size'] : 'avatar');
-$listHash['show_date'] = (!empty( $params['show_date'] ) ? $params['show_date'] : TRUE);;
+$listHash['full'] = !empty( $params['full'] ) ? $params['full'] : true;
+$listHash['thumb_size'] = !empty( $params['thumb_size'] ) ? $params['thumb_size'] : 'avatar';
+$listHash['show_date'] = !empty( $params['show_date'] ) ? $params['show_date'] : true;;
 
 if( !empty( $params['root_content_type_guid'] ) ) {
 	$listHash['root_content_type_guid'] = $params['root_content_type_guid'];
@@ -43,5 +47,3 @@ foreach( $keys as $k ) {
 }
 
 $gBitSmarty->assign( 'modLastComments', $modLastComments );
-
-?>

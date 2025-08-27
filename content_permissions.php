@@ -8,14 +8,19 @@
 /**
  * bit setup
  */
-require_once( '../kernel/includes/setup_inc.php' );
+namespace Smarty;
+use Bitweaver\BitBase;
+use Bitweaver\HttpStatusCodes;
+use Bitweaver\Liberty\LibertyBase;
+
+require_once '../kernel/includes/setup_inc.php';
 
 $gBitSystem->verifyPermission( 'p_liberty_assign_content_perms' );
 
-require_once( LIBERTY_PKG_INCLUDE_PATH.'lookup_content_inc.php' );
+require_once LIBERTY_PKG_INCLUDE_PATH.'lookup_content_inc.php';
 
 if( $gContent == null ) {
-	$gBitSystem->fatalError('Could not find the requested content.', NULL, NULL, HttpStatusCodes::HTTP_GONE );
+	$gBitSystem->fatalError('Could not find the requested content.', null, null, HttpStatusCodes::HTTP_GONE );
 }
 
 // Process the form
@@ -25,7 +30,7 @@ if( !empty( $_REQUEST['back'] )) {
 }
 
 // Update database if needed
-if( !empty( $_REQUEST['action'] ) && @BitBase::verifyId( $gContent->mContentId )) {
+if( !empty( $_REQUEST['action'] ) && BitBase::verifyId( $gContent->mContentId )) {
 	if( $_REQUEST["action"] == 'expunge' ) {
 		if( $gContent->expungeContentPermissions() ) {
 			$feedback['success'] = tra( 'The content permissions were successfully removed.' );
@@ -34,12 +39,12 @@ if( !empty( $_REQUEST['action'] ) && @BitBase::verifyId( $gContent->mContentId )
 		}
 	}
 
-	if( @BitBase::verifyId( $_REQUEST["group_id"] ) && !empty( $_REQUEST["perm"] )) {
+	if( BitBase::verifyId( $_REQUEST["group_id"] ?? 0 ) && !empty( $_REQUEST["perm"] )) {
 		$gBitUser->verifyTicket();
 		if( $_REQUEST["action"] == 'assign' ) {
 			$gContent->storePermission( $_REQUEST["group_id"], $_REQUEST["perm"] );
 		} elseif( $_REQUEST["action"] == 'negate' ) {
-			$gContent->storePermission( $_REQUEST["group_id"], $_REQUEST["perm"], TRUE );
+			$gContent->storePermission( $_REQUEST["group_id"], $_REQUEST["perm"], true );
 		} elseif( $_REQUEST["action"] == 'remove' ) {
 			$gContent->removePermission( $_REQUEST["group_id"], $_REQUEST["perm"] );
 		}
@@ -47,15 +52,13 @@ if( !empty( $_REQUEST['action'] ) && @BitBase::verifyId( $gContent->mContentId )
 }
 
 // Get a list of groups
-$listHash = array( 'sort_mode' => 'group_id_asc', 'visible' => 1 );
+$listHash = [ 'sort_mode' => 'group_id_asc', 'visible' => 1 ];
 $contentPerms['groups'] = $gBitUser->getAllGroups( $listHash );
 
-if( !empty( $gContent->mType['handler_package'] )) {
-	$contentPerms['assignable'] = $gBitUser->getGroupPermissions( array( 'package' => $gContent->mType['handler_package'] ));
-} else {
+$contentPerms['assignable'] = !empty( $gContent->mType['handler_package'] )
+	? $gBitUser->getGroupPermissions( [ 'package' => $gContent->mType['handler_package'] ] )
 	// this is a last resort and will dump all perms a user has
-	$contentPerms['assignable'] = $gBitUser->mPerms;
-}
+	: $gBitUser->mPerms;
 
 // Now we have to get the individual object permissions if any
 if( $contentPerms['assigned'] = $gContent->getContentPermissionsList() ) {
@@ -70,11 +73,7 @@ $gBitSmarty->assign( 'contentPerms', $contentPerms );
 
 // if we've called this page as part of an ajax update, we output the appropriate data
 if( $gBitThemes->isAjaxRequest() ) {
-	if( count( $contentPerms['groups'] <= 10 )) {
-		$size = 'large/';
-	} else {
-		$size = 'small/';
-	}
+	$size = count( $contentPerms['roles'] ) <= 10 ? 'large/' : 'small/';
 
 	$gid = $_REQUEST['group_id'];
 	$perm = $_REQUEST['perm'];
@@ -100,16 +99,14 @@ if( $gBitThemes->isAjaxRequest() ) {
 		}
 	}
 
-	$gBitSmarty->loadPlugin( 'smarty_function_biticon' );
 	$ret = '<a title="'.$contentPerms['groups'][$gid]['group_name']." :: ".$perm.'" '.
 			'href="javascript:void(0);" onclick="BitAjax.updater('.
 			"'{$perm}{$gid}', ".
 			"'".LIBERTY_PKG_URL."content_permissions.php', ".
 			"'action={$action}&amp;content_id={$gContent->mContentId}&amp;perm={$perm}&amp;group_id={$gid}'".
-		')">'.smarty_function_biticon( $biticon, $gBitSmarty ).'</a>';
+		')">'.$gBitweaverExtension->smarty_function_biticon( $biticon, $gBitSmarty ).'</a>';
 	echo $ret;
 	die;
 }
 
 $gBitSystem->display( 'bitpackage:liberty/content_permissions.tpl', tra( 'Content Permissions' ), array( 'display_mode' => 'display' ));
-?>

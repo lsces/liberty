@@ -12,15 +12,15 @@
  * Required setup
  */
 global $gLightweightScan;
-$gLightwieightScan = TRUE;
-require_once( '../kernel/includes/setup_inc.php' );
+$gLightwieightScan = true;
+require_once '../kernel/includes/setup_inc.php';
 
 global $gContent, $gBitSystem, $gBitSmarty;
 include_once( LIBERTY_PKG_INCLUDE_PATH.'lookup_content_inc.php' );
 // If we can't find one make an invalid one to keep the template happy.
 if (empty($gContent)) {
 	$gContent = new LibertyContent();
-	$gBitSmarty->assignByRef('gContent', $gContent);
+	$gBitSmarty->assign('gContent', $gContent);
 }
 // Should we tell the template to generate a closeclick icon
 if (isset($_REQUEST['closeclick'])) {

@@ -5,18 +5,18 @@
  */
 global $moduleParams, $gContent, $gBitSmarty;
 
-$gContent = NULL;
+$gContent = null;
 
 if( !empty( $moduleParams ) ) {
 	extract( $moduleParams );
 }
 
-$lookupHash['content_id'] = ( !empty( $module_params['content_id'] ) ? $module_params['content_id'] : NULL );
+$lookupHash['content_id'] = ( !empty( $module_params['content_id'] ) ? $module_params['content_id'] : null );
 
 if( $gContent = LibertyBase::getLibertyObject( $lookupHash['content_id'] ) ) {
 	if( !$gContent->hasViewPermission() ){
 		// no perm then get rid of the content object
-		$gContent = NULL;
+		$gContent = null;
 	}else{
 		// deal with the parsing
 		$parseHash['format_guid']		= $gContent->mInfo['format_guid'];

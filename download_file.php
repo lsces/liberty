@@ -11,12 +11,15 @@
 /**
  * Setup
  */
-require_once( '../kernel/includes/setup_inc.php' );
-require_once( LIBERTY_PKG_CLASS_PATH.'LibertyMime.php' );
+namespace Bitweaver\Liberty;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyMime;
+require_once '../kernel/includes/setup_inc.php';
 
 // fetch the attachment details
-if( @!BitBase::verifyId( $_REQUEST['attachment_id'] ) || !( $attachment = LibertyMime::loadAttachment( $_REQUEST['attachment_id'], $_REQUEST ))) {
-	$gBitSystem->fatalError( tra( "The Attachment ID given is not valid" ));
+if( @!BitBase::verifyId( $_REQUEST['attachment_id'] ?? 0 ) || !( $attachment = LibertyMime::loadAttachment( $_REQUEST['attachment_id'], $_REQUEST ))) {
+	$gBitSystem->fatalError( KernelTools::tra( "The Attachment ID given is not valid" ));
 }
 
 $gBitSmarty->assign( 'attachment', $attachment );
@@ -36,14 +39,14 @@ if( $gContent = LibertyBase::getLibertyObject( $attachment['content_id'] ) ) {
 				foreach( $attachment['errors'] as $error ) {
 					$msg .= $error.'<br />';
 				}
-				$gBitSystem->fatalError( tra( $msg ));
+				$gBitSystem->fatalError( KernelTools::tra( $msg ));
 			} else {
-				$gBitSystem->fatalError( tra( 'There was an undetermined problem trying to prepare the file for download.' ));
+				$gBitSystem->fatalError( KernelTools::tra( 'There was an undetermined problem trying to prepare the file for download.' ));
 			}
 		}
 	} else {
-		$gBitSystem->fatalError( tra( "No suitable download function found." ));
+		$gBitSystem->fatalError( KernelTools::tra( "No suitable download function found." ));
 	}
 } else {
-	$gBitSystem->fatalError( tra( "Object not found." ), NULL, NULL, 404 );
+	$gBitSystem->fatalError( KernelTools::tra( "Object not found." ), null, null, 404 );
 }

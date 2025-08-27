@@ -11,14 +11,17 @@
 /**
  * Setup
  */
-require_once( '../kernel/includes/setup_inc.php' );
-require_once( LIBERTY_PKG_CLASS_PATH.'LibertyMime.php' );
+require_once '../kernel/includes/setup_inc.php';
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyMime;
+use Bitweaver\Liberty\LibertyBase;
 
-$feedback = array();
+$feedback = [];
 
 // fetch the attachment details
-if( @!BitBase::verifyId( $_REQUEST['attachment_id'] ) || !( $attachment = LibertyMime::getAttachment( $_REQUEST['attachment_id'], $_REQUEST ))) {
-	$gBitSystem->fatalError( tra( "The Attachment ID given is not valid" ));
+if( !BitBase::verifyId( $_REQUEST['attachment_id'] ?? 0 ) || !( $attachment = LibertyMime::getAttachment( $_REQUEST['attachment_id'], $_REQUEST ))) {
+	$gBitSystem->fatalError( KernelTools::tra( "The Attachment ID given is not valid" ));
 }
 
 // first we need to check the permissions of the content the attachment belongs to since they inherit them
@@ -27,9 +30,9 @@ if( $gContent = LibertyBase::getLibertyObject( $attachment['content_id'] ) ) {
 
 	if( !empty( $_REQUEST['plugin_submit'] )) {
 		// now that we have data for a plugin, we'll simply feed it back to the update function of that plugin
-		$data = !empty( $_REQUEST['plugin'][$attachment['attachment_id']][$attachment['attachment_plugin_guid']] ) ? $_REQUEST['plugin'][$attachment['attachment_id']][$attachment['attachment_plugin_guid']] : array();
+		$data = !empty( $_REQUEST['plugin'][$attachment['attachment_id']][$attachment['attachment_plugin_guid']] ) ? $_REQUEST['plugin'][$attachment['attachment_id']][$attachment['attachment_plugin_guid']] : [];
 		if( $gContent->updateAttachmentParams( $attachment['attachment_id'], $attachment['attachment_plugin_guid'], $data )) {
-			$feedback['success'] = tra( "The data was successfully updated." );
+			$feedback['success'] = KernelTools::tra( "The data was successfully updated." );
 		} else {
 			$feedback['error'] = $gContent->mErrors;
 		}
@@ -46,7 +49,7 @@ if( $gContent = LibertyBase::getLibertyObject( $attachment['content_id'] ) ) {
 		$_REQUEST['size'] = 'large';
 	}
 
-	$attachment['original'] = ( $gContent->isOwner( $attachment ) || $gBitSystem->isFeatureActive( 'liberty_original_image' ));
+	$attachment['original'] = $gContent->isOwner( $attachment ) || $gBitSystem->isFeatureActive( 'liberty_original_image' );
 
 	$gBitSmarty->assign( 'attachment', $attachment );
 	$gBitSmarty->assign( 'gContent', $gContent );
@@ -56,8 +59,7 @@ if( $gContent = LibertyBase::getLibertyObject( $attachment['content_id'] ) ) {
 	$gBitSmarty->assign( 'view_template', $gLibertySystem->getMimeTemplate( 'view', $attachment['attachment_plugin_guid'] ));
 	$gBitSmarty->assign( 'edit_template', $gLibertySystem->getMimeTemplate( 'edit', $attachment['attachment_plugin_guid'] ));
 
-	$gBitSystem->display( 'bitpackage:liberty/mime_view.tpl', tra( "View File" ), array( 'display_mode' => 'display' ));
+	$gBitSystem->display( 'bitpackage:liberty/mime_view.tpl', KernelTools::tra( "View File" ), array( 'display_mode' => 'display' ));
 } else {
-	$gBitSystem->fatalError( 'Not Found', NULL, NULL, HttpStatusCodes::HTTP_GONE );
+	$gBitSystem->fatalError( 'Not Found', null, null, HttpStatusCodes::HTTP_GONE );
 }
-?>
