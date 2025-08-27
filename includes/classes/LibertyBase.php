@@ -21,8 +21,8 @@
 /**
  * required setup
  */
-require_once( LIBERTY_PKG_INCLUDE_PATH.'liberty_lib.php' );
-require_once( KERNEL_PKG_CLASS_PATH.'BitBase.php' );
+namespace Bitweaver\Liberty;
+use Bitweaver\BitBase;
 
 /**
  * Virtual base class (as much as one can have such things in PHP) for all
@@ -30,7 +30,13 @@ require_once( KERNEL_PKG_CLASS_PATH.'BitBase.php' );
  *
  * @package liberty
  */
+#[\AllowDynamicProperties]
 class LibertyBase extends BitBase {
+	/**
+	 * Content Id if an object has been loaded
+	 * @public
+	 */
+	public $mContentId;
 
 	/**
 	 * Constructor building on BitBase object
@@ -39,18 +45,18 @@ class LibertyBase extends BitBase {
 	 * Database will be linked via a previously activated BitDb object
 	 * which will provide the mDb pointer to that database
 	 */
-	function __construct() {
+	public function __construct() {
 		parent::__construct();
 	}
 
 	/**
 	 * given a content_type_guid this will return an object of the proper type
 	 *
-	 * @param the content type to be loaded
+	 * @param string the content type to be loaded
 	 */
-	function getLibertyClass($pContentTypeGuid) {
+	public function getLibertyClass( $pContentTypeGuid ) {
 		// We can abuse getLibertyObject to do the work
-		$ret = LibertyBase::getLibertyObject('1', $pContentTypeGuid, FALSE);
+		$ret = LibertyBase::getLibertyObject('1', $pContentTypeGuid, false);
 		// Make sure we don't have a content_id set though.
 		unset($ret->mContentId);
 		return $ret;
@@ -59,33 +65,33 @@ class LibertyBase extends BitBase {
 	/**
 	 * Given a content_id, this will return and object of the proper type
 	 *
-	 * @param integer content_id of the object to be returned
+	 * @param int content_id of the object to be returned
 	 * @param string optional content_type_guid of pConId. This will save a select if you happen to have this info. If not, this method will look it up for you.
-	 * @param call load on the content. Defaults to true.
-	 * @returns object of the appropriate content type class
+	 * @param bool call load on the content. Defaults to true.
+	 * @return object of the appropriate content type class
 	 */
-	public static function getLibertyObject( $pContentId, $pContentTypeGuid=NULL, $pLoadFromCache = TRUE ) {
-		$ret = NULL;
+	public static function getLibertyObject( $pContentId, $pContentTypeGuid=null, $pLoadFromCache = true ) {
+		$ret = null;
 		global $gLibertySystem, $gBitUser, $gBitSystem;
 
 		if( static::verifyId( $pContentId ) ) {
 			// remove non integer bits from structure_id and content_id requests
 			// can happen with period's at the end of url's that are email'ed around
-			$typeClass = NULL;
+			$typeClass = null;
 			$pContentId = preg_replace( '/[\D]/', '', $pContentId );
 			if( empty( $pContentTypeGuid ) ) {
-				$pContentTypeGuid = $gLibertySystem->mDb->getOne( "SELECT `content_type_guid` FROM `".BIT_DB_PREFIX."liberty_content` WHERE `content_id`=?", array( $pContentId ), NULL, NULL, 3600 );
+				$pContentTypeGuid = $gLibertySystem->mDb->getOne( "SELECT `content_type_guid` FROM `".BIT_DB_PREFIX."liberty_content` WHERE `content_id`=?", array( $pContentId ), null, null, 3600 );
 			}
 			if( !empty( $pContentTypeGuid ) && isset( $gLibertySystem->mContentTypes[$pContentTypeGuid] ) ) {
 				$typeClass = $gLibertySystem->getContentClassName( $pContentTypeGuid );
 			}
 			if( $pLoadFromCache && ($ret = static::loadFromCache( $pContentId, $typeClass )) ) {
-				$ret->mCacheObject = TRUE;
+				$ret->mCacheObject = true;
 			} else {
 				if( $typeClass ) {
 					$creator = new $typeClass();
 					if( $ret = $creator->getNewObject( $typeClass, $pContentId, $pLoadFromCache ) ) {
-						$ret->setCacheableObject( FALSE );
+						$ret->setCacheableObject( false );
 						$ret->clearFromCache();
 					}
 				}
@@ -97,12 +103,12 @@ class LibertyBase extends BitBase {
 	/**
 	 * Simple method to create a given class with a specified primary_id. The purpose of a method is to allow for derived classes to override as necessary.
 	 *
-	 * @param string class to be created
-	 * @param integer id from the secondary table of the object to be returned
-	 * @param call load on the content. Defaults to true.
-	 * @returns object of the appropriate content type class
+	 * @param string $pClass to be created
+	 * @param integer $pPrimaryId id from the secondary table of the object to be returned
+	 * @param bool $pLoadFromCache load the contentfrom cache
+	 * @return object of the appropriate content type class
 	 */
-	public static function getNewObjectById( $pClass, $pPrimaryId, $pLoadFromCache=TRUE ) {
+	public static function getNewObjectById( $pClass, $pPrimaryId, $pLoadFromCache=true ) {
 		if( $ret = new $pClass( $pPrimaryId ) ) {
 			$ret->load();
 		}
@@ -112,17 +118,15 @@ class LibertyBase extends BitBase {
 	/**
 	 * Simple method to create a given class with a specified content_id. The purpose of a method is to allow for derived classes to override as necessary.
 	 *
-	 * @param string class to be created
-	 * @param integer content_id of the object to be returned
-	 * @param call load on the content. Defaults to true.
-	 * @returns object of the appropriate content type class
+	 * @param string $pClass to be created
+	 * @param integer $pContentId of the object to be returned
+	 * @param bool $pLoadFromCache load the contentfrom cache
+	 * @return object of the appropriate content type class
 	 */
-	public static function getNewObject( $pClass, $pContentId, $pLoadFromCache=TRUE ) {
-		if( $ret = new $pClass( NULL, $pContentId ) ) {
+	public static function getNewObject( $pClass, $pContentId, $pLoadFromCache=true ) {
+		if( $ret = new $pClass( null, $pContentId ) ) {
 			$ret->load();
 		}
 		return $ret;
 	}
 }
-
-?>

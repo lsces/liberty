@@ -19,6 +19,10 @@
 // | Authors: spider <spider@steelsun.com>
 // +----------------------------------------------------------------------+
 
+namespace Bitweaver\Liberty;
+use Bitweaver\BitSingleton;
+use Bitweaver\KernelTools;
+
 /**
  * Local base defines
  */
@@ -61,21 +65,21 @@ define( 'LIBERTY_UPLOAD', 'upload' );
 /**
  * Link to base class
  */
-require_once( LIBERTY_PKG_CLASS_PATH.'LibertyBase.php' );
 
 /**
  * System class for handling the liberty package
  *
  * @package liberty
  */
+#[\AllowDynamicProperties]
 class LibertySystem extends BitSingleton {
 
 
 	// Hash of plugin data
-	public $mPlugins = array();
+	public $mPlugins = [];
 
 	// Liberty data tags
-	public $mDataTags = array();
+	public $mDataTags = [];
 
 	// Content Status
 	public $mContentStatus;
@@ -90,12 +94,19 @@ class LibertySystem extends BitSingleton {
 	// this makes it possible to extend LibertySystem by another package
 	public $mSystem = LIBERTY_PKG_NAME;
 	public $mPluginPath;
+	public $mPluginFilePath = '';
+	public $mServices = [];
 
+/**
+ * Fix for warnings due to static uses in installer
+ */
+	public $completeTableName = '';
+	public $gBitInstallDb = null;
 
 	/**
 	 * Initiate Class
 	 **/
-	function __construct( $pExtras = TRUE ) {
+	public function __construct( $pExtras = true ) {
 		parent::__construct();
 
 		$this->mPluginPath = LIBERTY_PKG_PATH.'plugins/';
@@ -112,7 +123,7 @@ class LibertySystem extends BitSingleton {
 	/**
 	 * Load only active plugins from disk
 	 *
-	 * @return none
+	 * @return void
 	 * @access public
 	 **/
 	function loadActivePlugins() {
@@ -133,7 +144,7 @@ class LibertySystem extends BitSingleton {
 			if( $pluginFile = $gBitSystem->getConfig( "{$this->mSystem}_plugin_path_$pluginGuid" ) ) {
 				if( is_file( BIT_ROOT_PATH.$pluginFile )) {
 					$this->mPluginFilePath = BIT_ROOT_PATH.$pluginFile;
-					include_once( BIT_ROOT_PATH.$pluginFile );
+					include_once BIT_ROOT_PATH.$pluginFile;
 				}
 			} elseif( $pluginFile = $gBitSystem->getConfig( "{$this->mSystem}_plugin_file_$pluginGuid" ) ) {
 				// TODO: all this is deprecated and doesn't really rock bitweavers boat anymore - we use the _plugin_path_ setting now.
@@ -146,12 +157,12 @@ class LibertySystem extends BitSingleton {
 
 				if( file_exists( $pluginFile )) {
 					$this->mPluginFilePath = $pluginFile;
-					include_once( $pluginFile );
+					include_once $pluginFile;
 				} else {
 					$defaultFile = $this->mPluginPath.basename( $pluginFile );
 					if( file_exists( $defaultFile )) {
 						$this->mPluginFilePath = $defaultFile;
-						include_once( $defaultFile );
+						include_once $defaultFile;
 					}
 				}
 			}
@@ -164,10 +175,9 @@ class LibertySystem extends BitSingleton {
 	 *
 	 * @param string $pPluginsPath Set the path where to scan for plugins
 	 * @param string $pPrefixPattern Perl regex for filenames can start with to prevent inclusion of unwanted filenames (e.g. (data\.|storage\.)). Final regex: /^{$pPrefixPattern}.*\.php$/
-	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return void
 	 */
-	function scanAllPlugins( $pPluginsPath = NULL, $pPrefixPattern = NULL ) {
+	public function scanAllPlugins( $pPluginsPath = null, $pPrefixPattern = null ) {
 		global $gBitSystem;
 		if( empty( $pPluginsPath )) {
 			$pPluginsPath = $this->mPluginPath;
@@ -175,23 +185,23 @@ class LibertySystem extends BitSingleton {
 
 		// check for plugins in plugins/ dir
 		if( $pluginHandle = opendir( $pPluginsPath )) {
-			while( FALSE !== ( $plugin = readdir( $pluginHandle ) ) ) {
+			while( false !== ( $plugin = readdir( $pluginHandle ) ) ) {
 				$pattern = "/^{$pPrefixPattern}.*\.php$/";
 				if( preg_match( $pattern, $plugin ) ) {
 					$this->mPluginFilePath = $pPluginsPath.$plugin;
-					include_once( $pPluginsPath.$plugin );
+					include_once $pPluginsPath.$plugin;
 				}
 			}
 		}
 
 		// check for liberty plugins in other packages as well
 		if( $this->mSystem == LIBERTY_PKG_NAME && $pkgHandle = opendir( BIT_ROOT_PATH )) {
-			while( FALSE !== ( $dirName = readdir( $pkgHandle ))) {
+			while( false !== ( $dirName = readdir( $pkgHandle ))) {
 				if( preg_match( '/^\w/', $dirName )  && $dirName != 'CVS' && is_dir( $pluginDir = BIT_ROOT_PATH.$dirName.'/liberty_plugins/' ) && ( $pluginHandle = opendir( $pluginDir ))) {
-					while( FALSE !== ( $plugin = readdir( $pluginHandle ))) {
+					while( false !== ( $plugin = readdir( $pluginHandle ))) {
 						if( preg_match( "/^{$pPrefixPattern}.*\.php$/", $plugin )) {
 							$this->mPluginFilePath = $pluginDir.$plugin;
-							include_once( $pluginDir.$plugin );
+							include_once $pluginDir.$plugin;
 						}
 					}
 				}
@@ -210,7 +220,7 @@ class LibertySystem extends BitSingleton {
 			$current_default_format_guid = $gBitSystem->getConfig( 'default_format' );
 			foreach( $this->mPlugins as $guid => $plugin ) {
 				// load all the requirements that we can display them on the plugin page
-				if( $requirement_func = $this->getPluginFunction( $guid, 'requirement_function', FALSE, TRUE )) {
+				if( $requirement_func = $this->getPluginFunction( $guid, 'requirement_function', false, true )) {
 					$this->mPlugins[$guid]['requirements'] = $requirement_func();
 				}
 
@@ -229,7 +239,7 @@ class LibertySystem extends BitSingleton {
 			// This happens during installation and therefore requires that we include the plugin file for the constant definitions
 			$plugin_file = $this->mPluginPath.'format.tikiwiki.php';
 			if( $format_plugin_count == 0 || $default_format_found == 0 && is_file( $plugin_file ) ) {
-				require_once( $plugin_file );
+				require_once $plugin_file;
 				$this->setActivePlugin( PLUGIN_GUID_TIKIWIKI );
 				$gBitSystem->storeConfig( 'default_format', PLUGIN_GUID_TIKIWIKI, $this->mSystem );
 				//make memory match db
@@ -242,22 +252,22 @@ class LibertySystem extends BitSingleton {
 		foreach( $plugins as $config => $path ) {
 			if( !is_file( BIT_ROOT_PATH.$path )) {
 				$guid = str_replace( "{$this->mSystem}_plugin_path_", '', $config );
-				$gBitSystem->storeConfigMatch( "/^{$this->mSystem}_plugin_\w+_$guid/i", NULL );
+				$gBitSystem->storeConfigMatch( "/^{$this->mSystem}_plugin_\w+_$guid/i", null );
 			}
 		}
 
 		// TODO: we can remove this at some point since it's not really important - it just clears out stuff from the database that we don't use anymore
-		$gBitSystem->storeConfigMatch( "/^{$this->mSystem}_plugin_file_/", NULL );
+		$gBitSystem->storeConfigMatch( "/^{$this->mSystem}_plugin_file_/", null );
 	}
 
 	/**
 	 * Check to see if a given plugin is activ or not
 	 *
 	 * @param $pPluginGuid Plugin GUID of the plugin you want to check
-	 * @return TRUE if the plugin is active, FALSE if it's not
+	 * @return bool true if the plugin is active, false if it's not
 	 **/
 	function isPluginActive( $pPluginGuid ) {
-		return( !empty( $this->mPlugins[$pPluginGuid]['is_active'] ) && ( $this->mPlugins[$pPluginGuid]['is_active'] == 'y' ));
+		return !empty( $this->mPlugins[$pPluginGuid]['is_active'] ) && ( $this->mPlugins[$pPluginGuid]['is_active'] == 'y' );
 	}
 
 	/**
@@ -275,20 +285,43 @@ class LibertySystem extends BitSingleton {
 	/**
 	 * Allow plugins to register themselves using this function. Data is added directly to the list of existing plugins
 	 *
-	 * @param $pGuid GUID of plugin
-	 * @param $pPluginParams Set of plugin parameters (see treasury/plugins/mime.*.php for example)
-	 * @return none
+	 * @param string $pGuid GUID of plugin
+	 * @param array $pPluginParams Set of plugin parameters (see treasury/plugins/mime.*.php for example)
+	 * @return void
 	 * @access public
 	 **/
 	function registerPlugin( $pGuid, $pPluginParams ) {
 		global $gBitSystem;
 		// plugins can set their own file_name. this is not mandatory but makes sure we store the path to the correct file
 		// this is useful for files that are included by other plugins
-		if( !empty( $pPluginParams['file_name'] )) {
-			$pluginPath = dirname( $this->mPluginFilePath )."/".$pPluginParams['file_name'];
-		} else {
-			$pluginPath = $this->mPluginFilePath;
-		}
+			$pluginPath = !empty( $pPluginParams['file_name'] ) 
+				? dirname( $this->mPluginFilePath ) . "/" . $pPluginParams['file_name']
+				: $this->mPluginFilePath;
+
+			if ( !empty( $pPluginParams['verify_function'] ) ) {
+				$pPluginParams['verify_function']   = '\\Bitweaver\\Liberty\\' . $pPluginParams['verify_function'];
+			}
+			if ( !empty( $pPluginParams['store_function'] ) ) {
+				$pPluginParams['store_function']    = '\\Bitweaver\\Liberty\\' . $pPluginParams['store_function'];
+			}
+			if ( !empty( $pPluginParams['update_function'] ) ) {
+				$pPluginParams['update_function']   = '\\Bitweaver\\Liberty\\' . $pPluginParams['update_function'];
+			}
+			if ( !empty( $pPluginParams['load_function'] ) ) {
+				$pPluginParams['load_function']     = '\\Bitweaver\\Liberty\\' . $pPluginParams['load_function'];
+			}
+			if ( !empty( $pPluginParams['branch_function'] ) ) {
+ 				$pPluginParams['branch_function']   = '\\Bitweaver\\Liberty\\' . $pPluginParams['branch_function'];
+			}
+			if ( !empty( $pPluginParams['download_function'] ) ) {
+				$pPluginParams['download_function'] = '\\Bitweaver\\Liberty\\' . $pPluginParams['download_function'];
+			}
+			if ( !empty( $pPluginParams['expunge_function'] ) ) {
+				$pPluginParams['expunge_function']  = '\\Bitweaver\\Liberty\\' . $pPluginParams['expunge_function'];
+			}
+			if ( !empty( $pPluginParams['help_function'] ) ) {
+				$pPluginParams['help_function']     = '\\Bitweaver\\Liberty\\' . $pPluginParams['help_function'];
+			}
 
 		if( !empty( $pGuid ) && !empty( $pluginPath ) && is_file( $pluginPath ) ) {
 			// store the relative path - we need to store the path to all plugins and not just active ones since we don't have access to this information when we use setActivePlugins()
@@ -307,15 +340,14 @@ class LibertySystem extends BitSingleton {
 	 * setActivePlugins
 	 *
 	 * @param array $pPluginGuids an array of all the plugin guids that are active. Any left out are *inactive*!
-	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return void
 	 */
-	function setActivePlugins( $pPluginGuids ) {
+	public function setActivePlugins( $pPluginGuids ): void {
 		global $gBitSystem;
 
 		if( is_array( $pPluginGuids ) ) {
 			// zap list of plugins from DB
-			$gBitSystem->storeConfigMatch( "/^{$this->mSystem}_plugin_status/i", NULL, 'n', LIBERTY_PKG_NAME );
+			$gBitSystem->storeConfigMatch( "/^{$this->mSystem}_plugin_status/i", null, 'n', LIBERTY_PKG_NAME );
 			foreach( array_keys( $this->mPlugins ) as $guid ) {
 				$this->mPlugins[$guid]['is_active'] = 'n';
 			}
@@ -337,11 +369,10 @@ class LibertySystem extends BitSingleton {
 	/**
 	 * set a single plugin as active and store the appropriate information in the database
 	 *
-	 * @param array $pPluginGuid the plugin guid we want to set active
-	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @param string $pPluginGuid the plugin guid we want to set active
+	 * @return array|null
 	 */
-	function setActivePlugin( $pPluginGuid ) {
+	public function setActivePlugin( $pPluginGuid ): array|null {
 		global $gBitSystem;
 		$gBitSystem->storeConfig( "{$this->mSystem}_plugin_status_".$pPluginGuid, 'y', LIBERTY_PKG_NAME );
 		if( isset( $this->mPlugins[$pPluginGuid] )) {
@@ -350,12 +381,12 @@ class LibertySystem extends BitSingleton {
 
 		// the requirement function can return a set of tables, indexes and sequences that need to be created for the plugin to work.
 		if( $requirement_func = $this->getPluginFunction( $pPluginGuid, 'requirement_function' )) {
-			$reqs = $requirement_func( TRUE );
+			$reqs = $requirement_func( true );
 			if( !empty( $reqs['schema']['tables'] )) {
 				// fetch a list of tables in the database that we know if we need to insert any plugin ones
 				if( strlen( BIT_DB_PREFIX ) > 0 ) {
 					$lastQuote = strrpos( BIT_DB_PREFIX, '`' );
-					if( $lastQuote != FALSE ) {
+					if( $lastQuote != false ) {
 						$lastQuote++;
 					}
 					$prefix = substr( BIT_DB_PREFIX, $lastQuote );
@@ -364,7 +395,7 @@ class LibertySystem extends BitSingleton {
 				}
 
 				global $gBitDbType, $gBitDbHost, $gBitDbUser, $gBitDbPassword, $gBitDbName;
-				$db = &ADONewConnection( $gBitDbType );
+				$db = \ADONewConnection( $gBitDbType );
 				if( $db->Connect( $gBitDbHost, $gBitDbUser, $gBitDbPassword, $gBitDbName )) {
 					$dict = NewDataDictionary( $db );
 
@@ -372,17 +403,11 @@ class LibertySystem extends BitSingleton {
 						$dict->connection->nameQuote = '';
 					}
 
-					if( $dbTables = $gBitSystem->mDb->MetaTables( 'TABLES', FALSE, ( $prefix ? $prefix.'%' : NULL ))) {
+					if( $dbTables = $gBitSystem->mDb->MetaTables( 'TABLES', false, $prefix ? $prefix.'%' : null ) ) {
 						// If we use MySql check which storage engine to use
-						if( isset( $_SESSION['use_innodb'] )) {
-							if( $_SESSION['use_innodb'] == TRUE ) {
-								$build = array( 'NEW', 'MYSQL' => 'ENGINE=INNODB' );
-							} else {
-								$build = array( 'NEW', 'MYSQL' => 'ENGINE=MYISAM' );
-							}
-						} else {
-							$build = 'NEW';
-						}
+							$build = isset( $_SESSION['use_innodb'] )
+								? ( $_SESSION['use_innodb'] == true ? [ 'NEW', 'MYSQL' => 'ENGINE=INNODB' ] : [ 'NEW', 'MYSQL' => 'ENGINE=MYISAM' ] )
+								: 'NEW';
 
 						// create tables
 						foreach( $reqs['schema']['tables'] as $table => $tableDict ) {
@@ -390,9 +415,9 @@ class LibertySystem extends BitSingleton {
 							if( !in_array( $fullTable, $dbTables )) {
 								if( $sql = $dict->CreateTableSQL( $fullTable, $tableDict, $build )) {
 									$ret = $dict->ExecuteSQLArray( $sql );
-									if( $ret === FALSE ) {
-										$errors[] = 'Failed to create table '.$completeTableName;
-										$tablesInstalled = TRUE;
+									if( $ret === false ) {
+										$errors[] = 'Failed to create table '.$this->completeTableName;
+										$tablesInstalled = true;
 									}
 								}
 							}
@@ -401,7 +426,7 @@ class LibertySystem extends BitSingleton {
 						// only continue if we installed at least one table
 						if( !empty( $tablesInstalled )) {
 							$schemaQuote = strrpos( BIT_DB_PREFIX, '`' );
-							$sequencePrefix = ( $schemaQuote ? substr( BIT_DB_PREFIX,  $schemaQuote + 1 ) : BIT_DB_PREFIX );
+							$sequencePrefix = $schemaQuote ? substr( BIT_DB_PREFIX,  $schemaQuote + 1 ) : BIT_DB_PREFIX;
 
 							// create indexes
 							if( !empty( $reqs['schema']['indexes'] )) {
@@ -409,7 +434,7 @@ class LibertySystem extends BitSingleton {
 									$completeTableName = $sequencePrefix.$reqs['schema']['indexes'][$idx]['table'];
 									if( $sql = $dict->CreateIndexSQL( $idx, $completeTableName, $reqs['schema']['indexes'][$idx]['cols'], $reqs['schema']['indexes'][$idx]['opts'] )) {
 										$ret = $dict->ExecuteSQLArray( $sql );
-										if( $ret === FALSE ) {
+										if( $ret === false ) {
 											$errors[] = 'Failed to create index '.$completeTableName;
 										}
 									}
@@ -420,15 +445,13 @@ class LibertySystem extends BitSingleton {
 							if( !empty( $reqs['schema']['sequences'] )) {
 								// If we use InnoDB for MySql we need this to get sequence tables created correctly.
 								if( isset( $_SESSION['use_innodb'] ) ) {
-									if( $_SESSION['use_innodb'] == TRUE ) {
-										$gBitInstallDb->_genSeqSQL = "create table %s (id int not null) ENGINE=INNODB";
-									} else {
-										$gBitInstallDb->_genSeqSQL = "create table %s (id int not null) ENGINE=MYISAM";
-									}
+									$this->gBitInstallDb->_genSeqSQL = $_SESSION['use_innodb']
+										? "create table %s (id int not null) ENGINE=MYINNO"
+										: "create table %s (id int not null) ENGINE=MYISAM";
 								}
 
 								foreach( array_keys( $reqs['schema']['sequences'] ) as $sequenceIdx ) {
-									if( !$gBitInstallDb->CreateSequence( $sequencePrefix.$sequenceIdx, $reqs['schema']['sequences'][$sequenceIdx]['start'] )) {
+									if( !$this->gBitInstallDb->CreateSequence( $sequencePrefix.$sequenceIdx, $reqs['schema']['sequences'][$sequenceIdx]['start'] )) {
 										$errors[] = 'Failed to create sequence '.$sequencePrefix.$sequenceIdx;
 									}
 								}
@@ -439,18 +462,17 @@ class LibertySystem extends BitSingleton {
 			}
 		}
 
-		return( !empty( $errors ) ? $errors : NULL );
+		return !empty( $errors ) ? $errors : null;
 	}
 
 	/**
 	 * getPluginInfo
 	 *
-	 * @param array $pGuid
-	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @param string $pGuid
+	 * @return array
 	 */
-	function getPluginInfo( $pGuid ) {
-		$ret = NULL;
+	public function getPluginInfo( $pGuid ) {
+		$ret = null;
 		if( !empty( $pGuid ) && !empty( $this->mPlugins[$pGuid] )) {
 			$ret = $this->mPlugins[$pGuid];
 		}
@@ -465,9 +487,9 @@ class LibertySystem extends BitSingleton {
 	 * @param string $pGetDefault Get default function for a given plugin type such as 'mime'
 	 * @param string $pGetInactive don't worry if plugin is active or not
 	 * @access public
-	 * @return function name on success, NULL on failure
+	 * @return string function name on success, null on failure
 	 */
-	function getPluginFunction( $pGuid, $pFunctionName, $pGetDefault = FALSE, $pGetInactive = FALSE ) {
+	public function getPluginFunction( $pGuid, $pFunctionName, $pGetDefault = false, $pGetInactive = false ) {
 		if(( $this->isPluginActive( $pGuid ) || $pGetInactive ) && !empty( $this->mPlugins[$pGuid][$pFunctionName] ) && function_exists( $this->mPlugins[$pGuid][$pFunctionName] )) {
 			$ret = $this->mPlugins[$pGuid][$pFunctionName];
 		}
@@ -477,7 +499,7 @@ class LibertySystem extends BitSingleton {
 			$ret = $this->getPluginFunction( LIBERTY_DEFAULT_MIME_HANDLER, $pFunctionName );
 		}
 
-		return( !empty( $ret ) ? $ret : NULL );
+		return !empty( $ret ) ? $ret : null;
 	}
 
 	/**
@@ -494,7 +516,7 @@ class LibertySystem extends BitSingleton {
 			}
 		}
 
-		return( !empty( $ret ) ? $ret : array() );
+		return !empty( $ret ) ? $ret : [];
 	}
 
 	/**
@@ -502,11 +524,10 @@ class LibertySystem extends BitSingleton {
 	 *
 	 * @param string $pTemplate Basename of the template
 	 * @param string $pGuid GUID of plugin
-	 * @access public
 	 * @return resource path to template
 	 */
-	function getMimeTemplate( $pTemplate, $pGuid = LIBERTY_DEFAULT_MIME_HANDLER ) {
-		$ret = NULL;
+	public function getMimeTemplate( $pTemplate, $pGuid = LIBERTY_DEFAULT_MIME_HANDLER ) {
+		$ret = null;
 		if( $this->isPluginActive( $pGuid ) && ( $plugin = $this->getPluginInfo( $pGuid )) && !empty( $plugin[$pTemplate.'_tpl'] )) {
 			$ret = $plugin[$pTemplate.'_tpl'];
 		} elseif( $pGuid != LIBERTY_DEFAULT_MIME_HANDLER ) {
@@ -523,7 +544,7 @@ class LibertySystem extends BitSingleton {
 	 * @return array of resource paths to templates
 	 */
 	function getAllMimeTemplates( $pTemplate ) {
-		$ret = array();
+		$ret = [];
 		foreach( $this->getPluginsOfType( MIME_PLUGIN ) as $guid => $plugin ) {
 			if( $this->isPluginActive( $guid ) && !empty( $plugin[$pTemplate.'_tpl'] )) {
 				$ret[] = $plugin[$pTemplate.'_tpl'];
@@ -536,11 +557,10 @@ class LibertySystem extends BitSingleton {
 	 * getPluginsOfType will fetch all plugins of a given type
 	 *
 	 * @param string $pPluginType
-	 * @access public
-	 * @return an array of plugins of a given type
+	 * @return array an array of plugins of a given type
 	 */
-	function getPluginsOfType( $pPluginType ) {
-		$ret = array();
+	public function getPluginsOfType( $pPluginType ) {
+		$ret = [];
 		if( !empty( $pPluginType )) {
 			foreach( $this->mPlugins as $guid => $plugin ) {
 				if( !empty( $plugin['plugin_type'] ) && $plugin['plugin_type'] == $pPluginType ) {
@@ -555,15 +575,14 @@ class LibertySystem extends BitSingleton {
 	 * This function will purge all plugin settings set in kernel_config. useful when the path to plugins changes
 	 * or plugins don't seem to be working
 	 *
-	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return void
 	 */
-	function resetAllPluginSettings() {
+	public function resetAllPluginSettings() {
 		global $gBitSystem;
-		$gBitSystem->storeConfigMatch( "/^{$this->mSystem}_plugin_/", NULL );
+		$gBitSystem->storeConfigMatch( "/^{$this->mSystem}_plugin_/", null );
 		if( $this->mSystem == LIBERTY_PKG_NAME ) {
 			// also remove the default format
-			$gBitSystem->storeConfig( 'default_format', NULL, $this->mSystem );
+			$gBitSystem->storeConfig( 'default_format', null, $this->mSystem );
 		}
 		$this->scanAllPlugins();
 	}
@@ -571,16 +590,16 @@ class LibertySystem extends BitSingleton {
 	/**
 	 * Load all available content types into $this->mContentTypes
 	 *
-	 * @return none
+	 * @return void
 	 **/
-	function loadContentTypes( $pCacheTime=BIT_QUERY_CACHE_TIME ) {
-		if( $rs = $this->mDb->query( "SELECT * FROM `".BIT_DB_PREFIX."liberty_content_types`", FALSE, BIT_QUERY_DEFAULT, BIT_QUERY_DEFAULT ) ) {
+	public function loadContentTypes( $pCacheTime=BIT_QUERY_CACHE_TIME ) {
+		if( $rs = $this->mDb->query( "SELECT * FROM `".BIT_DB_PREFIX."liberty_content_types`", null, BIT_QUERY_DEFAULT, BIT_QUERY_DEFAULT ) ) {
 			while( $row = $rs->fetchRow() ) {
 				// translate name
 				// content_description backward compatibility for now
-				$row['content_description'] = $row['content_name'] = tra( $row['content_name'] );
+				$row['content_description'] = $row['content_name'] = KernelTools::tra( $row['content_name'] );
 				if( !empty( $row['content_name_plural'] ) ){
-					$row['content_name_plural'] = tra( $row['content_name_plural'] );
+					$row['content_name_plural'] = KernelTools::tra( $row['content_name_plural'] );
 				}
 				$this->mContentTypes[$row['content_type_guid']] = $row;
 			}
@@ -590,10 +609,9 @@ class LibertySystem extends BitSingleton {
 	/**
 	 * Register new content type
 	 *
-	 * @return none
-	 * @access public
+	 * @return void
 	 **/
-	function registerContentType( $pGuid, $pTypeParams ) {
+	public function registerContentType( $pGuid, $pTypeParams ) {
 		global $gBitSystem;
 		if ( !$this->mDb->isValid() ) return;
 		if( !isset( $this->mContentTypes ) ) {
@@ -626,22 +644,21 @@ class LibertySystem extends BitSingleton {
 	}
 
 	/**
-	 * requireContentType will require_once() the handler file if given the hash found in $gLibertySystem->mContentTypes[content_type_guid]
+	 * requireHandlerFile will require_once() the handler file if given the hash found in $gLibertySystem->mContentTypes[content_type_guid]
 	 *
 	 * @param array $pContentTypeHash the hash found in $gLibertySystem->mContentTypes[content_type_guid]
 	 * @access public
-	 * @return TRUE on success, FALSE on failure
+	 * @return bool true on success, false on failure
 	 */
-	public static function requireContentType( $pContentTypeHash ) {
+	private function requireHandlerFile( $pContentTypeHash ) {
+		$ret = false;
 		$pkgName = strtoupper( $pContentTypeHash['handler_package'] );
-		if( !($ret = class_exists( $pContentTypeHash['handler_class'] )) )  {
-			foreach( array( '_PKG_CLASS_PATH', '_PKG_INCLUDE_PATH', '_PKG_PATH' ) as $pkgConstPath ) {
-				if( defined( $pkgName.$pkgConstPath ) && ($pkgDef = constant( $pkgName.$pkgConstPath )) ) {
-					$handlerFile = $pkgDef.$pContentTypeHash['handler_file'];
-					if( is_file( $handlerFile ) ) {
-						require_once( $handlerFile );
-						$ret = class_exists( $pContentTypeHash['handler_class'] );
-					}
+		foreach( [ '_PKG_CLASS_PATH', '_PKG_INCLUDE_PATH', '_PKG_PATH' ] as $pkgConstPath ) {
+			if( defined( $pkgName.$pkgConstPath ) && ($pkgDef = constant( $pkgName.$pkgConstPath )) ) {
+				$handlerFile = $pkgDef.$pContentTypeHash['handler_file'];
+				if( is_file( $handlerFile ) ) {
+					require_once $handlerFile;
+					$ret = true;
 				}
 			}
 		}
@@ -654,7 +671,7 @@ class LibertySystem extends BitSingleton {
 	 * @return string the display name of the content type
  	 */
 	function getContentType( $pContentTypeGuid ){
-		$ret = NULL;
+		$ret = null;
 		if( !isset( $this->mContentTypes ) ) {
 			$this->loadContentTypes();
 		}
@@ -670,27 +687,28 @@ class LibertySystem extends BitSingleton {
 	 * @return string the display name of the content type
  	 */
 	public function getContentClassName( $pContentTypeGuid ) {
-		$ret = NULL;
+		$ret = null;
 		if( !isset( $this->mContentTypes ) ) {
 			$this->loadContentTypes();
 		}
-		if( !empty( $this->mContentTypes[$pContentTypeGuid] ) && static::requireContentType( $this->mContentTypes[$pContentTypeGuid] ) ) {
-		 	$ret = $this->mContentTypes[$pContentTypeGuid]['handler_class'];
+		if( !empty( $this->mContentTypes[$pContentTypeGuid] ) && $this->requireHandlerFile( $this->mContentTypes[$pContentTypeGuid] ) ) {
+		 	$ret = '\\Bitweaver\\'. ucfirst( $this->mContentTypes[$pContentTypeGuid]['handler_package'] ) . '\\' . $this->mContentTypes[$pContentTypeGuid]['handler_class'];
 		}
 		return $ret;
 	}
 
 	/**
 	 * Get the display name of the content type
+	 * @param string $pContentTypeGuid
 	 * @param boolean $pPlural true will return the plural form of the content type display name
 	 * @return string the display name of the content type
  	 */
-	function getContentTypeName( $pContentTypeGuid, $pPlural=FALSE ){
-		$ret = NULL;
+	function getContentTypeName( $pContentTypeGuid, $pPlural=false ){
+		$ret = null;
 		if( $pPlural && isset( $this->mContentTypes[$pContentTypeGuid]['content_name_plural'] ) ) {
-			$ret = tra( $this->mContentTypes[$pContentTypeGuid]['content_name_plural'] );
+			$ret = KernelTools::tra( $this->mContentTypes[$pContentTypeGuid]['content_name_plural'] );
 		} elseif( !empty( $this->mContentTypes[$pContentTypeGuid]['content_name'] ) ) {
-		 	$ret = tra( $this->mContentTypes[$pContentTypeGuid]['content_name'] );
+		 	$ret = KernelTools::tra( $this->mContentTypes[$pContentTypeGuid]['content_name'] );
 		}
 		return $ret;
 	}
@@ -699,11 +717,10 @@ class LibertySystem extends BitSingleton {
 	 * Get the description of a given content type
 	 *
 	 * @param $pContentType Content type GUID you want the description for
-	 * @return Content type description
-	 * @access public
+	 * @return string Content type description
 	 **/
-	function getContentTypeDescription( $pContentType ) {
-		deprecated( 'You are calling the deprecated method getContentTypeDescription, use getContentTypeName( $pPlural )' );
+	public function getContentTypeDescription( $pContentType ) {
+		KernelTools::deprecated( 'You are calling the deprecated method getContentTypeDescription, use getContentTypeName( $pPlural )' );
 		return $this->getContentTypeName( $pContentType );
 	}
 
@@ -714,51 +731,48 @@ class LibertySystem extends BitSingleton {
 	/**
 	 * Get the service details of a given package
 	 *
-	 * @param $pPackageName Package name of you want the service details for
-	 * @return Service details if the package has them - FALSE if the package is not a service
+	 * @param string $pPackageName Package name of you want the service details for
+	 * @return array Service details if the package has them - false if the package is not a service
 	 * @access public
 	 **/
-	function getService( $pPackageName ) {
+	public function getService( $pPackageName ) {
 		global $gBitSystem;
-		return( !empty( $gBitSystem->mPackages[$pPackageName]['service'] ) ? $gBitSystem->mPackages[$pPackageName]['service'] : NULL );
+		return !empty( $gBitSystem->mPackages[$pPackageName]['service'] ) ? $gBitSystem->mPackages[$pPackageName]['service'] : null;
 	}
 
 	/**
 	 * Register package as service - hash added to $this->mServices
 	 *
 	 * $pServiceHash Service hash details. see existing service hashes found in <package>/bit_setup_inc.php for examples and details
-	 * @return none
-	 * @access public
+	 * @return void
 	 **/
-	function registerService( $pServiceName, $pPackageName, $pServiceHash, $pOptions = array()  ) {
-		$this->mServices[$pServiceName] = array(
-		   										'package' => $pPackageName,
-		   										'services'	=> $pServiceHash,
-												'description' => !empty( $pOptions['description'] ) ? $pOptions['description'] : NULL,
-												'required' => !empty( $pOptions['required'] ) ? $pOptions['required'] : FALSE,
-											 );
+	public function registerService( $pServiceName, $pPackageName, $pServiceHash, $pOptions = [] ) {
+		$this->mServices[$pServiceName] = [
+			'package' => $pPackageName,
+			'services'	=> $pServiceHash,
+			'description' => !empty( $pOptions['description'] ) ? $pOptions['description'] : '',
+			'required' => !empty( $pOptions['required'] ) ? $pOptions['required'] : [],
+		];
 	}
 
 	/**
 	 * Check to see if a package has any service capabilities
 	 *
-	 * @return TRUE on success, FALSE on failure
-	 * @access public
+	 * @return bool true on success, false on failure
 	 **/
-	function hasService( $pServiceName ) {
-		return( !empty( $this->mServices[$pServiceName] ) );
+	public function hasService( $pServiceName ) {
+		return !empty( $this->mServices[$pServiceName] );
 	}
 
 	/**
 	 * Get contents of a given service value
 	 *
 	 * @param $pServiceValue Service value you want to work to get
-	 * @return Value of a given service value
-	 * @access private
+	 * @return array Value of a given service value
 	 **/
-	function getServiceValues( $pServiceValue ) {
+	public function getServiceValues( $pServiceValue ) {
 		global $gBitSystem;
-		$ret = NULL;
+		$ret = null;
 		if( !empty( $this->mServices ) ) {
 			foreach( array_keys( $this->mServices ) as $service ) {
 				if( $this->hasService( $service ) ) {
@@ -782,41 +796,37 @@ class LibertySystem extends BitSingleton {
 		return $ret;
 	}
 
-
-
-
 	// ****************************** Miscellaneous Functions
 	/**
 	 * Get the URL to the icon for the mime type passed in. This should probably check for files of multiple image types instead of just jpg
 	 *
 	 * @param string $pMimeType Mime type of the file
 	 * @param string $pExt Extension of the file - used to get backup mime icon
-	 * @access public
-	 * @return Full image HTML tag to mime icon
+	 * @return string Full image HTML tag to mime icon
 	 */
-	public static function getMimeThumbnailURL($pMimeType, $pExt=NULL) {
-		$ret = NULL;
+	public static function getMimeThumbnailURL($pMimeType, $pExt=null) {
+		$ret = null;
 		$parts = explode( '/',$pMimeType );
 		if( count( $parts ) > 1 ) {
-			global $gBitSmarty;
-			$gBitSmarty->loadPlugin( 'smarty_function_biticon' );
-
+			global $gBitSmarty, $gLibertySystem;
+	
 			$ext = strtolower( $parts[1] );
-			$biticon = array(
+			$biticon = [
 				'ipackage' => 'liberty',
 				'ipath' => 'mime/',
 				'iname' => $ext,
 				'iexplain' => $ext,
 				'url' => 'only',
-			);
+			];
 
-			if( !$ret = smarty_function_biticon( $biticon ) ) {
+/*			if( !$ret = BitIcon::read( $biticon ) ) {
 				$biticon['iname'] = strtolower( $pExt );
-				if( !$ret = smarty_function_biticon( $biticon ) ) {
+				if( !$ret = BitIcon::read( $biticon  ) ) {
 					$biticon['iname'] = 'generic';
-					$ret = smarty_function_biticon( $biticon );
+					$ret = BitIcon::read( $biticon  );
 				}
 			}
+*/
 		}
 		return $ret;
 	}
@@ -826,15 +836,14 @@ class LibertySystem extends BitSingleton {
 	 *
 	 * @param string $pFileHash['mimetype'] (required if no tmp_name) Mime type of file that needs to be dealt with
 	 * @param string $pFileHash['tmp_name'] (required if no mimetype) Full path to file that needs to be dealt with
-	 * @access public
-	 * @return handler plugin guid
+	 * @return string handler plugin guid
 	 * TODO: Currently this will return the first found handler - might want to have a sort order?
 	 **/
-	function lookupMimeHandler( &$pFileHash ) {
+	public function lookupMimeHandler( &$pFileHash ): string {
 		global $gBitSystem;
 
 		if( empty( $this->mPlugins )) {
-			$this->scanAllPlugins( NULL, "mime\." );
+			$this->scanAllPlugins( null, "mime\." );
 		}
 
 		// we will do our best to work out what this file is.
@@ -842,7 +851,7 @@ class LibertySystem extends BitSingleton {
 		// this can be particularly important when fetching the mime-type of video files.
 		// ! Windows looses the file extension when creating the tmp file
 		// need a better way of handling this
-		if( !is_windows() ) {
+		if( !KernelTools::is_windows() ) {
 			$pFileHash['type'] = $gBitSystem->verifyMimeType( $pFileHash['tmp_name'] );
 		}
 
@@ -863,4 +872,3 @@ class LibertySystem extends BitSingleton {
 		return LIBERTY_DEFAULT_MIME_HANDLER;
 	}
 }
-?>

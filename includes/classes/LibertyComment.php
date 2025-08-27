@@ -10,7 +10,9 @@
 /**
  * required setup
  */
-require_once( LIBERTY_PKG_CLASS_PATH.'LibertyMime.php' );
+namespace Bitweaver\Liberty;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
 
 define( 'BITCOMMENT_CONTENT_TYPE_GUID', 'bitcomment' );
 
@@ -22,8 +24,9 @@ define( 'BITCOMMENT_CONTENT_TYPE_GUID', 'bitcomment' );
 
 class LibertyComment extends LibertyMime {
 	public $mCommentId;
+	public $mRootObj;
 
-	function __construct($pCommentId = NULL, $pContentId = NULL, $pInfo = array()) {
+	function __construct($pCommentId = null, $pContentId = null, $pInfo = null) {
 		parent::__construct();
 		$this->registerContentType( BITCOMMENT_CONTENT_TYPE_GUID, array(
 				'content_type_guid' => BITCOMMENT_CONTENT_TYPE_GUID,
@@ -38,7 +41,7 @@ class LibertyComment extends LibertyMime {
 		$this->mInfo = $pInfo;
 		$this->mContentTypeGuid = BITCOMMENT_CONTENT_TYPE_GUID;
 		$this->mAdminContentPerm = 'p_liberty_admin_comments';
-		$this->mRootObj = NULL;
+		$this->mRootObj = null;
 
 		if ($this->mCommentId || $this->mContentId) {
 			$this->loadComment();
@@ -53,7 +56,7 @@ class LibertyComment extends LibertyMime {
 	function loadComment() {
 		global $gBitSystem, $gBitUser;
 		if (!$this->verifyId($this->mCommentId) && !$this->verifyId($this->mContentId)) {
-			return NULL;
+			return null;
 		}
 
 		if ($this->mCommentId) {
@@ -82,7 +85,7 @@ class LibertyComment extends LibertyMime {
 				LibertyMime::load();
 			}
 		}
-		return count($this->mInfo);
+		return !empty($this->mInfo) ? count( $this->mInfo ) : 0;
 	}
 
 	function verifyComment(&$pParamHash) {
@@ -94,7 +97,7 @@ class LibertyComment extends LibertyMime {
 		}
 		*/
 
-		$pParamHash['content_id'] = (@BitBase::verifyId($this->mContentId) ? $this->mContentId : NULL);
+		$pParamHash['content_id'] = BitBase::verifyId($this->mContentId) ? $this->mContentId : null;
 
 		if( empty( $pParamHash['root_id'] ) && !empty( $pParamHash['comments_parent_id'] ) ) {
 			 $pParamHash['root_id'] = $pParamHash['comments_parent_id'];
@@ -105,7 +108,7 @@ class LibertyComment extends LibertyMime {
 		}
 
 		if( empty( $pParamHash['parent_id'] ) ){
-			$pParamHash['parent_id'] = (@BitBase::verifyId($this->mInfo['parent_id']) ? $this->mInfo['parent_id'] : (!@BitBase::verifyId($pParamHash['post_comment_reply_id']) ? $pParamHash['comments_parent_id'] : $pParamHash['post_comment_reply_id']));
+			$pParamHash['parent_id'] = BitBase::verifyId($this->mInfo['parent_id']) ? $this->mInfo['parent_id'] : (!BitBase::verifyId($pParamHash['post_comment_reply_id']) ? $pParamHash['comments_parent_id'] : $pParamHash['post_comment_reply_id']);
 		}
 
 		if (!$pParamHash['parent_id']) {
@@ -117,7 +120,7 @@ class LibertyComment extends LibertyMime {
 		}
 
 		if( !@$gBitUser->verifyCaptcha( $pParamHash['captcha'] ) ) {
-			$this->mErrors['store'] = tra( 'Incorrect validation code' );
+			$this->mErrors['store'] = KernelTools::tra( 'Incorrect validation code' );
 		}
 
 		if( !empty( $pParamHash['comment_title'] ) ){
@@ -129,21 +132,21 @@ class LibertyComment extends LibertyMime {
 		}
 
 		if( empty( $pParamHash['edit'] ) ) {
-			$this->mErrors['store'] = tra( 'Your comment was empty.' );
+			$this->mErrors['store'] = KernelTools::tra( 'Your comment was empty.' );
 		} elseif( !$gBitUser->hasPermission( 'p_liberty_trusted_editor' ) && ($linkCount = preg_match_all( '/http\:\/\//', $pParamHash['edit'], $links )) > $gBitSystem->getConfig( 'liberty_unstrusted_max_http_in_content', 0 ) ) {
-			$this->mErrors['store'] = tra( 'Links are not allowed.' );
+			$this->mErrors['store'] = KernelTools::tra( 'Links are not allowed.' );
 		} else {
 			$dupeQuery = "SELECT `data` FROM `".BIT_DB_PREFIX."liberty_content` lc INNER JOIN `".BIT_DB_PREFIX."liberty_comments` lcom ON (lc.`content_id`=lcom.`content_id`) WHERE `user_id`=? AND `content_type_guid`='".BITCOMMENT_CONTENT_TYPE_GUID."' AND `ip`=? AND lcom.`root_id`=? ORDER BY `created` DESC";
 			if( $lastPostData = $this->mDb->getOne( $dupeQuery, array( $gBitUser->mUserId, $_SERVER['REMOTE_ADDR'], $pParamHash['root_id'] ) ) ) {
 				if( empty( $this->mCommentId ) && trim( $lastPostData ) == trim( $pParamHash['edit'] ) ) {
-					$this->mErrors['store'] = tra( 'Duplicate comment.' );
+					$this->mErrors['store'] = KernelTools::tra( 'Duplicate comment.' );
 				}
 			}
 		}
 
 		// verify attachments are allowed on comments
 		if( ( isset( $pParamHash['_files_override'] ) || !empty( $_FILES ) ) && !$gBitSystem->isFeatureActive( 'comments_allow_attachments' ) ) {
-			$this->mErrors['comment_attachments'] = tra( 'Files can not be uploaded with comments.' );
+			$this->mErrors['comment_attachments'] = KernelTools::tra( 'Files can not be uploaded with comments.' );
 		}
 
         // if we have an error we get them all by checking parent classes for additional errors
@@ -151,7 +154,7 @@ class LibertyComment extends LibertyMime {
             parent::verify( $pParamHash );
         }
 
-		return (count($this->mErrors) == 0);
+		return count($this->mErrors) == 0;
 	}
 
 	function storeComment( &$pParamHash ) {
@@ -161,7 +164,7 @@ class LibertyComment extends LibertyMime {
 				$this->mCommentId = $this->mDb->GenID( 'liberty_comment_id_seq');
 
 				if (!empty($pParamHash['parent_id'])) {
-					$parentComment = new LibertyComment(NULL,$pParamHash['parent_id']);
+					$parentComment = new LibertyComment(null,$pParamHash['parent_id']);
 				}
 				$parent_sequence_forward = '';
 				$parent_sequence_reverse = '';
@@ -199,7 +202,7 @@ class LibertyComment extends LibertyMime {
 		}
 
 		$this->CompleteTrans();
-		return (count($this->mErrors) == 0);
+		return count($this->mErrors) == 0;
 	}
 
 
@@ -212,9 +215,9 @@ class LibertyComment extends LibertyMime {
 	}
 
 	// delete a single comment
-	function deleteComment() {
+	public function deleteComment(): bool {
 		global $gBitSystem;
-		$ret = FALSE;
+		$ret = false;
 		if( $this->isValid() ) {
 			$this->StartTrans();
 
@@ -241,7 +244,7 @@ class LibertyComment extends LibertyMime {
 			*/
 
 			if( LibertyMime::expunge() ) {
-				$ret = TRUE;
+				$ret = true;
 				$this->CompleteTrans();
 			} else {
 				$this->mDb->RollbackTrans();
@@ -256,9 +259,8 @@ class LibertyComment extends LibertyMime {
 	// 1) change name
 	// 2) use materialized path to cut query count and eliminate recursion
 
-	function expunge() {
+	public function expunge(): bool {
 		global $gBitSystem;
-		$ret = FALSE;
 		if( $this->isValid() ) {
 			$this->StartTrans();
 			$sql = "SELECT `comment_id` FROM `".BIT_DB_PREFIX."liberty_comments` WHERE `parent_id` = ?";
@@ -291,69 +293,67 @@ class LibertyComment extends LibertyMime {
 			*/
 
 			if( LibertyMime::expunge() ) {
-				$ret = TRUE;
 				$this->CompleteTrans();
 			} else {
 				$this->mDb->RollbackTrans();
 			}
 		}
-		return $ret;
+		return true;
 	}
 
 	function userCanEdit() {
 		global $gBitUser, $gBitSystem;
-		$ret = FALSE;
+		$ret = false;
 
 		// check the allowed edit time limit - we'll use it later
-		$withinEditTime = FALSE;
+		$withinEditTime = false;
 		if ( $gBitSystem->getConfig( 'comments_edit_minutes', 60 ) * 60 + $this->getField( 'created' ) > time() ) {
-			$withinEditTime = TRUE;
+			$withinEditTime = true;
 		}
 		if( $gBitUser->isRegistered() ) {
 			/* get the hash of the users perms rather than call hasUserPermission which
 			 * always returns true for owner which interferes with trying to time limit editing
 			 */
 			$checkPerms = $this->getUserPermissions();
-			$ret = ( !empty( $checkPerms['p_liberty_edit_comments'] ) ||
+			$ret = !empty( $checkPerms['p_liberty_edit_comments'] ) ||
 					 !empty( $checkPerms['p_liberty_admin_comments'] ) ||
 					 $gBitUser->hasPermission( 'p_liberty_admin_comments' ) ||
-					 ( $gBitUser->mUserId == $this->mInfo['user_id'] && $withinEditTime )
-					);
+					 $gBitUser->mUserId == $this->mInfo['user_id'] && $withinEditTime;
 		} elseif( $this->mInfo['user_id'] == ANONYMOUS_USER_ID ) {
-			$ret = (($_SERVER['REMOTE_ADDR']==$this->mInfo['ip']) && $withinEditTime );
+			$ret = $_SERVER['REMOTE_ADDR']==$this->mInfo['ip'] && $withinEditTime;
 		}
 		return $ret;
 	}
 
-	function userCanUpdate( $pRootContent=NULL ) {
-		return( $this->userCanEdit() || ($pRootContent && ($pRootContent->hasUserPermission( 'p_liberty_edit_comments' ) || $pRootContent->hasUserPermission( 'p_liberty_admin_comments' ))) );
+	function userCanUpdate( $pRootContent=null ) {
+		return $this->userCanEdit() || ($pRootContent && ($pRootContent->hasUserPermission( 'p_liberty_edit_comments' ) || $pRootContent->hasUserPermission( 'p_liberty_admin_comments' )));
 	}
 
     /**
-    * @param pLinkText name of
-    * @param pParamHash different possibilities depending on derived class
-    * @return the link to display the page.
+    * @param string pLinkText name of
+    * @param array pParamHash different possibilities depending on derived class
+    * @return string the link to display the page.
     */
 	public static function getDisplayUrlFromHash( &$pParamHash ) {
-		$ret = NULL;
-		if( @BitBase::verifyId( $pParamHash['root_id'] ) && $viewContent = LibertyBase::getLibertyObject( $pParamHash['root_id'] ) ) {
+		$ret = null;
+		if( BitBase::verifyId( $pParamHash['root_id'] ) && $viewContent = LibertyBase::getLibertyObject( $pParamHash['root_id'] ) ) {
 			// pass in cooment hash to the url func incase the root package needs to do something fancy
 			$viewContent->mInfo['comment'] = $pParamHash;
 			$ret = $viewContent->getDisplayUrl().( @static::verifyId( $pParamHash['content_id'] ) ? "#comment_".$pParamHash['content_id'] : '' );
-		} elseif( @BitBase::verifyId( $pParamHash['content_id'] ) ) {
+		} elseif( BitBase::verifyId( $pParamHash['content_id'] ) ) {
 			$ret = parent::getDisplayUrlFromHash( $pParamHash );
 			$ret .= "#comment_{$pParamHash['content_id']}";
 		}
 
-		return( $ret );
+		return $ret;
 	}
 
 	//generate a URL to directly access and display a single comment and the associated root content
-	public static function getDirectUrlFromHash( $pParamHash=NULL ) {
+	public function getDirectUrlFromHash( $pParamHash=null ) {
 			if( empty( $pParamHash ) ) {
-					$pParamHash = &$this->mInfo;
+				$pParamHash = &$this->mInfo;
 			}
-			$ret = NULL;
+			$ret = null;
 			if( !empty( $pParamHash['root_id'] ) && $viewContent = LibertyBase::getLibertyObject( $pParamHash['root_id'] ) ) {
 					$ret = $viewContent->getDisplayUrl();
 					if ( strstr($ret, '?') ) {
@@ -364,16 +364,16 @@ class LibertyComment extends LibertyMime {
 					}
 					$ret .= "view_comment_id=" . $pParamHash['content_id'] .  "#comment_".$pParamHash['content_id'];
 			}
-			return ( $ret );
+			return $ret;
 	}
 
-	public static function getDisplayLinkFromHash( &$pParamHash, $pLinkText=NULL, $pAnchor=NULL ) {
+	public static function getDisplayLinkFromHash( &$pParamHash, $pLinkText=null, $pAnchor=null ) {
 		$anchor = '';
 		// Override default title with something comment centric
 		if( empty( $pLinkText ) ) {
-			$pLinkText = tra( 'Comment' );
+			$pLinkText = KernelTools::tra( 'Comment' );
 		}
-		if( @BitBase::verifyId( $pParamHash['content_id'] )) {
+		if( BitBase::verifyId( $pParamHash['content_id'] )) {
 			$anchor = "&view_comment_id=".$pParamHash['content_id']."#comment_{$pParamHash['content_id']}";
 		}
 		return parent::getDisplayLinkFromHash( $pParamHash, $pLinkText, $anchor );
@@ -391,10 +391,10 @@ class LibertyComment extends LibertyMime {
 		$sort_mode = $this->mDb->convertSortmode($pParamHash['sort_mode']);
 
 		$joinSql = $whereSql = $selectSql = '';
-		$bindVars = $ret = array();
+		$bindVars = $ret = [];
 
-		$pParamHash['include_comments'] = TRUE;
-		$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars, NULL, $pParamHash );
+		$pParamHash['include_comments'] = true;
+		$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars, null, $pParamHash );
 
 		if ( !empty( $pParamHash['root_content_type_guid'] ) ) {
 			if( is_string( $pParamHash['root_content_type_guid'] ) ) {
@@ -463,8 +463,8 @@ class LibertyComment extends LibertyMime {
 		if( $result = $this->mDb->query( $query, $bindVars, $pParamHash['max_records'], $pParamHash['offset'] )) {
 			while( $row = $result->FetchRow() ) {
 				$row['display_link'] = $this->getDisplayLink( $row['content_title'], $row );
-				$row['display_url'] = static::getDisplayUrlFromHash( $row );
-				$row['direct_url'] = static::getDirectUrlFromHash( $row );
+				$row['display_url'] = $this->getDisplayUrlFromHash( $row );
+				$row['direct_url'] = $this->getDirectUrlFromHash( $row );
 				if (!empty($pParamHash['parse'])) {
 					$row['parsed_data'] = self::parseDataHash( $row );
 				}
@@ -483,14 +483,14 @@ class LibertyComment extends LibertyMime {
 	* @param array mInfo type hash of data to be used to provide base data
 	* @return string Descriptive title for the object
 	*/
-	public static function getTitleFromHash( &$pHash, $pDefault=TRUE ) {
-		global $gBitSmarty;
-		$ret = NULL;
+	public static function getTitleFromHash( &$pHash, $pDefault=true ) {
+		global $gBitweaverExtension;
+
+		$ret = null;
 		if( !empty( $pHash['title'] ) ) {
 			$ret = $pHash['title'];
 		} elseif( !empty( $pHash['created'] ) ) {
-			$gBitSmarty->loadPlugin( 'smarty_modifier_bit_short_date' );
-			$ret = smarty_modifier_bit_short_date( $pHash['created'] );
+			$ret = $gBitweaverExtension->smarty_modifier_bit_short_date( $pHash['created'] );
 		} elseif( !empty( $pHash['content_name'] ) ) {
 			$ret = $pHash['content_name'];
 		}
@@ -498,8 +498,8 @@ class LibertyComment extends LibertyMime {
 	}
 
 
-	function getNumComments($pContentId = NULL) {
-		$bindVars = NULL;
+	function getNumComments($pContentId = null) {
+		$bindVars = null;
 		if (!$pContentId && $this->mContentId) {
 			$mid = '=?';
 			$bindVars = array($this->mContentId);
@@ -523,7 +523,7 @@ class LibertyComment extends LibertyMime {
 		 * would be overkill for just getting a count.
 		 */
 		if ( !is_array($pContentId) ){
-			$sqlHash = liberty_content_list_sql( $this, NULL );
+			$sqlHash = liberty_content_list_sql( $this, null );
 			if( !empty( $sqlHash['select_sql'] ) ) {
 				$selectSql .= $sqlHash['select_sql'];
 			}
@@ -534,11 +534,9 @@ class LibertyComment extends LibertyMime {
 				$whereSql .= $sqlHash['where_sql'];
 			}
 			if( !empty( $sqlHash['bind_vars'] ) ) {
-				if ( is_array( $bindVars ) ) {
-					$bindVars = array_merge( $bindVars, $sqlHash['bind_vars'] );
-				} else {
-					$bindVars = $sqlHash['bind_vars'];
-				}
+				$bindVars = is_array( $bindVars )
+					? $bindVars = array_merge( $bindVars, $sqlHash['bind_vars'] )
+					: $sqlHash['bind_vars'];
 			}
 		}
 
@@ -556,7 +554,7 @@ class LibertyComment extends LibertyMime {
 	// used for direct access to view a single comment
 	// see usage in: liberty/comments_inc.php
     // there ought to be a better way to do this...
-	function getNumComments_upto($pCommentId = NULL, $pContentId = NULL) {
+	function getNumComments_upto($pCommentId = null, $pContentId = null) {
 
 		$comment = new LibertyComment($pCommentId, $pContentId);
 
@@ -578,17 +576,15 @@ class LibertyComment extends LibertyMime {
 	}
 
 	// Returns a hash containing the comment tree of comments related to this content
-	function getComments( $pContentId = NULL, $pMaxComments = NULL, $pOffset = NULL, $pSortOrder = NULL, $pDisplayMode = NULL ) {
+	function getComments( $pContentId = null, $pMaxComments = null, $pOffset = null, $pSortOrder = null, $pDisplayMode = null ) {
 		if( $pDisplayMode != "flat" ) {
-			if ($pSortOrder == "commentDate_asc") {
-				$pSortOrder = 'thread_asc';
-			} else {
-				$pSortOrder = 'thread_desc';
-			}
+			$pSortOrder = $pSortOrder == "commentDate_asc"
+				? 'thread_asc'
+				: 'thread_desc';
 		}
 
-		$contentId = NULL;
-		$ret = array();
+		$contentId = null;
+		$ret = [];
 		if (!$pContentId && $this->mContentId) {
 			$contentId = $this->mContentId;
 		} elseif ($pContentId) {
@@ -615,7 +611,7 @@ class LibertyComment extends LibertyMime {
 		}
 		$mid = 'order by ' . $mid;
 
-		$bindVars = array();
+		$bindVars = [];
 		if (is_array( $pContentId ) ) {
 			$mid2 = 'in ('.implode(',', array_fill(0, count( $pContentId ), '?')).')';
 			$bindVars = $pContentId;
@@ -629,7 +625,7 @@ class LibertyComment extends LibertyMime {
 		}
 
 		$joinSql = $selectSql = $whereSql = '';
-		$pListHash = array( 'content_id' => $contentId, 'max_records' => $pMaxComments, 'offset'=>$pOffset, 'sort_mode'=> $pSortOrder, 'display_mode' => $pDisplayMode, 'has_comment_view_perm' => TRUE );
+		$pListHash = array( 'content_id' => $contentId, 'max_records' => $pMaxComments, 'offset'=>$pOffset, 'sort_mode'=> $pSortOrder, 'display_mode' => $pDisplayMode, 'has_comment_view_perm' => true );
 		$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars, $this, $pListHash );
 
 		if ($pContentId) {
@@ -638,7 +634,7 @@ class LibertyComment extends LibertyMime {
 						LEFT OUTER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (lcom.`content_id` = lc.`content_id`)
 						LEFT OUTER JOIN `".BIT_DB_PREFIX."users_users` uu ON (lc.`user_id` = uu.`user_id`) $joinSql $join1
 				    WHERE lcom.root_id $mid2 $whereSql $mid";
-			$flat_comments = array();
+			$flat_comments = [];
 			if( $result = $this->mDb->query( $sql, $bindVars, $pMaxComments, $pOffset ) ) {
 				while( $row = $result->FetchRow() ) {
 					$row['parsed_data'] = self::parseDataHash( $row );
@@ -658,7 +654,7 @@ class LibertyComment extends LibertyMime {
 								if( $func = $gLibertySystem->getPluginFunction( $row2['attachment_plugin_guid'], 'load_function', 'mime' )) {
 									// we will pass the preferences by reference that the plugin can easily update them
 									if( empty( $row['storage'][$row2['attachment_id']] )) {
-										$row['storage'][$row2['attachment_id']] = array();
+										$row['storage'][$row2['attachment_id']] = [];
 									}
 									$row['storage'][$row2['attachment_id']] = $func( $row2, $row['storage'][$row2['attachment_id']] );
 								} else {
@@ -691,7 +687,7 @@ class LibertyComment extends LibertyMime {
  	// Basic formatting for quoting comments
  	function quoteComment($commentData) {
 		$ret = '> '.$commentData;
-		$ret = eregi_replace("\n", "\n>", $ret);
+		$ret = mb_eregi_replace("\n", "\n>", $ret);
 		return $ret;
 	}
 
@@ -704,5 +700,3 @@ class LibertyComment extends LibertyMime {
 		return $this->mRootObj;
 	}
 }
-
-?>
