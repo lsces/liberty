@@ -12,7 +12,7 @@
 		{include file=$tpl}
 	{/foreach}
 
-	{include file="bitpackage:liberty/edit_storage_list.tpl" uploadTab=TRUE}
+	{include file="bitpackage:liberty/edit_storage_list.tpl" uploadTab=true}
 
 {else}
 
@@ -35,7 +35,7 @@
 			{/foreach}
 		{/if}
 
-		{include file="bitpackage:liberty/edit_storage_list.tpl" uploadTab=TRUE}
+		{include file="bitpackage:liberty/edit_storage_list.tpl" uploadTab=true}
 	{else}
 
 		{if $gBitUser->hasPermission('p_liberty_attach_attachments') }

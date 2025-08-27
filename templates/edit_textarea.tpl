@@ -1,5 +1,5 @@
 {strip}
-	{if !$textarea_noformat}
+	{if !empty($textarea_noformat)}
 		{include file="bitpackage:liberty/edit_format.tpl"}
 	{/if}
 

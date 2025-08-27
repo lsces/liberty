@@ -34,7 +34,7 @@
 					{formlabel label=$output.label for=$item}
 					{forminput}
 						{html_checkboxes name="$item" values="y" checked=$gBitSystem->getConfig($item) labels=false id=$item}
-						{formhelp note=$output.note page=$output.page}
+						{formhelp note=$output.note page=$output.page|default:''}
 					{/forminput}
 				</div>
 				{/foreach}
@@ -46,7 +46,7 @@
 						{formlabel label=$output.label for=$item}
 						{forminput}
 							{html_checkboxes name="$item" values="y" checked=$gBitSystem->getConfig($item) labels=false id=$item}
-							{formhelp note=$output.note page=$output.page}
+							{formhelp note=$output.note page=$output.page|default:''}
 						{/forminput}
 					</div>
 				{/foreach}
@@ -56,7 +56,7 @@
 						{formlabel label=$output.label for=$item}
 						{forminput}
 							<input type="text" name="{$item}" value="{$gBitSystem->getConfig($item, $output.default)}" />
-							{formhelp note=$output.note page=$output.page}
+							{formhelp note=$output.note page=$output.page|default:''}
 						{/forminput}
 					</div>
 				{/foreach}
@@ -68,7 +68,7 @@
 						{formlabel label=$output.label for=$item}
 						{forminput}
 							{html_checkboxes name="$item" values="y" checked=$gBitSystem->getConfig($item) labels=false id=$item}
-							{formhelp note=$output.note page=$output.page}
+							{formhelp note=$output.note page=$output.page|default:''}
 							{if $item == "liberty_use_captcha_freecap"}
 								<p>{tr}If you can see the image below, you can use freecap{/tr}</p>
 								<img src="{$smarty.const.USERS_PKG_URL}freecap/freecap.php" alt="{tr}Random Image{/tr}" title="{tr}Random Image{/tr}" />
@@ -81,7 +81,7 @@
 						{formlabel label=$output.label for=$item}
 						{forminput}
 							<input type="text" name="{$item}" value="{$gBitSystem->getConfig($item, $output.default)}" />
-							{formhelp note=$output.note page=$output.page}
+							{formhelp note=$output.note page=$output.page|default:''}
 						{/forminput}
 					</div>
 				{/foreach}
@@ -107,9 +107,9 @@
 							</label>
 
 							{if !$output.installed}
-								{formhelp note=$output.install_note page=$output.page}
+								{formhelp note=$output.install_note page=$output.page|default:''}
 							{/if}
-							{formhelp note=$output.note page=$output.page}
+							{formhelp note=$output.note page=$output.page|default:''}
 						{/forminput}
 					</div>
 				{/foreach}
@@ -119,7 +119,7 @@
 						{formlabel label=$output.label for=$item}
 						{forminput}
 							{html_checkboxes name="$item" values="y" checked=$gBitSystem->getConfig($item) labels=false id=$item}
-							{formhelp note=$output.note page=$output.page}
+							{formhelp note=$output.note page=$output.page|default:''}
 						{/forminput}
 					</div>
 				{/foreach}

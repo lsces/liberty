@@ -52,7 +52,7 @@
 										</div>
 									{/if}
 									{if $plugin.plugin_type == 'mime' && $guid == $smarty.const.LIBERTY_DEFAULT_MIME_HANDLER}<strong>{tr}DEFAULT{/tr}</strong>{/if} {$plugin.description}
-									{if $plugin.requirements.output}
+									{if !empty($plugin.requirements.output)}
 										{formfeedback hash=$plugin.requirements.output}
 									{/if}
 								</dd>

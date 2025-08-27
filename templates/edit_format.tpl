@@ -27,7 +27,7 @@
 {* We have to count these first because of the tikiwiki format options which may show even if it is the only format option. *}
 {assign var=numformat value=0}
 {foreach name=formatPlugins from=$gLibertySystem->mPlugins item=plugin key=guid}
-	{if $plugin.is_active eq 'y' and $plugin.edit_field and $plugin.plugin_type eq 'format'}
+	{if $plugin.is_active eq 'y' and $plugin.edit_field|default:false and $plugin.plugin_type eq 'format'}
 		{assign var=numformat value=$numformat+1}
 		{if $plugin.plugin_guid == "tikiwiki"}
 			{assign var=format_options value=true}
@@ -41,10 +41,10 @@
 		{formfeedback error=$errors.format}
 		{formlabel label="Content Format"}
 		{foreach name=formatPlugins from=$gLibertySystem->mPlugins item=plugin key=guid}
-			{if $plugin.is_active eq 'y' and $plugin.edit_field and $plugin.plugin_type eq 'format'}
+			{if $plugin.is_active eq 'y' and $plugin.edit_field|default:false and $plugin.plugin_type eq 'format'}
 				{forminput label="radio"}
 					{if $numformat > 1}
-							<input type="radio" name="{$format_guid_variable|default:"format_guid"}" value="{$plugin.edit_field}"
+							<input type="radio" name="{$format_guid_variable|default:"format_guid"}" value="{$plugin.edit_field|default:false}"
 							{if $formatGuid eq $plugin.plugin_guid} checked="checked"
 							{elseif !$formatGuid and $plugin.plugin_guid eq $gBitSystem->getConfig('default_format', 'tikiwiki')} checked="checked" {assign var=formatGuid value='tikiwiki'}
 							{/if} onclick="
@@ -53,7 +53,7 @@
 								{/if}
 								{if $gBitSystem->isPackageActive('quicktags')}
 									{foreach from=$gLibertySystem->mPlugins item=tag key=guid}
-										{if $tag.is_active eq 'y' and $tag.edit_field and $tag.plugin_type eq 'format'}
+										{if $tag.is_active eq 'y' and $tag.edit_field|default:false and $tag.plugin_type eq 'format'}
 											{if $tag.plugin_guid eq $plugin.plugin_guid}
 												BitBase.showById
 											{else}
@@ -101,7 +101,7 @@
 			{/forminput}
 		</div>
 	{/if}
-	<input type="hidden" name="{$format_guid_variable|default:"format_guid"}" value="{if $numformat eq 1}{$singleplugin.edit_field}{else}{$gBitSystem->getConfig('default_format','tikiwiki')}{/if}" />
+	<input type="hidden" name="{$format_guid_variable|default:"format_guid"}" value="{if $numformat eq 1}{$singleplugin.edit_field|default:false}{else}{$gBitSystem->getConfig('default_format','tikiwiki')}{/if}" />
 {/if}
 
 {if $gBitSystem->isPackageActive('ckeditor') && ($formatGuid=='bithtml')}{* || (is_object($contentObject) && $formatGuid=='tikiwiki' && $contentObject->getPreference('content_enter_html')))} *}

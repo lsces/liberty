@@ -2,8 +2,8 @@
 <div class="listing liberty">
 	<header>
 		{form id="contentlist" class="form-search pull-right" action=$smarty.server.REQUEST_URI method="get"}
-			<input type="hidden" name="user_id" value="{$smarty.request.user_id}" />
-			<input type="hidden" name="sort_mode" value="{$smarty.request.sort_mode}" />
+			<input type="hidden" name="user_id" value="{$smarty.request.user_id|default:0}" />
+			<input type="hidden" name="sort_mode" value="{$smarty.request.sort_mode|default:''}" />
 
 			<div class="input-append pull-right">
 			{html_options onchange="submit();" options=$contentTypes name=content_type_guid id=content_type selected=$contentSelect}
@@ -24,7 +24,7 @@
 			{tr}All Content Types{/tr}
 		{/foreach}
 		</h1>
-		{if $smarty.request.user_id}
+		{if !empty($smarty.request.user_id)}
 			{tr}User{/tr}: {displayname user_id=$smarty.request.user_id}
 		{/if}
 	</header>

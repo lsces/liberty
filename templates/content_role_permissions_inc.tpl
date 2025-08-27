@@ -25,7 +25,7 @@
 							{assign var=action value="remove"}
 						{/if}
 					{/foreach}
-					<td style="text-align:center">{smartlink ititle=Allow ibiticon=$icon action=$action content_id=$gContent->mContentId perm=$perm.perm_name role_id=$role.role_id}</td>
+					<td style="text-align:center">{smartlink ititle=Allow ibiticon=$icon iforce="icon" action=$action content_id=$gContent->mContentId perm=$perm.perm_name role_id=$role.role_id}</td>
 				</tr>
 			{/foreach}
 		</table>

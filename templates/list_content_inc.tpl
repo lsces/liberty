@@ -72,5 +72,5 @@
 		</form>
 	{/if}
 
-{pagination content_status_id=$smarty.request.content_status_id}
+{pagination content_status_id=$smarty.request.content_status_id|default:''}
 {/strip}

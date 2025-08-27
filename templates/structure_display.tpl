@@ -1,5 +1,5 @@
 {strip}
-{if $structureInfo.structure_path}
+{if !empty($structureInfo.structure_path)}
 	<div class="structurebar">
 		{if $gBitSystem->isFeatureActive( 'wiki_book_show_path' )}
 			<div class="path">

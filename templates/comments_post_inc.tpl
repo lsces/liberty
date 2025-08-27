@@ -12,7 +12,7 @@
 		{formfeedback hash=$formfeedback}
 
 
-		{if $post_comment_request || $smarty.request.post_comment_preview || $gBitSystem->isFeatureActive('comments_ajax')}
+		{if $post_comment_request || $smarty.request.post_comment_preview|default:false || $gBitSystem->isFeatureActive('comments_ajax')}
 			{legend legend=$post_title}
 				<input type="hidden" name="post_comment_reply_id" value="{$post_comment_reply_id}" />
 				<input type="hidden" name="post_comment_id" value="{$post_comment_id}" />
@@ -27,7 +27,7 @@
 				<div class="form-group">
 					{formlabel label="Title" for="comments-title"}
 					{forminput}
-						<input type="text" size="50" name="comment_title" id="comments-title" value="{$postComment.title|escape:html}" />
+						<input type="text" size="50" name="comment_title" id="comments-title" value="{$postComment.title|default:''|escape:html}" />
 						{formhelp note=""}
 					{/forminput}
 				</div>
@@ -62,7 +62,7 @@
 					</div>
 				{/if}
 
-				{textarea id="commentpost" name="comment_data" rows=$gBitSystem->getConfig('comments_default_post_lines',6) edit=$postComment.data}
+				{textarea id="commentpost" name="comment_data" rows=$gBitSystem->getConfig('comments_default_post_lines',6) edit=$postComment.data|default:''}
 
 				{* @TODO perm check more accurately should be on root content object *}
 				{if $gBitSystem->isFeatureActive( 'comments_allow_attachments' ) && $gBitUser->hasPermission('p_liberty_attach_attachments') }

@@ -14,8 +14,14 @@
 	{if $gBitUser->hasPermission( 'p_liberty_assign_content_perms' ) and $serviceHash.content_id}
 		{if $gContent->hasUserPermissions()}
 			{assign var=iconClass value="highlight"}
+		{else}
+			{assign var=iconClass value=""}
 		{/if}
-		{smartlink ipackage=liberty ifile="content_permissions.php" ititle="Assign Permissions" booticon="fa-key" class=$iconClass ipackage=liberty ifile="content_permissions.php" content_id=$serviceHash.content_id}
+		{if $smarty.const.ROLE_MODEL }
+			{smartlink ipackage=liberty ifile="content_role_permissions.php" ititle="Assign Permissions" booticon="icon-key" class=$iconClass ipackage=liberty ifile="content_permissions.php" content_id=$serviceHash.content_id}
+		{else}
+			{smartlink ipackage=liberty ifile="content_permissions.php" ititle="Assign Permissions" booticon="icon-key" class=$iconClass ipackage=liberty ifile="content_permissions.php" content_id=$serviceHash.content_id}
+		{/if}
 	{/if}
 {/if}
 {/strip}
