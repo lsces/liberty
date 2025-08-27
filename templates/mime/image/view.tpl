@@ -1,4 +1,4 @@
-{if $attachment.thumbnail_url.panorama}
+{if $attachment.thumbnail_url.panorama|default:false}
 	{include file="bitpackage:liberty/mime/image/player.tpl"}
 	{include file="bitpackage:liberty/mime_meta_inc.tpl"}
 {else}
