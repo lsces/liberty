@@ -13,6 +13,14 @@
  * @access public
  * @return void
  */
+
+ /**
+ * required setup
+ */
+namespace Bitweaver\Liberty;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
+
 function parse_data_plugins( &$pData, &$pReplace, $pCommonObject, $pParseHash ) {
 	global $gLibertySystem, $gBitSystem;
 
@@ -20,8 +28,8 @@ function parse_data_plugins( &$pData, &$pReplace, $pCommonObject, $pParseHash ) 
 	preg_match_all( "/\{\/?([A-Za-z0-9]+)([^\}]*)\}/", $pData, $curlyTags, PREG_OFFSET_CAPTURE );
 
 	if( count( $curlyTags[0] ) ) {
-		// if TRUE, replace only CODE plugin, if false, replace all other plugins
-		$code_first = TRUE;
+		// if true, replace only CODE plugin, if false, replace all other plugins
+		$code_first = true;
 
 		// Process plugins in reverse order, so that nested plugins are handled from the inside out.
 		$i = count( $curlyTags[0] ) - 1;
@@ -36,23 +44,20 @@ function parse_data_plugins( &$pData, &$pReplace, $pCommonObject, $pParseHash ) 
 			$pos = strpos( $pData, $plugin_start );
 			$dataTag = strtolower( $plugin );
 			// hush up the return of this in case someone uses curly braces to enclose text
-			$pluginInfo = $gLibertySystem->getPluginInfo( @$gLibertySystem->mDataTags[$dataTag] ) ;
+			if( !empty( $gLibertySystem->mDataTags[$dataTag] ) ) {
+				$pluginInfo = $gLibertySystem->getPluginInfo( $gLibertySystem->mDataTags[$dataTag] ) ;
 
-			// only process a standalone unpaired tag or the start tag for a paired tag
-			if( empty( $paired_close_tag_seen[$dataTag] ) || $paired_close_tag_seen[$dataTag] == 0 ) {
-				$paired_close_tag_seen[$dataTag] = 1;
-			} else {
-				$paired_close_tag_seen[$dataTag] = 0;
+				// only process a standalone unpaired tag or the start tag for a paired tag
+				$paired_close_tag_seen[$dataTag] = empty( $paired_close_tag_seen[$dataTag] ) || $paired_close_tag_seen[$dataTag] == 0 ? 1 : 0;
+
+				$is_opening_tag = false;
+				if(( empty( $pluginInfo['requires_pair'] ) && ( strtolower( $plugin_start ) != '{/'. $dataTag . '}' ))
+					|| ( strpos( $plugin_start, ' ' ) > 0 )
+					|| ( strtolower( $plugin_start ) == '{'.$dataTag.'}' && !$paired_close_tag_seen[$dataTag] )
+				) {
+					$is_opening_tag = true;
+				}
 			}
-
-			$is_opening_tag = FALSE;
-			if(( empty( $pluginInfo['requires_pair'] ) && ( strtolower( $plugin_start ) != '{/'. $dataTag . '}' ))
-				|| ( strpos( $plugin_start, ' ' ) > 0 )
-				|| ( strtolower( $plugin_start ) == '{'.$dataTag.'}' && !$paired_close_tag_seen[$dataTag] )
-			) {
-				$is_opening_tag = TRUE;
-			}
-
 			if(
 				// when in CODE parsing mode, replace only CODE plugins
 				( ( $code_first && ( $dataTag == 'code' ) )
@@ -62,7 +67,7 @@ function parse_data_plugins( &$pData, &$pReplace, $pCommonObject, $pParseHash ) 
 				&& !empty( $gLibertySystem->mDataTags[$dataTag] )
 				&& !empty( $pluginInfo )
 				&& ( $loadFunc = $gLibertySystem->getPluginFunction( $gLibertySystem->mDataTags[$dataTag], 'load_function' ) )
-				&& ( $is_opening_tag )
+				&& $is_opening_tag
 			) {
 
 				if( $pluginInfo['requires_pair'] ) {
@@ -71,7 +76,7 @@ function parse_data_plugins( &$pData, &$pReplace, $pCommonObject, $pParseHash ) 
 					$plugin_end2 = '{'.$plugin.'}';
 					$pos_end2 = strpos( strtolower( $pData ), strtolower( $plugin_end2 ), $pos + 1 ); // where plugin data ends
 
-					if( ( $pos_end2 > 0 && $pos_end2 > 0 && $pos_end2 < $pos_end ) || $pos_end === FALSE ) {
+					if( ( $pos_end2 > 0 && $pos_end2 > 0 && $pos_end2 < $pos_end ) || $pos_end === false ) {
 						$pos_end = $pos_end2;
 						$plugin_end = $plugin_end2;
 					}
@@ -84,7 +89,7 @@ function parse_data_plugins( &$pData, &$pReplace, $pCommonObject, $pParseHash ) 
 				$plugin_data_len = $pos_end - $pos - strlen( $curlyTags[0][$i][0] );
 				$plugin_data = substr( $pData, $pos + strlen( $plugin_start ), $plugin_data_len );
 
-				$arguments = array();
+				$arguments = [];
 				// Construct argument list array
 				$paramString = str_replace( '&gt;', '>', trim( $curlyTags[2][$i][0] ) );
 				if( preg_match( '/^\(.*=>.*\)$/', $paramString ) ) {
@@ -105,27 +110,27 @@ function parse_data_plugins( &$pData, &$pReplace, $pCommonObject, $pParseHash ) 
 				} else {
 					$paramString = trim( $curlyTags[2][$i][0], " \t()" );
 					$paramString = str_replace("&quot;", '"', $paramString);
-					$arguments = parse_xml_attributes( $paramString );
+					$arguments = KernelTools::parse_xml_attributes( $paramString );
 				}
 
 				if( $ret = $loadFunc( $plugin_data, $arguments, $pCommonObject, $pParseHash )) {
 					$key = "parseprotect".md5( mt_rand() );
-					$pReplace[] = array(
+					$pReplace[] = [
 						'key'  => $key,
 						'data' => $ret,
-					);
+					];
 
-					// don't modify data if $pos is FALSE
-					if( $pos !== FALSE ) {
+					// don't modify data if $pos is false
+					if( $pos !== false ) {
 						$pData = substr_replace( $pData, $key, $pos, $pos_end - $pos + strlen( $plugin_end ));
 					}
 				}
 			}
 			$i--;
 			// if we are in CODE parsing mode and list is done, switch to 'parse other plugins' mode and start all over
-			if( ( $code_first ) && ( $i < 0 ) ) {
+			if( $code_first && ( $i < 0 ) ) {
 				$i = count( $curlyTags[0] ) - 1;
-				$code_first = FALSE;
+				$code_first = false;
 			}
 		} // while
 	}
@@ -136,7 +141,7 @@ function parse_data_plugins( &$pData, &$pReplace, $pCommonObject, $pParseHash ) 
  * saves the section contents for later reinsertion. It is needed by
  * parse_data_plugins() to extract sections that don't require parsing
  *
- * @param array $pData data that might contain ~np~ or ~pp~ strings
+ * @param string $pData data that might contain ~np~ or ~pp~ strings
  * @param array $preparsed array that is updated by refrerence with key and data that needs to be substituted later
  * @param array $noparsed array that is updated by refrerence with key and data that needs to be substituted later
  * @access public
@@ -184,12 +189,12 @@ function parse_protect( &$pData, &$pReplace ) {
  *
  * @param array $pParamHash
  * @access public
- * @return hash full of styling goodies
+ * @return array hash full of styling goodies
  */
 function liberty_plugins_wrapper_style( $pParamHash ) {
 	global $gBitSystem;
 
-	$ret = array();
+	$ret = [];
 	$ret['style'] = $ret['description'] = '';
 
 	if( !empty( $pParamHash ) && is_array( $pParamHash )) {
@@ -274,11 +279,11 @@ function liberty_plugins_wrapper_style( $pParamHash ) {
  * liberty_content_load_sql
  *
  * @access public
- * @return content load sql
+ * @return string content load sql
  */
-function liberty_content_load_sql( $pObject, $pParamHash=NULL ) {
+function liberty_content_load_sql( $pObject, $pParamHash=null ) {
 	global $gBitSystem, $gBitUser;
-	$ret = array();
+	$ret = '';
 
 	$hasPerm = ( is_object( $pObject ) && isset( $pObject->hasUserPermission )) ? $pObject->hasUserPermission( 'p_liberty_edit_all_status' ) : $gBitUser->hasPermission( 'p_liberty_edit_all_status' );
 
@@ -312,23 +317,23 @@ function liberty_content_load_sql( $pObject, $pParamHash=NULL ) {
  * @param array $pParamHash['max_status_id'] one more than the maximum status a content can have to be included
  * @param array $pParamHash['min_owner_status_id'] one less than the mimimum status a content can have to be included that is owned by the requester
  * @access public
- * @return content list sql
+ * @return array content list sql
  */
-function liberty_content_list_sql( $pObject, $pParamHash=NULL ) {
+function liberty_content_list_sql( $pObject, $pParamHash=null ) {
 	global $gBitSystem, $gBitUser;
-	$ret = array();
+	$ret = [];
 
-	$hasPerm = FALSE;
+	$hasPerm = false;
 	// enforce_status will require the status limit on everyone including admin and thus we can ignore permission checks
 	if( !isset( $pParamHash['enforce_status'] )) {
-		$hasPerm = ( is_object( $pObject ) && method_exists( $pObject, 'hasUserPermission' )) ? $pObject->hasUserPermission( 'p_liberty_edit_all_status', FALSE ) : $gBitUser->hasPermission( 'p_liberty_edit_all_status' );
+		$hasPerm = ( is_object( $pObject ) && method_exists( $pObject, 'hasUserPermission' )) ? $pObject->hasUserPermission( 'p_liberty_edit_all_status', false ) : $gBitUser->hasPermission( 'p_liberty_edit_all_status' );
 	}
 
 	// default show content with status between 0 and 100;
-	$min_status_id = isset( $pParamHash['min_status_id'] ) && ( @BitBase::verifyId( $pParamHash['min_status_id'] ) || $pParamHash['min_status_id'] === 0 ) ? $pParamHash['min_status_id'] : 0;
-	$max_status_id = isset( $pParamHash['max_status_id'] ) && ( @BitBase::verifyId( $pParamHash['max_status_id'] ) || $pParamHash['max_status_id'] === 0 ) ? $pParamHash['max_status_id'] : 100;
+	$min_status_id = BitBase::verifyId( $pParamHash['min_status_id'] ?? 0 ) ? $pParamHash['min_status_id'] : 0;
+	$max_status_id = BitBase::verifyId( $pParamHash['max_status_id'] ?? 0 ) ? $pParamHash['max_status_id'] : 100;
 	// let owner see any of their own content with a status > -100
-	$min_owner_status_id = isset( $pParamHash['min_owner_status_id'] ) && ( @BitBase::verifyId( $pParamHash['min_owner_status_id'] ) || $pParamHash['min_owner_status_id'] === 0 ) ? $pParamHash['min_owner_status_id'] : -100;
+	$min_owner_status_id = BitBase::verifyId( $pParamHash['min_owner_status_id'] ?? 0 ) ? $pParamHash['min_owner_status_id'] : -100;
 
 	if( $gBitSystem->isFeatureActive('liberty_display_status') && !$hasPerm ) {
 		if(( is_object( $pObject ) && !empty( $pObject->mType['content_type_guid'] ) && $pObject->mType['content_type_guid'] == 'bitcomment' )
@@ -359,7 +364,7 @@ function liberty_content_list_sql( $pObject, $pParamHash=NULL ) {
 /**
  * liberty_content_preview
  *
- * @param array $pObject
+ * @param object $pObject
  * @access public
  * @return void
  */
@@ -367,21 +372,21 @@ function liberty_content_preview( $pObject ) {
 	global $gBitSystem, $gBitUser;
 	if( $gBitSystem->isFeatureActive( 'liberty_display_status' )
 		&& ( $gBitUser->hasPermission( 'p_liberty_edit_content_status' ) || $gBitUser->hasPermission( 'p_libert_edit_all_status' ))
-		&& @BitBase::verifyId( $_REQUEST['content_status_id'] )) {
+		&& BitBase::verifyId( $_REQUEST['content_status_id'] )) {
 		$pObject->mInfo['content_status_id'] = $_REQUEST['content_status_id'];
 	}
 	if( $gBitSystem->isFeatureActive( 'liberty_allow_change_owner' )
 		&& $gBitUser->hasPermission( 'p_liberty_edit_content_owner' )
-		&& @BitBase::verifyId( $_REQUEST['owner_id'] )) {
+		&& BitBase::verifyId( $_REQUEST['owner_id'] )) {
 		$pObject->mInfo['owner_id'] = $_REQUEST['owner_id'];
 	}
-	include_once( LIBERTY_PKG_INCLUDE_PATH.'edit_help_inc.php' );
+	include_once LIBERTY_PKG_INCLUDE_PATH.'edit_help_inc.php';
 }
 
 /**
  * liberty_content_display
  *
- * @param array $pObject
+ * @param object $pObject
  * @param array $pParamHash
  * @access public
  * @return void
@@ -406,8 +411,8 @@ function liberty_content_display( $pObject, &$pParamHash ) {
  * @return void
  */
 function liberty_content_edit( $pObject ) {
-	include_once( LIBERTY_PKG_INCLUDE_PATH.'edit_help_inc.php' );
-	include_once( LIBERTY_PKG_INCLUDE_PATH."edit_storage_inc.php" );
+	include_once LIBERTY_PKG_INCLUDE_PATH.'edit_help_inc.php';
+	include_once LIBERTY_PKG_INCLUDE_PATH."edit_storage_inc.php";
 }
 
 
@@ -421,25 +426,25 @@ function liberty_content_edit( $pObject ) {
  * @param array $pFileHash['type'] (required) Mime type of the file uploaded
  * @param array $pFileHash['dest_branch'] (required) Relative path where you want to store the file (trailing slash required)
  * @param array $pFileHash['tmp_name'] (required) Absolute path to file including file name
- * @param boolean $pFileHash['thumbnail'] (optional) Set to FALSE if you don't want to generate thumbnails
+ * @param boolean $pFileHash['thumbnail'] (optional) Set to false if you don't want to generate thumbnails
  * @param array $pFileHash['thumbnail_sizes'] (optional) Decide what sizes thumbnails you want to create: icon, avatar, small, medium, large
  * @param boolean $pMoveFile (optional) specify if you want to move or copy the original file
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
-function liberty_process_upload( &$pFileHash, $pMoveFile = TRUE ) {
+function liberty_process_upload( &$pFileHash, $pMoveFile = true ) {
 	global $gBitSystem;
 
 	// Check for evil file extensions that could be execed on the server
 	if( preg_match( EVIL_EXTENSION_PATTERN, $pFileHash['name'] )) {
 		$pFileHash['type'] = 'text/plain';
-		$pFileHash['name'] = $pFileHash['name'].'.txt';
+		$pFileHash['name'] .= '.txt';
 	}
 
-	if ( !is_windows() ) {
+	if ( !KernelTools::is_windows() ) {
 		list( $pFileHash['name'], $pFileHash['type'] ) = $gBitSystem->verifyFileExtension( $pFileHash['tmp_name'], $pFileHash['name'] );
 	} else {
-		//$pFile['type'] = $gBitSystem->verifyMimeType( $pFile['tmp_name'] );
+		$pFileHash['type'] = $gBitSystem->verifyMimeType( $pFileHash['tmp_name'] );
 	}
 
 	$ext = strrpos( $pFileHash['name'], '.' );
@@ -454,11 +459,9 @@ function liberty_process_upload( &$pFileHash, $pMoveFile = TRUE ) {
 
 	// Thumbs.db is a windows My Photos/ folder file, and seems to really piss off imagick
 	$canThumbFunc = liberty_get_function( 'can_thumbnail' );
-	if( !empty( $canThumbFunc ) && $canThumbFunc( $pFileHash['type'] ) && $pFileHash['name'] != 'Thumbs.db' ) {
-		$ret = liberty_process_image( $pFileHash, $pMoveFile );
-	} else {
-		$ret = liberty_process_generic( $pFileHash, $pMoveFile );
-	}
+	$ret =  !empty( $canThumbFunc ) && $canThumbFunc( $pFileHash['type'] ) && $pFileHash['name'] != 'Thumbs.db' 
+		? liberty_process_image( $pFileHash, $pMoveFile )
+		: liberty_process_generic( $pFileHash, $pMoveFile );
 
 	return $ret;
 }
@@ -468,12 +471,12 @@ function liberty_process_upload( &$pFileHash, $pMoveFile = TRUE ) {
  *
  * @param array $pFileHash
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return string|bool true on success, false on failure
  */
 function liberty_process_archive( &$pFileHash ) {
 	// sanity check: make sure tmp_name isn't empty. will scan / if it is
 	if( !is_array( $pFileHash ) || empty( $pFileHash['tmp_name'] ) || empty( $pFileHash['name'] ) ) {
-		return FALSE;
+		return false;
 	}
 
 	$cwd = getcwd();
@@ -482,14 +485,14 @@ function liberty_process_archive( &$pFileHash ) {
 	// we'll copy the file. in the case of xuploaded files, the files have been
 	// processed but don't have to be copied
 	if( empty( $pFileHash['preprocessed'] ) && !is_uploaded_file( $pFileHash['tmp_name'] ) && is_file( $pFileHash['tmp_name'] ) ) {
-		$tmpDir = get_temp_dir();
+		$tmpDir = KernelTools::get_temp_dir();
 		$copyFile = tempnam( !empty( $tmpDir ) ? $tmpDir : '/tmp', $pFileHash['name'] );
 		copy( $pFileHash['tmp_name'], $copyFile );
 		$pFileHash['tmp_name'] = $copyFile;
 	}
 
 	$dir = dirname( $pFileHash['tmp_name'] );
-	$upExt = strtolower( substr( $pFileHash['name'], ( strrpos( $pFileHash['name'], '.' ) + 1 ) ) );
+	$upExt = strtolower( substr( $pFileHash['name'], strrpos( $pFileHash['name'], '.' ) + 1 ) );
 	$baseDir = $dir.'/';
 	if( is_file( $pFileHash['tmp_name'] ) ) {
 		global $gBitUser;
@@ -540,7 +543,7 @@ function liberty_process_archive( &$pFileHash ) {
 					print( "unstuff -d=\"$destDir\" \"{$pFileHash['tmp_name']}\" " );
 					$shellResult = shell_exec( "unstuff -d=\"$destDir\" \"{$pFileHash['tmp_name']}\" " );
 				} else {
-					$destDir = NULL;
+					$destDir = null;
 				}
 				break;
 		}
@@ -553,9 +556,9 @@ function liberty_process_archive( &$pFileHash ) {
 		@unlink( $copyFile );
 	}
 
-	if( preg_match( "!^/+$!", $destDir )) {
+	if( preg_match( "!^/+$!", $destDir || '' )) {
 		// obviously something went horribly wrong
-		return FALSE;
+		return false;
 	} else {
 		return $destDir;
 	}
@@ -565,27 +568,25 @@ function liberty_process_archive( &$pFileHash ) {
  * liberty_process_generic
  *
  * @param array $pFileHash
- * @param array $pMoveFile
+ * @param bool $pMoveFile
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
-function liberty_process_generic( &$pFileHash, $pMoveFile = TRUE ) {
+function liberty_process_generic( &$pFileHash, $pMoveFile = true ) {
 	global $gBitSystem;
-	$ret = NULL;
+	$ret = null;
 	if( !empty( $pFileHash['dest_file'] ) ) {
 		$destFile = $pFileHash['dest_file'];
 	} else {
-		if( $gBitSystem->isFeatureActive( 'liberty_originalize_file_names' ) ) {
-			$destFile = STORAGE_PKG_PATH.$pFileHash['dest_branch'].liberty_mime_get_default_file_name( $pFileHash['name'], $pFileHash['type'] );
-		} else {
-			$destFile = STORAGE_PKG_PATH.$pFileHash['dest_branch'].$pFileHash['name'];
-		}
-		if ( is_windows() ) {
+		$destFile =  $gBitSystem->isFeatureActive( 'liberty_originalize_file_names' )
+			? STORAGE_PKG_PATH.$pFileHash['dest_branch'].liberty_mime_get_default_file_name( $pFileHash['name'], $pFileHash['type'] )
+			: STORAGE_PKG_PATH.$pFileHash['dest_branch'].$pFileHash['name'];
+		if ( KernelTools::is_windows() ) {
 			$destFile = str_replace( '//', '\\', str_replace( "\\", '\\', $destFile ) );
 		}
 	}
 
-	mkdir_p( dirname( $destFile ) );
+	KernelTools::mkdir_p( dirname( $destFile ) );
 
 	if( is_file( $pFileHash['source_file']) ) {
 		if( $pFileHash['source_file'] == $destFile ) {
@@ -612,11 +613,11 @@ function liberty_process_generic( &$pFileHash, $pMoveFile = TRUE ) {
  *
  * @param array $pFileHash
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
-function liberty_process_image( &$pFileHash, $pMoveFile = TRUE ) {
+function liberty_process_image( &$pFileHash, $pMoveFile = true ) {
 	global $gBitSystem;
-	$ret = NULL;
+	$ret = null;
 
 	list($type, $ext) = explode( '/', strtolower( $pFileHash['type'] ) );
 	if( $resizePath = liberty_process_generic( $pFileHash, $pMoveFile )) {
@@ -630,8 +631,8 @@ function liberty_process_image( &$pFileHash, $pMoveFile = TRUE ) {
 		$sizeHold = $pFileHash['size'];
 		$ret = $pFileHash['source_file'];
 
-		// do not thumbnail only if intentionally set to FALSE
-		if( !isset( $pFileHash['thumbnail'] ) || $pFileHash['thumbnail']==TRUE ) {
+		// do not thumbnail only if intentionally set to false
+		if( !isset( $pFileHash['thumbnail'] ) || $pFileHash['thumbnail']==true ) {
 			liberty_generate_thumbnails( $pFileHash );
 		}
 		$pFileHash['name'] = $nameHold;
@@ -645,14 +646,14 @@ function liberty_process_image( &$pFileHash, $pMoveFile = TRUE ) {
  *
  * @param array $pFileHash['dest_branch'] should contain the path to the dir where we should remove thumbnails
  * @access public
- * @return TRUE on success, FALSE on failure
+ * @return bool true on success, false on failure
  */
 function liberty_clear_thumbnails( &$pFileHash ) {
 	if( !empty( $pFileHash['dest_branch'] )) {
-		$thumbHash = array(
+		$thumbHash = [
 			'source_file' => $pFileHash['dest_branch'],
-			'mime_image'   => FALSE,
-		);
+			'mime_image'   => false,
+		];
 
 		// get thumbnails we want to remove
 		if( $thumbs = liberty_fetch_thumbnails( $thumbHash )) {
@@ -668,21 +669,21 @@ function liberty_clear_thumbnails( &$pFileHash ) {
 			}
 		}
 	}
-	return TRUE;
+	return true;
 }
 
 /**
  * liberty_get_function
  *
- * @param array $pType
+ * @param string $pType
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return string
  */
 function liberty_get_function( $pType ) {
 	global $gBitSystem;
 	$processor = $gBitSystem->getConfig( 'image_processor', 'gd' );
-	$ret = 'liberty_'.$processor.'_'.$pType.'_image';
-	return( function_exists( $ret ) ? $ret : FALSE );
+	$ret = "\\Bitweaver\\Liberty\\liberty_{$processor}_{$pType}_image";
+	return function_exists( $ret ) ? $ret : false;
 }
 
 /**
@@ -690,21 +691,19 @@ function liberty_get_function( $pType ) {
  *
  * @param array $pFileHash
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
 function liberty_generate_thumbnails( $pFileHash ) {
 	global $gBitSystem, $gThumbSizes;
-	$ret = FALSE;
+	$ret = false;
 
 	if( $resizeFunc = liberty_get_function( 'resize' ) ) {
 
 		// allow custom selection of thumbnail sizes
 		if( empty( $pFileHash['thumbnail_sizes'] )) {
-			if( !empty( $gThumbSizes ) && is_array( $gThumbSizes )) {
-				$pFileHash['thumbnail_sizes'] = array_keys( $gThumbSizes );
-			} else {
-				$pFileHash['thumbnail_sizes'] = array( 'large', 'medium', 'small', 'avatar', 'icon' );
-			}
+			$pFileHash['thumbnail_sizes'] = !empty( $gThumbSizes ) && is_array( $gThumbSizes )
+				? array_keys( $gThumbSizes )
+				: [ 'extra-large','large', 'medium', 'small', 'avatar', 'icon' ];
 		}
 
 		if( ( !preg_match( '#image/(gif|jpe?g|png)#i', $pFileHash['type'] ) && $gBitSystem->isFeatureActive( 'liberty_jpeg_originals' )) || in_array( 'original', $pFileHash['thumbnail_sizes'] ) ) {
@@ -714,7 +713,7 @@ function liberty_generate_thumbnails( $pFileHash ) {
 				if( function_exists( 'liberty_rasterize_pdf' ) && $rasteredFile = liberty_rasterize_pdf( $pFileHash['source_file'] ) ) {
 					$pFileHash['source_file'] = $rasteredFile;
 				} else {
-					$magickWand = NewMagickWand();
+/*					$magickWand = NewMagickWand();
 					if( !$pFileHash['error'] = liberty_magickwand_check_error( MagickReadImage( $magickWand, $pFileHash['source_file'] ), $magickWand )) {
 						MagickSetFormat( $magickWand, 'JPG' );
 						if( MagickGetImageColorspace( $magickWand ) == MW_CMYKColorspace ) {
@@ -732,6 +731,7 @@ function liberty_generate_thumbnails( $pFileHash ) {
 							$pFileHash['source_file'] = $rasteredFile;
 						}
 					}
+*/
 				}
 			} else {
 				$pFileHash['dest_base_name'] = 'original';
@@ -740,25 +740,20 @@ function liberty_generate_thumbnails( $pFileHash ) {
 				$pFileHash['max_height'] = MAX_THUMBNAIL_DIMENSION;
 				if( $convertedFile = $resizeFunc( $pFileHash )) {
 					$pFileHash['source_file'] = $convertedFile;
-					$ret = TRUE;
+					$ret = true;
 				}
 			}
 			$pFileHash['type'] = $gBitSystem->verifyMimeType( $pFileHash['source_file'] );
 		}
 
-		$mimeExt = '';
 		// override $mimeExt if we have a custom setting for it
 		if( $gBitSystem->isFeatureActive( 'liberty_thumbnail_format' )) {
 			$mimeExt = $gBitSystem->getConfig( 'liberty_thumbnail_format' );
-		} elseif( !empty( $pFileHash['type'] ) ) {
+		} else {
 			list( $type, $mimeExt ) = preg_split( '#/#', strtolower( $pFileHash['type'] ));
 		}
 
-		if( preg_match( "!(png|gif)!", $mimeExt )) {
-			$destExt = '.'.$mimeExt;
-		} else {
-			$destExt = '.jpg';
-		}
+		$destExt = preg_match( "!(png|gif)!", $mimeExt ) ? '.'.$mimeExt : '.jpg';
 
 		$initialDestPath = $pFileHash['dest_branch'];
 		foreach( $pFileHash['thumbnail_sizes'] as $thumbSize ) {
@@ -780,7 +775,7 @@ function liberty_generate_thumbnails( $pFileHash ) {
 					$pFileHash['dest_branch'] = $initialDestPath.'thumbs/';
 					clearstatcache();
 					if( !is_dir( STORAGE_PKG_PATH.$pFileHash['dest_branch'] )) {
-						@mkdir( STORAGE_PKG_PATH.$pFileHash['dest_branch'], 0775, TRUE );
+						@mkdir( STORAGE_PKG_PATH.$pFileHash['dest_branch'], 0775, true );
 						clearstatcache();
 					}
 				}
@@ -792,7 +787,7 @@ function liberty_generate_thumbnails( $pFileHash ) {
 					unset( $pFileHash['max_height'] );
 				}
 				if( $pFileHash['icon_thumb_path'] = $resizeFunc( $pFileHash )) {
-					$ret = TRUE;
+					$ret = true;
 					// use the previous thumb as the source for the next, decreasingly smaller thumb as this GREATLY increases speed
 					$pFileHash['source_file'] = $pFileHash['icon_thumb_path'];
 				}
@@ -816,7 +811,7 @@ function liberty_generate_thumbnails( $pFileHash ) {
  */
 function liberty_fetch_thumbnails( $pParamHash ) {
 	global $gBitSystem, $gThumbSizes;
-	$ret = array();
+	$ret = [];
 
 	if( !empty( $pParamHash['source_file'] )) {
 		if( empty( $pParamHash['thumbnail_sizes'] )) {
@@ -825,7 +820,7 @@ function liberty_fetch_thumbnails( $pParamHash ) {
 
 		// liberty file processors automatically pick the best format for us. we can force a format though.
 		// using array_unique will give us the best order in which to look for the thumbnails
-		$exts = array_unique( array( $gBitSystem->getConfig( 'liberty_thumbnail_format', 'jpg' ), 'jpg', 'png', 'gif', 'x-jpeg' ));
+		$exts = array_unique( [ $gBitSystem->getConfig( 'liberty_thumbnail_format', 'jpg' ), 'jpg', 'png', 'gif', 'x-jpeg' ]);
 
 		// short hand
 		$path = &$pParamHash['source_file'];
@@ -837,17 +832,17 @@ function liberty_fetch_thumbnails( $pParamHash ) {
 		// remove the filename if there is one (we can't just use dirname() becuase we might only have the path to the dir)
 		$dir = substr( $path, 0, strrpos( $path, '/' ) + 1 );
 		// assume thumb sizes are from largest to smallest. reverse so smaller can be used if larger don't exist
-		$lastSize = NULL;
+		$lastSize = null;
 		foreach( array_reverse( $pParamHash['thumbnail_sizes'] ) as $size ) {
 			foreach( $exts as $ext ) {
 				$image = $size.'.'.$ext;
 				$thumbDir = is_dir( STORAGE_PKG_PATH.$dir.'thumbs/' ) ?  $dir.'thumbs/' :  $dir;
 				if( is_readable( STORAGE_PKG_PATH.$thumbDir.$image )) {
-					$ret[$size] = (empty( $_REQUEST['uri_mode'] ) ? STORAGE_PKG_URL : STORAGE_PKG_URI).$thumbDir.$image;
+					$ret[$size] = (empty( $_REQUEST['uri_mode'] ) ? STORAGE_PKG_URL : STORAGE_BASE_URI).$thumbDir.$image;
 				}
 			}
-			// fetch mime image unless we set this to FALSE
-			if(( !isset( $pParamHash['mime_image'] ) || $pParamHash['mime_image'] === TRUE ) && empty( $ret[$size] )) {
+			// fetch mime image unless we set this to false
+			if(( !isset( $pParamHash['mime_image'] ) || $pParamHash['mime_image'] === true ) && empty( $ret[$size] )) {
 				if( $lastSize && !empty( $ret[$lastSize] ) ) {
 					$ret[$size] = $ret[$lastSize];
 				}
@@ -862,7 +857,7 @@ function liberty_fetch_thumbnails( $pParamHash ) {
 					$ret[$size] = $pParamHash['default_image'];
 				} else {
 					// we need to make sure we have an image name that we can look up the mime type
-					$path .= ( strrpos( $dir, '/' ) == strlen( $path ) ? 'dummy.jpg' : basename( $path ));
+					$path .= strrpos( $dir, '/' ) == strlen( $path ) ? 'dummy.jpg' : basename( $path );
 					$ret[$size] = LibertySystem::getMimeThumbnailURL( $gBitSystem->lookupMimeType( $path ), substr( $path, strrpos( $path, '.' ) + 1 ));
 				}
 			}
@@ -873,7 +868,7 @@ function liberty_fetch_thumbnails( $pParamHash ) {
 }
 
 /**
- * fetch a single available thumbnail for a given item. if no thumbnail is present, return NULL
+ * fetch a single available thumbnail for a given item. if no thumbnail is present, return null
  *
  * @param array   $pParamHash Hash of all settings used to fetch thumbnails including: size, source_file, default_image, and mime_image
  * @access public
@@ -886,28 +881,27 @@ function liberty_fetch_thumbnail_url( $pParamHash ) {
 			$pParamHash['size'] = 'small';
 		}
 
-		$pParamHash['thumbnail_sizes'] = array( $pParamHash['size'] );
+		$pParamHash['thumbnail_sizes'] = [ $pParamHash['size'] ];
 		$ret = liberty_fetch_thumbnails( $pParamHash );
-
-		return( !empty( $ret[$pParamHash['size']] ) ? $ret[$pParamHash['size']] : NULL );
 	}
+	return !empty( $ret[$pParamHash['size']] ) ? $ret[$pParamHash['size']] : null;
 }
 
 /**
  * get a set of image size options based on $gThumbSizes
  *
- * @param string $pEmptyOption string to use as empty option - if set to FALSE no empty string is eincluded - Note that string is tra()'d
+ * @param string $pEmptyOption string to use as empty option - if set to false no empty string is eincluded - Note that string is KernelTools::tra()'d
  * @access public
  * @return array of image size options suitable for use in a form
  */
 function get_image_size_options( $pEmptyOption = 'Disable this feature' ) {
 	global $gThumbSizes;
-	$ret = array();
+	$ret = [];
 	if( !empty( $pEmptyOption )) {
-		$ret[''] = tra( $pEmptyOption );
+		$ret[''] = KernelTools::tra( $pEmptyOption );
 	}
 	foreach( $gThumbSizes as $key => $size ) {
-		$ret[$key] = tra( ucfirst( $key ))." ( ". ( empty( $size['width'] ) ? tra( 'unlimited' ) : $size['width'] ) ." x ". ( empty($size['height'] ) ? tra('unlimited') : $size['height'] ) ." ".tra( 'pixels' )." )";
+		$ret[$key] = KernelTools::tra( ucfirst( $key ))." ( ". ( empty( $size['width'] ) ? KernelTools::tra( 'unlimited' ) : $size['width'] ) ." x ". ( empty($size['height'] ) ? KernelTools::tra('unlimited') : $size['height'] ) ." ".KernelTools::tra( 'pixels' )." )";
 	}
 	return $ret;
 }
@@ -917,11 +911,11 @@ function get_image_size_options( $pEmptyOption = 'Disable this feature' ) {
  *
  * @param string $pString string that should be checked for the delimiter
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return string
  */
 function get_leadtitle( $pString ) {
 	global $gBitSystem;
-	return( substr( $pString, 0, strpos( $pString, $gBitSystem->getConfig( 'liberty_subtitle_delimiter', ':' ))));
+	return substr( $pString, 0, strpos( $pString, $gBitSystem->getConfig( 'liberty_subtitle_delimiter', ':' )));
 }
 
 /**
@@ -929,12 +923,12 @@ function get_leadtitle( $pString ) {
  *
  * @param string $pString string that should be checked for the delimiter
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return string
  */
 function get_subtitle( $pString ) {
 	global $gBitSystem;
-	if(( $start = strpos( $pString, $gBitSystem->getConfig( 'liberty_subtitle_delimiter', ':' ))) !== FALSE ) {
-		return( substr( $pString, ( $start + 1 )));
+	if(( $start = strpos( $pString, $gBitSystem->getConfig( 'liberty_subtitle_delimiter', ':' ))) !== false ) {
+		return substr( $pString, $start + 1 );
 	}
+	return '';
 }
-?>

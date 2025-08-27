@@ -11,11 +11,15 @@
 // All Rights Reserved. See below for details and a complete list of authors.
 // Licensed under the GNU LESSER GENERAL PUBLIC LICENSE. See http://www.gnu.org/copyleft/lesser.html for details.
 
-require_once( '../kernel/includes/setup_inc.php' );
-include_once( LIBERTY_PKG_CLASS_PATH.'LibertyStructure.php');
+namespace Bitweaver\Liberty;
+require_once '../kernel/includes/setup_inc.php';
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyContent;
+use Bitweaver\Liberty\LibertyStructure;
 
-if( !@BitBase::verifyId( $_REQUEST["structure_id"] ) ) {
-	$gBitSystem->fatalError( tra( "No structure indicated" ));
+if( !BitBase::verifyId( $_REQUEST["structure_id"] ) ) {
+	$gBitSystem->fatalError( KernelTools::tra( "No structure indicated" ));
 } else {
 	global $gStructure;
 	$gStructure = new LibertyStructure( $_REQUEST["structure_id"] );
@@ -23,7 +27,7 @@ if( !@BitBase::verifyId( $_REQUEST["structure_id"] ) ) {
 
 	// order matters for these conditionals
 	if( empty( $gStructure ) || !$gStructure->isValid() ) {
-		$gBitSystem->fatalError( tra( 'Invalid structure' ));
+		$gBitSystem->fatalError( KernelTools::tra( 'Invalid structure' ));
 	}
 
 	if( $gStructure->mInfo['root_structure_id'] == $gStructure->mInfo['structure_id'] ) {
@@ -40,8 +44,8 @@ if( !@BitBase::verifyId( $_REQUEST["structure_id"] ) ) {
 		$gContent->verifyUpdatePermission();
 	}
 
-	$gBitSmarty->assignByRef( 'gStructure', $gStructure );
-	$gBitSmarty->assign( 'editingStructure', TRUE );
+	$gBitSmarty->assign( 'gStructure', $gStructure );
+	$gBitSmarty->assign( 'editingStructure', true );
 	$gBitSmarty->assign('structureInfo', $gStructure->mInfo);
 
 	// Store the actively stored structure name
@@ -54,24 +58,24 @@ if( !@BitBase::verifyId( $_REQUEST["structure_id"] ) ) {
 			$gBitUser->verifyTicket();
 			if( $gStructure->removeStructureNode( $_REQUEST["structure_id"], false ) ) {
 				if( $gBitThemes->isAjaxRequest() ) {
-					$feedback['success'] = tra( "removed from" ).' '.$gContent->getContentTypeName();
+					$feedback['success'] = KernelTools::tra( "removed from" ).' '.$gContent->getContentTypeName();
 				} else {
-					bit_redirect( $_SERVER['SCRIPT_NAME'].'?structure_id='.$gStructure->mInfo["parent_id"] );
+					KernelTools::bit_redirect( $_SERVER['SCRIPT_NAME'].'?structure_id='.$gStructure->mInfo["parent_id"] );
 				}
 			} else {
 				$feedback['error'] = $gStructure->mErrors;
 			}
-			$gBitSmarty->assignByRef('feedback', $feedback);
+			$gBitSmarty->assign('feedback', $feedback);
 		} elseif( $_REQUEST["action"] == 'remove' ) {
-			$gBitSystem->setBrowserTitle( tra('Confirm removal of ').$gContent->getTitle() );
+			$gBitSystem->setBrowserTitle( KernelTools::tra('Confirm removal of ').$gContent->getTitle() );
 			$formHash['action'] = 'remove';
-			$formHash['remove'] = TRUE;
+			$formHash['remove'] = true;
 			$formHash['structure_id'] = $_REQUEST['structure_id'];
-			$msgHash = array(
-				'label' => tra('Remove content from Structure'),
-				'confirm_item' => $gContent->getTitle().tra('and any subitems'),
-				'warning' => tra('This will remove the content from the structure but will <strong>not</strong> modify or remove the content itself.'),
-			);
+			$msgHash = [
+				'label' => KernelTools::tra('Remove content from Structure'),
+				'confirm_item' => $gContent->getTitle().KernelTools::tra('and any subitems'),
+				'warning' => KernelTools::tra('This will remove the content from the structure but will <strong>not</strong> modify or remove the content itself.'),
+			];
 			$gBitSystem->confirmDialog( $formHash,$msgHash );
 		}
 	} elseif (isset($_REQUEST["move_node"])) {
@@ -84,10 +88,10 @@ if( !@BitBase::verifyId( $_REQUEST["structure_id"] ) ) {
 		} elseif ($_REQUEST["move_node"] == '4') {
 			$gStructure->moveNodeEast();
 		}
-		bit_redirect( $_SERVER['SCRIPT_NAME'].'?structure_id='.$gStructure->mInfo["structure_id"] );
+		KernelTools::bit_redirect( $_SERVER['SCRIPT_NAME'].'?structure_id='.$gStructure->mInfo["structure_id"] );
 	} elseif( !empty( $_REQUEST['submit_structure'] ) ) {
 		if( $gStructure->storeStructure( $_REQUEST ) ) {
-			$feedback['success'] = tra( "Your changes were successfully saved." );
+			$feedback['success'] = KernelTools::tra( "Your changes were successfully saved." );
 		} else {
 			$feedback['error'] = $gStructure->mErrors;
 		}
@@ -100,13 +104,13 @@ if( !@BitBase::verifyId( $_REQUEST["structure_id"] ) ) {
 			$structureHash['after_ref_id'] = $_REQUEST['after_ref_id'];
 		}
 		if (!(empty($_REQUEST['name']))) {
-			$gStructure->s_create_page($_REQUEST["structure_id"], $after, $_REQUEST["name"], '');
+//			$gStructure->s_create_page($_REQUEST["structure_id"], $after, $_REQUEST["name"], '');
 		} elseif(!empty($_REQUEST['content'])) {
 			foreach ($_REQUEST['content'] as $conId ) {
 				$structureHash['content_id'] = $conId;
 				if( $new_structure_id = $gStructure->storeNode( $structureHash ) ) {
 					$structureHash['after_ref_id'] = $new_structure_id;
-					$feedback['success'] = tra( "added to" ).' '.$gContent->getContentTypeName();
+					$feedback['success'] = KernelTools::tra( "added to" ).' '.$gContent->getContentTypeName();
 				} else {
 					$feedback['failure'] = $gStructure->mErrors;
 				}
@@ -117,8 +121,6 @@ if( !@BitBase::verifyId( $_REQUEST["structure_id"] ) ) {
 	$structureTocId = $rootStructure->mStructureId;
 	$gBitSmarty->assign( 'structureToc', $rootStructure->getToc() );
 	$gBitSmarty->assign( 'structureTocId', $structureTocId );
-	$gBitSmarty->assignByRef('feedback', $feedback);
+	$gBitSmarty->assign('feedback', $feedback);
 }
-	$gBitSmarty->assign( 'editingStructure', FALSE );
-
-?>
+	$gBitSmarty->assign( 'editingStructure', false );

@@ -14,7 +14,7 @@
  */
 global $gLibertySystem, $gBitSmarty;
 
-$inEditor = TRUE; // Required by PluginHelp to Determin Executed in an Editor
+$inEditor = true; // Required by PluginHelp to Determin Executed in an Editor
 
 $dataplugins = array_merge( $gLibertySystem->getPluginsOfType( DATA_PLUGIN ), $gLibertySystem->getPluginsOfType( FILTER_PLUGIN ));
 $formatplugins = $gLibertySystem->getPluginsOfType( FORMAT_PLUGIN );
@@ -53,16 +53,16 @@ foreach( array_keys( $formatplugins ) as $guid ) {
 
 if( !empty( $formatplugins ) ) {
 	usort( $formatplugins, 'usort_by_title' );
-	$gBitSmarty->assignByRef( 'formatplugins', $formatplugins );
+	$gBitSmarty->assign( 'formatplugins', $formatplugins );
 }
 
 if( !empty( $mimeplugins ) ) {
 	usort( $mimeplugins, 'usort_by_title' );
-	$gBitSmarty->assignByRef( 'mimeplugins', $mimeplugins );
+	$gBitSmarty->assign( 'mimeplugins', $mimeplugins );
 }
 
 if( !empty( $dataplugins ) ) {
 	usort( $dataplugins, 'usort_by_title' );
-	$gBitSmarty->assignByRef( 'dataplugins', $dataplugins );
+	$gBitSmarty->assign( 'dataplugins', $dataplugins );
 }
 ?>

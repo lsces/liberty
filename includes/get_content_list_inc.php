@@ -11,21 +11,18 @@
 /**
  * required setup
  */
-require_once( LIBERTY_PKG_CLASS_PATH.'LibertyContent.php' );
-global $gContent;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyContent;
 global $gLibertySystem;
 
 if( empty( $gContent ) || !is_object( $gContent ) ) {
 	$gContent = new LibertyContent();
 }
 
-$contentTypeGuids = array();
+$contentTypeGuids = [];
 if( !empty( $_REQUEST['content_type_guid'] )) {
-	if( !is_array( $_REQUEST['content_type_guid'] )) {
-		$guids = explode( ",", $_REQUEST['content_type_guid'] );
-	} else {
-		$guids = $_REQUEST['content_type_guid'];
-	}
+	$guids = ( !is_array( $_REQUEST['content_type_guid'] ) ) ? explode( ",", $_REQUEST['content_type_guid'] ) : $_REQUEST['content_type_guid'];
 	/**
 	 * if an empty string was passed in an array (likely since it is used for ALL) then the user has requested all so return all
 	 * even if they have requested additional content types too - ALL is ALL
@@ -38,27 +35,27 @@ if( !empty( $_REQUEST['content_type_guid'] )) {
 
 // get_content_list_inc doesn't use $_REQUEST parameters as it might not be the only list in the page that needs sorting and limiting
 if( empty( $contentListHash ) ) {
-	$contentListHash = array(
-		'content_type_guid' => $contentSelect = empty( $_REQUEST['content_type_guid'] ) ? NULL : $contentTypeGuids,
+	$contentListHash = [
+		'content_type_guid' => $contentSelect = empty( $_REQUEST['content_type_guid'] ) ? null : $contentTypeGuids,
 		// pagination offset
-		'offset'            => !empty( $offset_content ) ? $offset_content : NULL,
+		'offset'            => !empty( $offset_content ) ? $offset_content : null,
 		// maximum number of records displayed on a page
 		'max_records'       => !empty( $max_content ) ? $max_content : ( !empty( $_REQUEST['max_records'] ) ? $_REQUEST['max_records'] : 100 ),
 		// sort by this: <table column>_asc (or _desc)
 		'sort_mode'         => !empty( $content_sort_mode ) ? $content_sort_mode : 'title_asc',
 		// limit the result to this set
-		'find'              => !empty( $_REQUEST["find"] ) ? $_REQUEST["find"] : NULL,
+		'find'              => !empty( $_REQUEST["find"] ) ? $_REQUEST["find"] : null,
 		// display this page number - replaces antiquated offset
-		'page'              => !empty( $_REQUEST["list_page"] ) ? $_REQUEST["list_page"] : NULL,
+		'page'              => !empty( $_REQUEST["list_page"] ) ? $_REQUEST["list_page"] : (!empty( $_REQUEST["page"] ) ? $_REQUEST["page"] : 1),
 		// only display content by this user
-		'user_id'           => @BitBase::verifyId( $_REQUEST['user_id'] ) ? $_REQUEST['user_id'] : NULL,
+		'user_id'           => BitBase::verifyId( $_REQUEST['user_id'] ?? 0 ) ? $_REQUEST['user_id'] : null,
 		// only display content modified more recently than this (UTC timestamp)
-		'from_date'         => !empty( $_REQUEST["from_date"] ) ? $_REQUEST["from_date"] : NULL,
+		'from_date'         => !empty( $_REQUEST["from_date"] ) ? $_REQUEST["from_date"] : null,
 		// only display content modified before this (UTC timestamp)
-		'until_date'        => !empty( $_REQUEST["until_date"] ) ? $_REQUEST["until_date"] : NULL,
+		'until_date'        => !empty( $_REQUEST["until_date"] ) ? $_REQUEST["until_date"] : null,
 		// get a thumbnail - off by default because it is expensive
-		'thumbnail_size'    => !empty( $_REQUEST["thumbnail_size"] ) ? $_REQUEST["thumbnail_size"] : NULL,
-	);
+		'thumbnail_size'    => !empty( $_REQUEST["thumbnail_size"] ) ? $_REQUEST["thumbnail_size"] : null,
+	];
 
 	if( !empty( $_REQUEST['output'] ) && ( $_REQUEST['output'] == 'json' || $_REQUEST['output'] == 'ajax' ) ) {	
 		foreach( $_REQUEST as $key => $value ) {
@@ -77,9 +74,9 @@ if( empty( $contentListHash ) ) {
 $contentList = $gContent->getContentList( $contentListHash );
 
 if( empty( $contentTypes ) ) {
-	$contentTypes = array( '' => tra( 'All Content' ) );
+	$contentTypes = [ '' => KernelTools::tra( 'All Content' ) ];
 	foreach( $gLibertySystem->mContentTypes as $cType ) {
-		$contentTypes[$cType['content_type_guid']] = $gLibertySystem->getContentTypeName( $cType['content_type_guid'], TRUE );
+		$contentTypes[$cType['content_type_guid']] = $gLibertySystem->getContentTypeName( $cType['content_type_guid'], true );
 	}
 	asort( $contentTypes );
 }
@@ -90,4 +87,3 @@ if( $gBitSystem->isFeatureActive( 'liberty_display_status' ) &&  $gBitUser->hasP
 	$contentStatuses['not_available'] = 'All but Available';
 	$gBitSmarty->assign( 'content_statuses', $contentStatuses );
 }
-?>

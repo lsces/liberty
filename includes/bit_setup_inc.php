@@ -7,20 +7,24 @@
  * @package  liberty
  * @subpackage functions
  */
+namespace Bitweaver\Liberty;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
 
-$registerHash = array(
+$pRegisterHash = [
 	'package_name' => 'liberty',
 	'package_path' => dirname( dirname( __FILE__ ) ).'/',
-	'required_package'=> TRUE,
-);
-$gBitSystem->registerPackage( $registerHash );
+	'required_package'=> true,
+];
+$gBitSystem->registerPackage( $pRegisterHash );
 
 // initiate LibertySystem
-require_once( LIBERTY_PKG_CLASS_PATH.'LibertySystem.php' );
-LibertySystem::loadSingleton();
-$gBitSmarty->assignByRef( 'gLibertySystem', $gLibertySystem );
 
-// We can't load this in liberty/bit_setup_inc.php becuase it's too soon in the process.
+LibertySystem::loadSingleton();
+$gBitSmarty->assign( 'gLibertySystem', $gLibertySystem );
+global $gLibertySystem;
+
+// We can't load this in liberty/bit_setup_inc.php because it's too soon in the process.
 // packages haven't been scanned yet making things like <pkg>_PKG_URL and similar
 // unavailable to the plugins that are kept in <pkg>/liberty_plugins/
 $current_default_format_guid = $gBitSystem->getConfig( 'default_format' );
@@ -35,7 +39,7 @@ if( $gLibertySystem->mDb->isValid() ) { // install condition check
 
 $gLibertySystem->registerService( 'liberty', 
 	LIBERTY_PKG_NAME, 
-	array(
+	[
 		'content_edit_mini_tpl'      => 'bitpackage:liberty/service_content_edit_mini_inc.tpl',
 		'content_edit_tab_tpl'       => 'bitpackage:liberty/service_content_edit_tab_inc.tpl',
 		'content_icon_tpl'           => 'bitpackage:liberty/service_content_icon_inc.tpl',
@@ -47,20 +51,19 @@ $gLibertySystem->registerService( 'liberty',
 		'content_load_sql_function'  => 'liberty_content_load_sql',
 		'content_list_sql_function'  => 'liberty_content_list_sql',
 		'content_preview_function'   => 'liberty_content_preview',
-	),
-	array( 
-		'description' => tra( 'Provides core functionality, including enforcing some access control and dynamic layout components.' ),
-		'required' => TRUE,
-	)
+	],
+	[ 
+		'description' => KernelTools::tra( 'Provides core functionality, including enforcing some access control and dynamic layout components.' ),
+		'required' => true,
+	]
 );
 
 // delete cache file if requested
 if( !empty( $_REQUEST['refresh_liberty_cache'] ) && BitBase::verifyId( $_REQUEST['refresh_liberty_cache'] )) {
-	require_once( LIBERTY_PKG_CLASS_PATH.'LibertyContent.php' );
+	require_once LIBERTY_PKG_CLASS_PATH.'LibertyContent.php';
 	LibertyContent::expungeCacheFile( $_REQUEST['refresh_liberty_cache'] );
 }
 
 // make thumbnail sizes available to smarty
 global $gThumbSizes;
-$gBitSmarty->assignByRef( 'gThumbSizes', $gThumbSizes );
-?>
+$gBitSmarty->assign( 'gThumbSizes', $gThumbSizes );

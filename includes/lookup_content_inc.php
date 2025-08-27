@@ -8,13 +8,15 @@
  * @subpackage functions
  */
 
+/**
+ * required setup
+ */
+namespace Bitweaver\Liberty;
+use Bitweaver\BitBase;
+
 global $gContent;
 
-if( BitBase::verifyIdParameter( $_REQUEST, 'structure_id' ) ) {
-	/**
-	 * required setup
-	 */
-	require_once( LIBERTY_PKG_CLASS_PATH.'LibertyStructure.php');
+if( !empty($_REQUEST['structure_id']) && BitBase::verifyId( $_REQUEST['structure_id'] ) ) {
 	$_REQUEST['structure_id'] = preg_replace( '/[\D]/', '', $_REQUEST['structure_id'] );
 	$gStructure = new LibertyStructure( $_REQUEST['structure_id'] );
 	if( $gStructure->load() ) {
@@ -24,17 +26,17 @@ if( BitBase::verifyIdParameter( $_REQUEST, 'structure_id' ) ) {
 //		$_REQUEST['page_id'] = $gStructure->mInfo['page_id'];
 		if( $viewContent = LibertyBase::getLibertyObject( $gStructure->mInfo['content_id'], $gStructure->mInfo['content_type']['content_type_guid'] ) ) {
 			$viewContent->setStructure( $_REQUEST['structure_id'] );
-			$gBitSmarty->assignByRef( 'pageInfo', $viewContent->mInfo );
+			$gBitSmarty->assign( 'pageInfo', $viewContent->mInfo );
 			$gContent = &$viewContent;
-			$gBitSmarty->assignByRef( 'gContent', $gContent );
+			$gBitSmarty->assign( 'gContent', $gContent );
 		}
 	}
-} elseif( BitBase::verifyIdParameter( $_REQUEST, 'content_id' ) ) {
+} elseif( !empty($_REQUEST['content_id']) && BitBase::verifyId( $_REQUEST['content_id'] ) ) {
 	$_REQUEST['content_id'] = preg_replace( '/[\D]/', '', $_REQUEST['content_id'] );
-	require_once( LIBERTY_PKG_CLASS_PATH.'LibertyBase.php');
+
 	if( $gContent = LibertyBase::getLibertyObject( $_REQUEST['content_id'] ) ) {
-		$gBitSmarty->assignByRef( 'gContent', $gContent );
-		$gBitSmarty->assignByRef( 'pageInfo', $gContent->mInfo );
+		$gBitSmarty->assign( 'gContent', $gContent );
+		$gBitSmarty->assign( 'pageInfo', $gContent->mInfo );
 	}
 }
 

@@ -18,5 +18,5 @@ if( is_object( $gContent ) && $gContent->isValid() ) {
 	$gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );
 	include $gContent->getRenderFile();
 } else {
-	$gBitSystem->fatalError( tra( 'Page cannot be found' ), NULL, NULL, HttpStatusCodes::HTTP_GONE );
+	$gBitSystem->fatalError( tra( 'Page cannot be found' ), null, null, HttpStatusCodes::HTTP_GONE );
 }
