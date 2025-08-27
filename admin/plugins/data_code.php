@@ -1,9 +1,11 @@
 <?php
-require_once( '../../../kernel/includes/setup_inc.php' );
-require_once( KERNEL_PKG_PATH.'/simple_form_functions_lib.php' );
+use Bitweaver\KernelTools;
+
+require_once '../../../kernel/includes/setup_inc.php';
+require_once KERNEL_PKG_INCLUDE_PATH . 'simple_form_functions_lib.php';
 $gBitSystem->verifyPermission( 'p_admin' );
 
-$feedback = array();
+$feedback = [];
 
 $sources = array(
 	'ASP'          => 'ASP',
@@ -65,9 +67,8 @@ $gBitSmarty->assign( 'sources', $sources );
 
 if( !empty( $_REQUEST['plugin_settings'] )) {
 	simple_set_value( 'liberty_plugin_code_default_source', LIBERTY_PKG_NAME );
-	$feedback['success'] = tra( 'The plugin was successfully updated' );
+	$feedback['success'] = KernelTools::tra( 'The plugin was successfully updated' );
 }
 
 $gBitSmarty->assign( 'feedback', $feedback );
-$gBitSystem->display( 'bitpackage:liberty/plugins/data_code_admin.tpl', tra( 'Data Code Plugin Settings' ), array( 'display_mode' => 'admin' ));
-?>
+$gBitSystem->display( 'bitpackage:liberty/plugins/data_code_admin.tpl', KernelTools::tra( 'Data Code Plugin Settings' ), array( 'display_mode' => 'admin' ));

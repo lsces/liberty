@@ -1,19 +1,21 @@
 <?php
-require_once( '../../../kernel/includes/setup_inc.php' );
-include_once( KERNEL_PKG_PATH.'simple_form_functions_lib.php' );
+
+use Bitweaver\KernelTools;
+require_once '../../../kernel/includes/setup_inc.php';
+include_once KERNEL_PKG_INCLUDE_PATH . 'simple_form_functions_lib.php';
 
 $gBitSystem->verifyPermission( 'p_admin' );
 
-$settings = array(
-	'mime_image_panoramas' => array(
+$settings = [
+	'mime_image_panoramas' => [
 		'label' => 'Panorama Images',
-		'note' => 'When users upload 360&deg; panoramic images, they can enable a flash viewer to view these. This can greatly enhance the image viewing experience for panoramic images. (<a class="external" href="http://pan0.net/fspp">example</a>)',
-		'type' => 'checkbox',
-	),
-);
+		'note'  => 'When users upload 360&deg; panoramic images, they can enable a flash viewer to view these. This can greatly enhance the image viewing experience for panoramic images. (<a class="external" href="http://pan0.net/fspp">example</a>)',
+		'type'  => 'checkbox',
+	],
+];
 $gBitSmarty->assign( 'settings', $settings );
 
-$panWidth = array(
+$panWidth = [
 	1500 => '1500 x 750',
 	2000 => '2000 x 1000 (about 1MB)',
 	2500 => '2500 x 1250',
@@ -22,26 +24,25 @@ $panWidth = array(
 	4000 => '4000 x 2000 (about 3-4MB)',
 	4500 => '4500 x 2250',
 	5000 => '5000 x 2500 (about 5-6MB)',
-);
+];
 $gBitSmarty->assign( 'panWidth', $panWidth );
 
 if( $gBitSystem->getConfig( 'image_processor' ) != 'magickwand' ) {
-	$gBitSmarty->assign( 'image_processor_warning', TRUE );
+	$gBitSmarty->assign( 'image_processor_warning', true );
 }
 
-$feedback = array();
+$feedback = [];
 if( !empty( $_REQUEST['settings_store'] )) {
 	foreach( $settings as $item => $data ) {
 		if( $data['type'] == 'checkbox' ) {
-			simple_set_toggle( $item, TREASURY_PKG_NAME );
+			simple_set_toggle( $item, FISHEYE_PKG_NAME );
 		} elseif( $data['type'] == 'numeric' ) {
-			simple_set_int( $item, TREASURY_PKG_NAME );
+			simple_set_int( $item, FISHEYE_PKG_NAME );
 		} else {
-			$gBitSystem->storeConfig( $item, ( !empty( $_REQUEST[$item] ) ? $_REQUEST[$item] : NULL ), TREASURY_PKG_NAME );
+			$gBitSystem->storeConfig( $item, !empty( $_REQUEST[$item] ) ? $_REQUEST[$item] : null, FISHEYE_PKG_NAME );
 		}
 	}
 	simple_set_int( 'mime_image_panorama_width', $_REQUEST['mime_image_panorama_width'] );
 }
 $gBitSmarty->assign( 'feedback', $feedback );
-$gBitSystem->display( 'bitpackage:liberty/mime/image/admin.tpl', tra( 'Image Plugin Settings' ), array( 'display_mode' => 'admin' ));
-?>
+$gBitSystem->display( 'bitpackage:liberty/mime/image/admin.tpl', KernelTools::tra( 'Image Plugin Settings' ), [ 'display_mode' => 'admin' ]);

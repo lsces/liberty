@@ -1,12 +1,12 @@
 <?php
-require_once( '../../../kernel/includes/setup_inc.php' );
-include_once( KERNEL_PKG_PATH.'simple_form_functions_lib.php' );
+require_once '../../../kernel/includes/setup_inc.php';
+include_once KERNEL_PKG_INCLUDE_PATH . 'simple_form_functions_lib.php';
 /* We need DEFAULT_ACCEPTABLE_TAGS from here. */
-include_once( LIBERTY_PKG_PATH.'plugins/filter.simplepurifier.php');
+include_once LIBERTY_PKG_PATH . 'plugins/filter.simplepurifier.php';
 $gBitSystem->verifyPermission( 'p_admin' );
 
 if( !empty( $_REQUEST['apply'] )) {
-	$errors = array();
+	$errors = [];
 	if( $_REQUEST['approved_html_tags'] != DEFAULT_ACCEPTABLE_TAGS ) {
 		$tags = preg_replace( '/\s/', '', $_REQUEST['approved_html_tags'] );
 		$lastAngle = strrpos( $tags, '>' ) + 1;
@@ -17,7 +17,7 @@ if( !empty( $_REQUEST['apply'] )) {
 		}
 		$gBitSystem->storeConfig('approved_html_tags', $tags , LIBERTY_PKG_NAME );
 	}
-	$gBitSmarty->assignByRef( 'errors', $errors );
+	$gBitSmarty->assign( 'errors', $errors );
 
 	if( !empty($_REQUEST['approved_html_tags'] )) {
 		$tags = preg_replace( '/\s/', '', $_REQUEST['approved_html_tags'] );
@@ -33,5 +33,4 @@ $tags = $gBitSystem->getConfig( 'approved_html_tags', DEFAULT_ACCEPTABLE_TAGS );
 
 $gBitSmarty->assign( 'approved_html_tags', $tags );
 
-$gBitSystem->display( 'bitpackage:liberty/plugins/filter_simplepurifier_admin.tpl', 'Simple HTML Purifier' , array( 'display_mode' => 'admin' ));
-?>
+$gBitSystem->display( 'bitpackage:liberty/plugins/filter_simplepurifier_admin.tpl', 'Simple HTML Purifier' , [ 'display_mode' => 'admin' ]);

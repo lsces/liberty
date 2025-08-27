@@ -1,33 +1,35 @@
 <?php
-require_once( '../../../kernel/includes/setup_inc.php' );
-include_once( KERNEL_PKG_PATH.'simple_form_functions_lib.php' );
+use Bitweaver\KernelTools;
+
+require_once '../../../kernel/includes/setup_inc.php';
+include_once KERNEL_PKG_INCLUDE_PATH . 'simple_form_functions_lib.php';
 
 $gBitSystem->verifyPermission( 'p_admin' );
 
-$feedback = array();
+$feedback = [];
 
-$pdfSettings = array(
-	'pdf2swf_path' => array(
-		'label'   => 'Path to pdf2swf',
-		'note'    => 'Path to the pdf2swf executable.',
-		'type'    => 'text',
-	),
-	'swfcombine_path' => array(
-		'label'   => 'Path to swfcombine',
-		'note'    => 'Path to the swfcombine executable.',
-		'type'    => 'text',
-	),
-	'mwconvert_path' => array(
-		'label'   => 'Path to ImageMagick convert',
-		'note'    => 'Path to the ImageMagick convert executable.',
-		'type'    => 'text',
-	),
-	'pdf_thumbnails' => array(
-		'label'   => 'PDF Upload Thumbnails',
-		'note'    => 'Create thumbnails for PDF uploads.',
-		'type'    => 'checkbox',
-	),
-);
+$pdfSettings = [
+	'pdf2swf_path'    => [
+		'label' => 'Path to pdf2swf',
+		'note'  => 'Path to the pdf2swf executable.',
+		'type'  => 'text',
+	],
+	'swfcombine_path' => [
+		'label' => 'Path to swfcombine',
+		'note'  => 'Path to the swfcombine executable.',
+		'type'  => 'text',
+	],
+	'mwconvert_path'  => [
+		'label' => 'Path to ImageMagick convert',
+		'note'  => 'Path to the ImageMagick convert executable.',
+		'type'  => 'text',
+	],
+	'pdf_thumbnails'  => [
+		'label' => 'PDF Upload Thumbnails',
+		'note'  => 'Create thumbnails for PDF uploads.',
+		'type'  => 'checkbox',
+	],
+];
 
 if( function_exists( 'shell_exec' )) {
 	$pdfSettings['pdf2swf_path']['default']    =  shell_exec( 'which pdf2swf' );
@@ -50,9 +52,8 @@ if( !empty( $_REQUEST['plugin_settings'] )) {
 		}
 	}
 
-	$feedback['success'] = tra( 'The plugin was successfully updated' );
+	$feedback['success'] = KernelTools::tra( 'The plugin was successfully updated' );
 }
 
 $gBitSmarty->assign( 'feedback', $feedback );
-$gBitSystem->display( 'bitpackage:liberty/mime/pdf/adminx.tpl', tra( 'PDF Plugin Settings' ), array( 'display_mode' => 'admin' ));
-?>
+$gBitSystem->display( 'bitpackage:liberty/mime/pdf/adminx.tpl', KernelTools::tra( 'PDF Plugin Settings' ), [ 'display_mode' => 'admin' ]);

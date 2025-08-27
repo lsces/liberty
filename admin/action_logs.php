@@ -1,19 +1,22 @@
 <?php
-require_once( '../../kernel/includes/setup_inc.php' );
-include_once( KERNEL_PKG_PATH.'simple_form_functions_lib.php' );
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyContent;
+require_once '../../kernel/includes/setup_inc.php';
+include_once KERNEL_PKG_INCLUDE_PATH.'simple_form_functions_lib.php';
 
 $gBitSystem->verifyPermission( 'p_admin' );
 
 $gContent = new LibertyContent();
 
 // logging options
-$logSettings = array(
-	'liberty_action_log' => array(
+$logSettings = [
+	'liberty_action_log' => [
 		'label' => 'Action Logs',
 		'note'  => 'Log all changes made to liberty content.',
 		'type'  => 'toggle',
-	),
-);
+		'page'  => 'page tag',
+	],
+];
 $gBitSmarty->assign( 'logSettings', $logSettings );
 
 // form processing
@@ -35,5 +38,4 @@ $actionLogs = $gContent->getActionLogs( $listHash );
 $gBitSmarty->assign( 'listInfo', $listHash['listInfo'] );
 $gBitSmarty->assign( 'actionLogs', $actionLogs );
 
-$gBitSystem->display( 'bitpackage:liberty/action_logs.tpl', tra( 'Action Logs' ) , array( 'display_mode' => 'admin' ));
-?>
+$gBitSystem->display( 'bitpackage:liberty/action_logs.tpl', KernelTools::tra( 'Action Logs' ) , [ 'display_mode' => 'admin' ]);

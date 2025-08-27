@@ -1,6 +1,9 @@
 <?php
-require_once( '../../kernel/includes/setup_inc.php' );
-include_once( KERNEL_PKG_INCLUDE_PATH.'simple_form_functions_lib.php' );
+namespace Bitweaver\Liberty;
+require_once '../../kernel/includes/setup_inc.php';
+use Bitweaver\KernelTools;
+
+include_once KERNEL_PKG_INCLUDE_PATH.'simple_form_functions_lib.php';
 
 $gBitSystem->verifyPermission( 'p_admin' );
 
@@ -9,7 +12,7 @@ $gBitSystem->verifyPermission( 'p_admin' );
 if( !empty( $_REQUEST['reset_all_plugins'] ) ) {
 	// because of include_once scenarios in scanAllPlugins, you need two complete page refreshes afternuking the plugin settings
 	if( $_REQUEST['reset_all_plugins'] == 'refresh' ) {
-		bit_redirect( LIBERTY_PKG_URL."admin/plugins.php" );
+		KernelTools::bit_redirect( LIBERTY_PKG_URL."admin/plugins.php" );
 	} else {
 		$gBitUser->verifyTicket();
 		//$gBitSystem->storeConfig( 'default_format', PLUGIN_GUID_TIKIWIKI, LIBERTY_PKG_NAME );
@@ -17,7 +20,7 @@ if( !empty( $_REQUEST['reset_all_plugins'] ) ) {
 
 		// this scanAllPlugins is required. who knows why this stuff is so resilient
 		$gLibertySystem->scanAllPlugins();
-		bit_redirect( LIBERTY_PKG_URL."admin/plugins.php?reset_all_plugins=refresh" );
+		KernelTools::bit_redirect( LIBERTY_PKG_URL."admin/plugins.php?reset_all_plugins=refresh" );
 	}
 }
 
@@ -33,8 +36,8 @@ if( isset( $_REQUEST['pluginsave'] ) && !empty( $_REQUEST['pluginsave'] ) ) {
 	} else {
 		$gBitSmarty->assign( 'errorMsg', 'You cannot disable the default format');
 	}
-	$gBitSystem->storeConfig( 'content_allow_html', !empty( $_REQUEST['content_allow_html'] ) ? $_REQUEST['content_allow_html'] : NULL, LIBERTY_PKG_NAME );
-	$gBitSystem->storeConfig( 'content_force_allow_html', !empty( $_REQUEST['content_force_allow_html'] ) ? $_REQUEST['content_force_allow_html'] : NULL, LIBERTY_PKG_NAME );
+	$gBitSystem->storeConfig( 'content_allow_html', !empty( $_REQUEST['content_allow_html'] ) ? $_REQUEST['content_allow_html'] : null, LIBERTY_PKG_NAME );
+	$gBitSystem->storeConfig( 'content_force_allow_html', !empty( $_REQUEST['content_force_allow_html'] ) ? $_REQUEST['content_force_allow_html'] : null, LIBERTY_PKG_NAME );
 }
 
 
@@ -51,9 +54,8 @@ foreach( $gLibertySystem->mPlugins as $guid => $plugin ) {
 	$guidSort[$guid] = $plugin['plugin_guid'];
 }
 array_multisort( $typeSort, SORT_ASC, $guidSort, SORT_ASC, $gLibertySystem->mPlugins );
-$gBitSmarty->assignByRef( 'gLibertySystem', $gLibertySystem );
+$gBitSmarty->assign( 'gLibertySystem', $gLibertySystem );
 ksort( $types );
-$gBitSmarty->assignByRef( 'pluginTypes', $types );
+$gBitSmarty->assign( 'pluginTypes', $types );
 
-$gBitSystem->display( 'bitpackage:liberty/admin_plugins.tpl', tra( 'Liberty Plugins' ), array( 'display_mode' => 'admin' ));
-?>
+$gBitSystem->display( 'bitpackage:liberty/admin_plugins.tpl', KernelTools::tra( 'Liberty Plugins' ), [ 'display_mode' => 'admin' ] );
