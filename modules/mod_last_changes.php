@@ -14,7 +14,7 @@
 global $gQueryUser, $gBitUser, $gLibertySystem, $moduleParams;
 extract( $moduleParams );
 
-$userId = NULL;
+$userId = null;
 if( !empty( $gQueryUser->mUserId ) ) {
 	$userId = $gQueryUser->mUserId;
 }
@@ -29,18 +29,18 @@ if( empty( $module_title ) ) {
 }
 
 if( !empty( $module_params['show_date'] ) ) {
-	$_template->tpl_vars['showDate'] = new Smarty_variable(  TRUE  );
+	$gBitSmarty->assign( 'showDate',  true  );
 }
 
-$_template->tpl_vars['contentType'] = new Smarty_variable( !empty( $module_params['content_type_guid'] ) );
+$gBitSmarty->assign( 'contentType', !empty( $module_params['content_type_guid'] ) );
 
 $listHash = array(
-	'content_type_guid' => !empty( $module_params['content_type_guid'] ) ? $module_params['content_type_guid'] : NULL,
+	'content_type_guid' => !empty( $module_params['content_type_guid'] ) ? $module_params['content_type_guid'] : null,
 	'offset' => 0,
 	'max_records' => $module_rows,
 	'sort_mode' => 'last_modified_desc',
 	'user_id' => $userId,
 );
 $modLastContent = $gBitUser->getContentList( $listHash );
-$_template->tpl_vars['modLastContent'] = new Smarty_variable( $modLastContent );
+$gBitSmarty->assign( 'modLastContent', $modLastContent );
 ?>

@@ -8,12 +8,13 @@
 /**
  * Initial Setup
  */
-require_once( LIBERTY_PKG_CLASS_PATH.'LibertyComment.php' );
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyComment;
 global $gQueryUser, $gBitUser, $gLibertySystem, $moduleParams;
 $params = $moduleParams['module_params'];
-$moduleTitle = !empty($moduleParams['title'])? $moduleParams['title'] : NULL;
+$moduleTitle = !empty($moduleParams['title'])? $moduleParams['title'] : null;
 
-$userId = NULL;
+$userId = null;
 if( !empty( $gQueryUser->mUserId ) ) {
 	$userId = $gQueryUser->mUserId;
 }
@@ -24,7 +25,7 @@ $listHash = array(
 );
 
 if (!empty($params['full'])) {
-	$listHash['parse'] = TRUE;
+	$listHash['parse'] = true;
 }
 
 if (!empty($params['sort'])) {
@@ -37,13 +38,12 @@ if (!empty($params['pigeonholes'])) {
 
 if( !empty( $params['root_content_type_guid'] ) ) {
 	if( empty($moduleTitle) && is_string( $params['root_content_type_guid'] ) ) {
-		$moduleTitle = $gLibertySystem->getContentTypeName( $params['root_content_type_guid'] ).' '.tra( 'Comments' );
+		$moduleTitle = $gLibertySystem->getContentTypeName( $params['root_content_type_guid'] ).' '. KernelTools::tra( 'Comments' );
 	}
 	$listHash['root_content_type_guid'] = $params['root_content_type_guid'];
 }
-$_template->tpl_vars['moduleTitle'] = new Smarty_variable( $moduleTitle );
+$gBitSmarty->assign( 'moduleTitle', $moduleTitle );
 
 $lcom = new LibertyComment();
 $modLastComments = $lcom->getList( $listHash );
-$_template->tpl_vars['modLastComments'] = new Smarty_variable( $modLastComments );
-?>
+$gBitSmarty->assign( 'modLastComments', $modLastComments );

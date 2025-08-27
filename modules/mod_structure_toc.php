@@ -9,18 +9,20 @@
 /**
  * Initial Setup
  */
+use Bitweaver\BitBase;
+use Bitweaver\Liberty\LibertyStructure;
+
 global $gStructure, $gContent, $moduleParams, $gBitSmarty;
-require_once( LIBERTY_PKG_CLASS_PATH.'LibertyStructure.php' );
 
 extract( $moduleParams );
 
-$struct = NULL;
+$struct = null;
 
 if( is_object( $gStructure ) && $gStructure->isValid() && $gStructure->hasViewPermission() ) {
 	$struct = &$gStructure;
-} elseif( @BitBase::verifyId( $module_params['structure_id'] ) ) {
+} elseif( BitBase::verifyId( $module_params['structure_id'] ) ) {
 	$struct = new LibertyStructure( $module_params['structure_id'] );
-} elseif( is_object( $gContent ) && is_a( $gContent, 'LibertyBase' ) && $gContent->hasViewPermission( FALSE ) ) {
+} elseif( is_object( $gContent ) && $gContent->hasViewPermission( false ) ) {
 	if( $structures = $gContent->getStructures() ) {
 		// We take the first structure by default, perhaps there is a better choice
 		$structureId = $structures[0]['structure_id'];
@@ -33,7 +35,7 @@ if( is_object( $gStructure ) && $gStructure->isValid() && $gStructure->hasViewPe
 			}
 		}
 		if( !empty( $structures[0] ) ) {
-			require_once( LIBERTY_PKG_CLASS_PATH.'LibertyStructure.php' );
+			require_once LIBERTY_PKG_CLASS_PATH.'LibertyStructure.php';
 			$struct = new LibertyStructure( $structureId );
 		}
 	}
@@ -41,10 +43,10 @@ if( is_object( $gStructure ) && $gStructure->isValid() && $gStructure->hasViewPe
 
 if( is_object( $struct ) && $struct->isValid() ) {
 	if( !empty( $moduleParams['title'] ) ) {
-		$_template->tpl_vars['moduleTitle'] = new Smarty_variable( $moduleParams['title'] );
+		$gBitSmarty->assign( 'moduleTitle', $moduleParams['title'] );
 	}
-	$toc = $struct->getToc( $struct->mInfo['root_structure_id'], 'asc', FALSE, 2 );
+	$toc = $struct->getToc( $struct->mInfo['root_structure_id'], 'asc', false, 2 );
 	$root = $struct->getRootObject( $struct->mInfo['root_structure_id'] );
-	$_template->tpl_vars['rootTitle'] = new Smarty_variable( $root->getDisplayLink() );
-	$_template->tpl_vars['modStructureTOC'] = new Smarty_variable( $struct->getToc( $struct->mInfo['root_structure_id'], 'asc', FALSE, 2 ) );
+	$gBitSmarty->assign( 'rootTitle', $root->getDisplayLink() );
+	$gBitSmarty->assign( 'modStructureTOC', $struct->getToc( $struct->mInfo['root_structure_id'], 'asc', false, 2 ) );
 }
