@@ -42,7 +42,7 @@
 										{else}
 											<input type="checkbox" name="PLUGINS[{$guid}][]" value="y" {if $plugin.is_active=='y'}checked{/if} id="{$guid}">
 										{/if}
-										{if $plugin.edit_label}{$plugin.edit_label}{else}{$plugin.title|escape}{/if} <small>[{$guid}]</small>
+										{if !empty($plugin.edit_label)}{$plugin.edit_label}{else}{$plugin.title|escape}{/if} <small>[{$guid}]</small>
 									</strong><label></div>
 								</dt>
 								<dd>
