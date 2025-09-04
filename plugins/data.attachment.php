@@ -115,7 +115,6 @@ function data_attachment_help() {
 }
 
 function data_attachment( $pData, $pParams, $pCommonObject, $pParseHash ) {
-	require_once LIBERTY_PKG_CLASS_PATH.'LibertyMime.php';
 
 	// at a minimum, return blank string (not empty) so we still replace the tag
 	$ret = ' ';
