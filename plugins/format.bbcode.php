@@ -40,15 +40,14 @@ function bbcode_parse_data( &$pParseHash, &$pCommonObject ) {
 	$data = preg_replace( '/\[(quote|code):[0-9a-f]+=/', '[\1=', $data );
 	$data = preg_replace( '/:[0-9a-f]+\]/', ']', $data );
 
-	/* get options from the ini file 
+	// get options from the ini file 
 	// $config = parse_ini_file('BBCodeParser.ini', true);
 	$config = parse_ini_file('doc/Text_Wiki_BBCode/doc/BBCodeParser_V2.ini', true);
-	$options = &PEAR::getStaticProperty('HTML_BBCodeParser', '_options');
+	$options = \PEAR::getStaticProperty('HTML_BBCodeParser', '_options');
 	$options = $config['HTML_BBCodeParser'];
 	unset($options);
-	 */
 
-	$parser = new HTML_BBCodeParser('BBCodeParser_V2.ini');
+	$parser = new \HTML_BBCodeParser('BBCodeParser_V2.ini');
 	$parser->setText( $data );
 	$parser->parse();
 	$ret = $parser->getParsed();
