@@ -28,14 +28,14 @@ class LibertyComment extends LibertyMime {
 
 	function __construct($pCommentId = null, $pContentId = null, $pInfo = null) {
 		parent::__construct();
-		$this->registerContentType( BITCOMMENT_CONTENT_TYPE_GUID, array(
-				'content_type_guid' => BITCOMMENT_CONTENT_TYPE_GUID,
-				'content_name' => 'Comment',
-				'handler_class' => 'LibertyComment',
-				'handler_package' => 'liberty',
-				'handler_file' => 'LibertyComment.php',
-				'maintainer_url' => 'http://www.bitweaver.org'
-			) );
+		$this->registerContentType( BITCOMMENT_CONTENT_TYPE_GUID, [
+			'content_type_guid' => BITCOMMENT_CONTENT_TYPE_GUID,
+			'content_name'      => 'Comment',
+			'handler_class'     => 'LibertyComment',
+			'handler_package'   => 'liberty',
+			'handler_file'      => 'LibertyComment.php',
+			'maintainer_url'    => 'http://www.bitweaver.org',
+		] );
 		$this->mCommentId = (int)$pCommentId;
 		$this->mContentId = (int)$pContentId;
 		$this->mInfo = $pInfo;
@@ -50,7 +50,7 @@ class LibertyComment extends LibertyMime {
 
 
 	public function __sleep() {
-		return array_merge( parent::__sleep(), array( 'mCommentId', 'mRootObj' ) );
+		return array_merge( parent::__sleep(), [ 'mCommentId', 'mRootObj' ] );
 	}
 
 	function loadComment() {
@@ -61,10 +61,10 @@ class LibertyComment extends LibertyMime {
 
 		if ($this->mCommentId) {
 			$mid = 'WHERE lcom.`comment_id` = ?';
-			$bindVars = array($this->mCommentId);
+			$bindVars = [ $this->mCommentId ];
 		} else {
 			$mid = 'WHERE lc.`content_id` = ?';
-			$bindVars = array($this->mContentId);
+			$bindVars = [ $this->mContentId ];
 		}
 
 		$joinSql = $selectSql = $whereSql = '';
@@ -137,7 +137,7 @@ class LibertyComment extends LibertyMime {
 			$this->mErrors['store'] = KernelTools::tra( 'Links are not allowed.' );
 		} else {
 			$dupeQuery = "SELECT `data` FROM `".BIT_DB_PREFIX."liberty_content` lc INNER JOIN `".BIT_DB_PREFIX."liberty_comments` lcom ON (lc.`content_id`=lcom.`content_id`) WHERE `user_id`=? AND `content_type_guid`='".BITCOMMENT_CONTENT_TYPE_GUID."' AND `ip`=? AND lcom.`root_id`=? ORDER BY `created` DESC";
-			if( $lastPostData = $this->mDb->getOne( $dupeQuery, array( $gBitUser->mUserId, $_SERVER['REMOTE_ADDR'], $pParamHash['root_id'] ) ) ) {
+			if( $lastPostData = $this->mDb->getOne( $dupeQuery, [ $gBitUser->mUserId, $_SERVER['REMOTE_ADDR'], $pParamHash['root_id'] ] ) ) {
 				if( empty( $this->mCommentId ) && trim( $lastPostData ) == trim( $pParamHash['edit'] ) ) {
 					$this->mErrors['store'] = KernelTools::tra( 'Duplicate comment.' );
 				}
@@ -183,16 +183,22 @@ class LibertyComment extends LibertyMime {
 
 				$sql = "INSERT INTO `".BIT_DB_PREFIX."liberty_comments` (`comment_id`, `content_id`, `parent_id`, `root_id`, `anon_name`, `thread_forward_sequence`, `thread_reverse_sequence`) VALUES (?,?,?,?,?,?,?)";
 
-				$this->mDb->query($sql, array($this->mCommentId, $pParamHash['content_id'], $pParamHash['parent_id'],
-					$pParamHash['root_id'], $pParamHash['anon_name'],
-					$this->mInfo['thread_forward_sequence'], $this->mInfo['thread_reverse_sequence']));
+				$this->mDb->query($sql, [
+					$this->mCommentId,
+					$pParamHash['content_id'],
+					$pParamHash['parent_id'],
+					$pParamHash['root_id'],
+					$pParamHash['anon_name'],
+					$this->mInfo['thread_forward_sequence'],
+					$this->mInfo['thread_reverse_sequence'],
+				]);
 				$this->mInfo['parent_id'] = $pParamHash['parent_id'];
 				$this->mInfo['content_id'] = $pParamHash['content_id'];
 				$this->mInfo['root_id'] = $pParamHash['root_id'];
 				$this->mContentId = $pParamHash['content_id'];
 			} else {
 				$sql = "UPDATE `".BIT_DB_PREFIX."liberty_comments` SET `parent_id` = ?, `content_id`= ? WHERE `comment_id` = ?";
-				$this->mDb->query($sql, array($pParamHash['parent_id'], $pParamHash['content_id'], $this->mCommentId));
+				$this->mDb->query($sql, [ $pParamHash['parent_id'], $pParamHash['content_id'], $this->mCommentId ]);
 				$this->mInfo['parent_id'] = $pParamHash['parent_id'];
 				$this->mInfo['content_id'] = $pParamHash['content_id'];
 				$this->mContentId = $pParamHash['content_id'];
@@ -210,7 +216,7 @@ class LibertyComment extends LibertyMime {
 	// (Hint: see mailing list integreation in boards)
 	function storeMessageId( $pMessageId ) {
 		if( $this->isValid() ) {
-			$this->mDb->query( "UPDATE `".BIT_DB_PREFIX."liberty_comments` SET `message_guid`=? WHERE `content_id`=?", array( $pMessageId, $this->mContentId ) );
+			$this->mDb->query( "UPDATE `".BIT_DB_PREFIX."liberty_comments` SET `message_guid`=? WHERE `content_id`=?", [ $pMessageId, $this->mContentId ] );
 		}
 	}
 
@@ -224,14 +230,14 @@ class LibertyComment extends LibertyMime {
 			if( $gBitSystem->isPackageActive( 'boards' ) ) {
 				// due to foreign key constraints, this has to go in the base class of BitBoardPost
 				$sql = "DELETE FROM `".BIT_DB_PREFIX."boards_posts` WHERE `comment_id` = ?";
-				$rs = $this->mDb->query($sql, array($this->mCommentId ) );
+				$rs = $this->mDb->query($sql, [ $this->mCommentId ] );
 //				$query = "DELETE FROM `".BIT_DB_PREFIX."boards_topics` WHERE `parent_id` = ?";
-//				$result = $this->mDb->query( $query, array( $this->getField( 'content_id' ) ) );
+//				$result = $this->mDb->query( $query, [ $this->getField( 'content_id' ) ] );
 			}
 
 
 			$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_comments` WHERE `comment_id` = ?";
-			$rs = $this->mDb->query($sql, array($this->mCommentId));
+			$rs = $this->mDb->query($sql, [ $this->mCommentId ]);
 
 			/*
 			 * TODO: figureout why this is even here. Mime should handle this and it needs to pass in mandatory attachmentId
@@ -264,7 +270,7 @@ class LibertyComment extends LibertyMime {
 		if( $this->isValid() ) {
 			$this->StartTrans();
 			$sql = "SELECT `comment_id` FROM `".BIT_DB_PREFIX."liberty_comments` WHERE `parent_id` = ?";
-			$rows = $this->mDb->getAll($sql, array($this->mContentId));
+			$rows = $this->mDb->getAll($sql, [ $this->mContentId ]);
 
 			foreach ($rows as $row) {
 				$comment = new LibertyComment($row['comment_id']);
@@ -274,13 +280,13 @@ class LibertyComment extends LibertyMime {
 			if( $gBitSystem->isPackageActive( 'boards' ) ) {
 				// due to foreign key constraints, this has to go in the base class of BitBoardPost
 				$sql = "DELETE FROM `".BIT_DB_PREFIX."boards_posts` WHERE `comment_id` = ?";
-				$rs = $this->mDb->query($sql, array($this->mCommentId ) );
+				$rs = $this->mDb->query($sql, [ $this->mCommentId ] );
 				$query = "DELETE FROM `".BIT_DB_PREFIX."boards_topics` WHERE `parent_id` = ?";
-				$result = $this->mDb->query( $query, array( $this->getField( 'content_id' ) ) );
+				$result = $this->mDb->query( $query, [ $this->getField( 'content_id' ) ] );
 			}
 
 			$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_comments` WHERE `comment_id` = ?";
-			$rs = $this->mDb->query($sql, array($this->mCommentId));
+			$rs = $this->mDb->query($sql, [ $this->mCommentId ]);
 
 			/*
 			 * TODO: figureout why this is even here. Mime should handle this and it needs to pass in mandatory attachmentId
@@ -398,7 +404,7 @@ class LibertyComment extends LibertyMime {
 
 		if ( !empty( $pParamHash['root_content_type_guid'] ) ) {
 			if( is_string( $pParamHash['root_content_type_guid'] ) ) {
-				$pParamHash['root_content_type_guid'] = array( $pParamHash['root_content_type_guid'] );
+				$pParamHash['root_content_type_guid'] = [ $pParamHash['root_content_type_guid'] ];
 			} elseif( is_array( $pParamHash['root_content_type_guid'] ) ) {
 				$contentTypes = array_keys( $gLibertySystem->mContentTypes );
 				$max = count( $pParamHash['root_content_type_guid'] );
@@ -502,13 +508,13 @@ class LibertyComment extends LibertyMime {
 		$bindVars = null;
 		if (!$pContentId && $this->mContentId) {
 			$mid = '=?';
-			$bindVars = array($this->mContentId);
+			$bindVars = [ $this->mContentId ];
 		} elseif (is_array($pContentId)) {
 			$mid = 'in ('.implode(',', array_fill(0, count( $pContentId ), '?')).')';
 			$bindVars = $pContentId;
 		} elseif ($pContentId) {
 			$mid = '=?';
-			$bindVars = array($pContentId);
+			$bindVars = [ $pContentId ];
 		}
 		$commentCount = 0;
 
@@ -570,7 +576,7 @@ class LibertyComment extends LibertyMime {
 					 `".BIT_DB_PREFIX."liberty_content` tcn
 					 ON (tc.`content_id` = tcn.`content_id`)
 				    where tc.`root_id` =? and `created` < ?";
-			$commentCount = $this->mDb->getOne($sql, array($contentId, $created));
+			$commentCount = $this->mDb->getOne($sql, [ $contentId, $created ]);
 		}
 		return $commentCount;
 	}
@@ -619,13 +625,13 @@ class LibertyComment extends LibertyMime {
 			$join1 = " LEFT OUTER JOIN `".BIT_DB_PREFIX."liberty_content` lcp ON (lcp.`content_id` = lcom.`parent_id`) ";
 		} elseif ($pContentId) {
 			$mid2 = '=?';
-			$bindVars = array( $pContentId );
+			$bindVars = [ $pContentId ];
 			$select1 = '';
 			$join1 = '';
 		}
 
 		$joinSql = $selectSql = $whereSql = '';
-		$pListHash = array( 'content_id' => $contentId, 'max_records' => $pMaxComments, 'offset'=>$pOffset, 'sort_mode'=> $pSortOrder, 'display_mode' => $pDisplayMode, 'has_comment_view_perm' => true );
+		$pListHash = [ 'content_id' => $contentId, 'max_records' => $pMaxComments, 'offset' => $pOffset, 'sort_mode' => $pSortOrder, 'display_mode' => $pDisplayMode, 'has_comment_view_perm' => true ];
 		$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars, $this, $pListHash );
 
 		if ($pContentId) {
