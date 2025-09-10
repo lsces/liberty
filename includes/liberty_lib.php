@@ -283,7 +283,7 @@ function liberty_plugins_wrapper_style( $pParamHash ) {
  */
 function liberty_content_load_sql( $pObject, $pParamHash=null ) {
 	global $gBitSystem, $gBitUser;
-	$ret = '';
+	$ret = [];
 
 	$hasPerm = ( is_object( $pObject ) && isset( $pObject->hasUserPermission )) ? $pObject->hasUserPermission( 'p_liberty_edit_all_status' ) : $gBitUser->hasPermission( 'p_liberty_edit_all_status' );
 
@@ -410,7 +410,7 @@ function liberty_content_display( $pObject, &$pParamHash ) {
  * @access public
  * @return void
  */
-function liberty_content_edit( $pObject ) {
+function liberty_content_edit( $pObject, $pParamHash ) {
 	include_once LIBERTY_PKG_INCLUDE_PATH.'edit_help_inc.php';
 	include_once LIBERTY_PKG_INCLUDE_PATH."edit_storage_inc.php";
 }
