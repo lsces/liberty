@@ -12,6 +12,7 @@
 /**
  * required setup
  */
+use Bitweaver\KernelTools;
 global $gLibertySystem, $gBitSmarty;
 
 $inEditor = true; // Required by PluginHelp to Determin Executed in an Editor
@@ -46,23 +47,22 @@ foreach( array_keys( $formatplugins ) as $guid ) {
 	if( is_file( LIBERTY_PKG_PATH."templates/help_format_{$guid}_inc.tpl" )) {
 		$formatplugins[$guid]['format_help'] = "bitpackage:liberty/help_format_{$guid}_inc.tpl";
 		if( is_file( LIBERTY_PKG_INCLUDE_PATH.'help_format_{$guid}_inc.php' )) {
-			include_once( LIBERTY_PKG_INCLUDE_PATH.'help_format_{$guid}_inc.php' );
+			include_once LIBERTY_PKG_INCLUDE_PATH . 'help_format_{$guid}_inc.php';
 		}
 	}
 }
 
 if( !empty( $formatplugins ) ) {
-	usort( $formatplugins, 'usort_by_title' );
+	usort( $formatplugins, [KernelTools::class, 'usort_by_title'] );
 	$gBitSmarty->assign( 'formatplugins', $formatplugins );
 }
 
 if( !empty( $mimeplugins ) ) {
-	usort( $mimeplugins, 'usort_by_title' );
+	usort( $mimeplugins, [KernelTools::class, 'usort_by_title'] );
 	$gBitSmarty->assign( 'mimeplugins', $mimeplugins );
 }
 
 if( !empty( $dataplugins ) ) {
-	usort( $dataplugins, 'usort_by_title' );
+	usort( $dataplugins, [KernelTools::class, 'usort_by_title'] );
 	$gBitSmarty->assign( 'dataplugins', $dataplugins );
 }
-?>
