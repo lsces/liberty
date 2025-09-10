@@ -873,6 +873,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		// Invoke any services store functions such as categorization or access control
 		if( $serviceFunctions = $gLibertySystem->getServiceValues( $pServiceFunction ) ) {
 			foreach ( $serviceFunctions as $func ) {
+				$func = "\\Bitweaver\\Liberty\\$func";
 				if( function_exists( $func ) ) {
 					if( $errors = $func( $this, $pFunctionParam ) ) {
 						$this->mErrors = array_merge( $this->mErrors, $errors );
@@ -1155,6 +1156,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gLibertySystem;
 		if( $loadFuncs = $gLibertySystem->getServiceValues( $pServiceFunction ) ) {
 			foreach( $loadFuncs as $func ) {
+				$func = "\\Bitweaver\\Liberty\\$func";
 				if( function_exists( $func ) ) {
 					$loadHash = !empty( $pObject ) && is_object( $pObject )
 						? $func( $pObject, $pParamHash )
