@@ -3184,8 +3184,8 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 					LEFT OUTER JOIN `".BIT_DB_PREFIX."liberty_content_data` lcds ON (lc.`content_id` = lcds.`content_id` AND lcds.`data_type`='summary')
 				WHERE lc.`content_id` = ?" ;
 		$res = $gBitSystem->mDb->getRow($sql, [ $pContentId ]);
-		if (!(isset($this->mInfo['no_index']) and $this->mInfo['no_index'] == true)) {
-			$this->mInfo['index_data'] = $res["title"] . " " . $res["data"] . " " . $res["login"] . " " . $res["real_name"] ;
+		if ( isset($res["title"] ) and !(isset($this->mInfo['no_index']) and $this->mInfo['no_index'] == true)) {
+			$this->mInfo['index_data'] = $res["title"] . " " . $res["data"] . " " . $res["login"] . " " . $res["real_name"];
 		}
 	}
 
