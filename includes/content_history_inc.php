@@ -29,7 +29,7 @@ if( isset( $_REQUEST["delete"] ) && isset( $_REQUEST["hist"] )) {
 		$gBitSmarty->assign( 'sourcev', nl2br( htmlentities( $version["data"][0]["data"] )));
 	}
 
-} elseif( BitBase::verifyId( $_REQUEST["preview"] )) {
+} elseif( isset( $_REQUEST["preview"] ) && BitBase::verifyId( $_REQUEST["preview"] )) {
 	if( $version = $gContent->getHistory( $_REQUEST["preview"] )) {
 		$version['data'][0]['no_cache'] = true;
 		$version['data'][0]['parsed_data'] = LibertyContent::parseDataHash( $version["data"][0], $gContent );
@@ -37,7 +37,7 @@ if( isset( $_REQUEST["delete"] ) && isset( $_REQUEST["hist"] )) {
 		$gBitSmarty->assign( 'version', $_REQUEST["preview"] );
 	}
 
-} elseif( BitBase::verifyId( $_REQUEST["diff2"] ) ) {
+} elseif( isset( $_REQUEST["diff2"] ) && BitBase::verifyId( $_REQUEST["diff2"] ) ) {
 	$from_version = $_REQUEST["diff2"];
 	$from_page = $gContent->getHistory( $from_version );
 	$from_lines = explode( "\n",$from_page["data"][0]["data"] );
@@ -68,7 +68,7 @@ if( isset( $_REQUEST["delete"] ) && isset( $_REQUEST["hist"] )) {
 	$gBitSmarty->assign( 'version_from', $from_version );
 	$gBitSmarty->assign( 'version_to', $to_version );
 
-} elseif( BitBase::verifyId( $_REQUEST["compare"] )) {
+} elseif ( isset( $_REQUEST["compare"] ) &&  BitBase::verifyId( $_REQUEST["compare"] )) {
 	$from_version = $_REQUEST["compare"];
 	$from_page = $gContent->getHistory( $from_version );
 	$from_page['data'][0]['no_cache'] = true;
@@ -77,7 +77,7 @@ if( isset( $_REQUEST["delete"] ) && isset( $_REQUEST["hist"] )) {
 	$gBitSmarty->assign( 'diff_to', $gContent->getParsedData() );
 	$gBitSmarty->assign( 'version_from', $from_version );
 
-} elseif( BitBase::verifyId( $_REQUEST["rollback"] )) {
+} elseif ( isset( $_REQUEST["rollback"] ) &&  BitBase::verifyId( $_REQUEST["rollback"] )) {
 	$gContent->verifyUserPermission( !empty( $rollbackPerm ) ? $rollbackPerm : $gContent->mUpdateContentPerm );
 	if( !isset( $_REQUEST["rollback_comment"] )) {
 		$_REQUEST["rollback_comment"] = '';

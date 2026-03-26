@@ -1943,7 +1943,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * @return string Descriptive title for the page
 	 */
 	public static function getTitleFromHash( &$pHash, $pDefault=true ) {
-		$ret = null;
+		$ret = '';
 		if( !empty( $pHash['title'] ) ) {
 			$ret = $pHash['title'];
 		} elseif( $pDefault && !empty( $pHash['content_name'] ) ) {
@@ -2286,7 +2286,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 
-	public function getThumbnailUri( $pSize='small' ) {
+	public function getThumbnailUri( string $pSize='small' ) {
 		if( $this->isValid() ) {
 			return $this->getThumbnailUriFromHash( $this->mInfo, $pSize );
 		}
