@@ -1,5 +1,5 @@
 {strip}
-{if $wrapper.output == 'desc' || $wrapper.output == 'description'}
+{if $wrapper.output == 'desc' or $wrapper.output == 'description'}
 	{if $attachment.display_url}<a {$wrapper.href_class} href="{$wrapper.display_url|default:$attachment.display_url}">{/if}
 		{$wrapper.description_parsed|default:$attachment.filename}
 	{if $attachment.display_url}</a>{/if}
