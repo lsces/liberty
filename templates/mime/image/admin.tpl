@@ -8,14 +8,14 @@
 	<div class="body">
 		{form legend="Image specific settings"}
 			{foreach from=$settings key=feature item=output}
-				{if $feature == 'mime_image_panoramas' && $image_processor_warning}
+				{if $feature == 'mime_image_panoramas' and $image_processor_warning}
 					{formfeedback warning="This feature is only available when using the magickwand image processor."}
 				{/if}
 				<div class="form-group">
 					{formlabel label=`$output.label` for=$feature}
 					{forminput}
 						{if $output.type == 'checkbox'}
-							{if $feature == 'mime_image_panoramas' && $image_processor_warning}
+							{if $feature == 'mime_image_panoramas' and $image_processor_warning}
 								{html_checkboxes name="$feature" values="y" labels=false id=$feature disabled="disabled"}
 							{else}
 								{html_checkboxes name="$feature" values="y" checked=$gBitSystem->getConfig($feature) labels=false id=$feature}

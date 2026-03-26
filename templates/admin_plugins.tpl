@@ -36,7 +36,7 @@
 									<div class="checkbox" for="{$guid}"><label><strong>
 										{if $plugin.is_active == 'x'}
 											[Missing]
-										{elseif $plugin.plugin_type == 'mime' && $guid == $smarty.const.LIBERTY_DEFAULT_MIME_HANDLER}
+										{elseif $plugin.plugin_type == 'mime' and $guid == $smarty.const.LIBERTY_DEFAULT_MIME_HANDLER}
 											<input type="checkbox" checked value="y" disabled>
 											<input type="hidden" name="PLUGINS[{$guid}][]" checked id="{$guid}" value="y">
 										{else}
@@ -51,7 +51,7 @@
 										{if $plugin.is_active == 'y'}<label><input type="radio" value="{$guid}" name="default_format" {if $gBitSystem->getConfig('default_format')==$guid}checked{/if}> <em class="small">{tr}Default{/tr}</em></label>{/if}
 										</div>
 									{/if}
-									{if $plugin.plugin_type == 'mime' && $guid == $smarty.const.LIBERTY_DEFAULT_MIME_HANDLER}<strong>{tr}DEFAULT{/tr}</strong>{/if} {$plugin.description}
+									{if $plugin.plugin_type == 'mime' and $guid == $smarty.const.LIBERTY_DEFAULT_MIME_HANDLER}<strong>{tr}DEFAULT{/tr}</strong>{/if} {$plugin.description}
 									{if !empty($plugin.requirements.output)}
 										{formfeedback hash=$plugin.requirements.output}
 									{/if}

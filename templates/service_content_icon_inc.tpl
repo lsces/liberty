@@ -1,8 +1,8 @@
 {strip}
 {if !empty($gContent)}
-	{if $gBitSystem->isFeatureActive( 'liberty_cache' ) && $gContent && $gContent->isCached( $serviceHash.content_id ) && $gBitUser->hasPermission( 'p_users_view_icons_and_tools' )}
+	{if $gBitSystem->isFeatureActive( 'liberty_cache' ) and $gContent and $gContent->isCached( $serviceHash.content_id ) and $gBitUser->hasPermission( 'p_users_view_icons_and_tools' )}
 		{assign var=url value=$gContent->getDisplayUrl()|default:$serviceHash.display_url}
-		{if (not empty($url)) && strstr($url, "?") }
+		{if (not empty($url)) and strstr($url, "?") }
 			{assign var="amp" value="&amp;"}
 		{else}
 			{assign var="amp" value="?"}

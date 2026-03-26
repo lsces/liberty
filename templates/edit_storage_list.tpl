@@ -64,9 +64,9 @@ window.attachmentUrls["{$storage.attachment_id}"]["original"] = "{$storage.sourc
 						</div>
 					</div>
 					<div class="col-xs-1">
-						{if $gBitUser->isAdmin() || ($storage.user_id == $gBitUser->mUserId) }
+						{if $gBitUser->isAdmin() or ($storage.user_id == $gBitUser->mUserId) }
 							{capture name=urlArgs}{$attachmentBaseArgs}content_id={$gContent->mContentId}{if empty($gContent->mContentId)}{foreach from=$gContent->mStorage key=key item=val}&amp;STORAGE[existing][{$val.attachment_id}]={$val.attachment_id}{/foreach}{/if}{/capture}
-							{if $libertyUploader || $gBitSystem->getConfig('liberty_attachment_style') == 'ajax'}
+							{if $libertyUploader or $gBitSystem->getConfig('liberty_attachment_style') == 'ajax'}
 								<a href="javascript:void(0);" onclick="
 									BitAjax.updater('edit_storage_list_tab_{$form_id}', '{$smarty.const.LIBERTY_PKG_URL}ajax_edit_storage.php', '{$smarty.capture.urlArgs}&amp;deleteAttachment={$attachmentId}&amp;form_id={$form_id}');
 									BitAjax.updater('edit_storage_list_{$form_id}', '{$smarty.const.LIBERTY_PKG_URL}ajax_edit_storage.php', '{$smarty.capture.urlArgs}&amp;form_id={$form_id}');">

@@ -1,5 +1,5 @@
 {strip}
-{if $comments_style eq 'threaded' && $comment.level}
+{if $comments_style eq 'threaded' and $comment.level}
 	<div class="threaded">
 {else}
 	<div class="">

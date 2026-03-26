@@ -1,4 +1,4 @@
-{if $gBitUser->hasPermission('p_liberty_post_comments') || $gBitUser->hasPermission('p_liberty_read_comments')}
+{if $gBitUser->hasPermission('p_liberty_post_comments') or $gBitUser->hasPermission('p_liberty_read_comments')}
 {strip}
 <div class="display comment">
 	{if $comments}
@@ -7,14 +7,14 @@
 	</div>
 	{/if}
 
-	<div class="body"{if !( $post_comment_request || $post_comment_preview )} id="editcomments"{/if}>
+	<div class="body"{if !( $post_comment_request or $post_comment_preview )} id="editcomments"{/if}>
 		<div id="edit_comments" {if $gBitSystem->isFeatureActive('comments_ajax')}style="display:none"{/if}>
 			{include file="bitpackage:liberty/comments_post_inc.tpl" post_title="Post Comment"}
 		</div>
 
 		{include file="bitpackage:liberty/comments_display_option_bar.tpl"}
 
-		{if $gBitSystem->isFeatureActive('comments_ajax') && $gBitUser->hasPermission( 'p_liberty_post_comments' )}
+		{if $gBitSystem->isFeatureActive('comments_ajax') and $gBitUser->hasPermission( 'p_liberty_post_comments' )}
 			<div class="form-group">
 				<input type="submit" class="btn btn-default" name="post_comment_request" value="{tr}Add Comment{/tr}" onclick="LibertyComment.attachForm('comment_{$gContent->mContentId}', '{$gContent->mContentId}', {if $gContent->mContentId}{$gContent->mContentId}{elseif $commentsParentId}{$commentsParentId}{else}null{/if})"/>
 			</div>

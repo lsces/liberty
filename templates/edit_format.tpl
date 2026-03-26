@@ -1,6 +1,6 @@
 {strip}
 {* comment or content @TODO pass in as a var in includes *}
-{if ( $post_comment_request || $post_comment_preview || $gBitSystem->isFeatureActive('comments_ajax') ) && $gComment}
+{if ( $post_comment_request or $post_comment_preview or $gBitSystem->isFeatureActive('comments_ajax') ) and $gComment}
 	{assign var=contentObject value=$gComment}
 {else}
 	{assign var=contentObject value=$gContent}
@@ -16,7 +16,7 @@
 			{/if}
 			<select name="i18n[lang_code]" id="lang_code">
 				{foreach from=$translationsList key=codeKey item=lang}
-					<option value="{$codeKey}" {if $smarty.request.i18n.lang_code==$codeKey || $langCode==$codeKey || ($codeKey==$gBitSystem->getConfig('bitlanguage') && !$smarty.request.i18n.lang_code && !$langCode)}selected="selected" {/if}>{$lang.native_name}</option>
+					<option value="{$codeKey}" {if $smarty.request.i18n.lang_code==$codeKey or $langCode==$codeKey or ($codeKey==$gBitSystem->getConfig('bitlanguage') and !$smarty.request.i18n.lang_code and !$langCode)}selected="selected" {/if}>{$lang.native_name}</option>
 				{/foreach}
 			</select>
 			{formhelp note="The language of this page"}
@@ -36,7 +36,7 @@
 		{assign var=singleplugin value=$plugin}
 	{/if}
 {/foreach}
-{if $numformat > 1 || $format_options}
+{if $numformat > 1 or $format_options}
 	<div class="form-group">
 		{formfeedback error=$errors.format}
 		{formlabel label="Content Format"}
@@ -70,9 +70,9 @@
 					{/if}
 					{if $plugin.plugin_guid == "tikiwiki"}
 						{if !$gBitSystem->isFeatureActive('content_force_allow_html')}
-							{if $gBitUser->hasPermission( 'p_liberty_enter_html' ) || $gBitSystem->isFeatureActive('content_allow_html')}
+							{if $gBitUser->hasPermission( 'p_liberty_enter_html' ) or $gBitSystem->isFeatureActive('content_allow_html')}
 								<label class="inline-block checkbox"><input type="checkbox" name="preferences[content_enter_html]" value="y" id="{$textarea_id}-html" {if $contentObject->mPrefs.content_enter_html}{if $gBitSystem->isPackageActive('ckeditor')}contenteditable="true"{/if} checked="checked" {/if} {*if $gBitSystem->isPackageActive('ckeditor')}onclick="if($(this).is(':checked')) createCkEditor('{$textarea_id}'); else destroyCkEditor('{$textarea_id}');{/if*}"/> {tr}Allow HTML{/tr}</label>
-							{elseif is_object($contentObject) && $contentObject->getPreference( 'content_enter_html' )}
+							{elseif is_object($contentObject) and $contentObject->getPreference( 'content_enter_html' )}
 								[ {tr}HTML will remain as HTML{/tr} ]
 							{else}
 								[ {tr}HTML will be escaped{/tr} ]
@@ -104,7 +104,7 @@
 	<input type="hidden" name="{$format_guid_variable|default:"format_guid"}" value="{if $numformat eq 1}{$singleplugin.edit_field|default:false}{else}{$gBitSystem->getConfig('default_format','tikiwiki')}{/if}" />
 {/if}
 
-{if $gBitSystem->isPackageActive('ckeditor') && ($formatGuid=='bithtml')}{* || (is_object($contentObject) && $formatGuid=='tikiwiki' && $contentObject->getPreference('content_enter_html')))} *}
+{if $gBitSystem->isPackageActive('ckeditor') and ($formatGuid=='bithtml')}{* or (is_object($contentObject) and $formatGuid=='tikiwiki' and $contentObject->getPreference('content_enter_html')))} *}
 <script>
 $(document).ready( function() {
 createCkEditor('{$textarea_id}');

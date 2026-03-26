@@ -55,7 +55,7 @@
 			</tr>
 			<tr>
 				<td><pre><code>
-					| Value || Value || Value ...<br />
+					| Value or Value or Value ...<br />
 					| optional parameters | value | optional parameters | value |
 				</code></pre></td>
 				<td>Multiple Cells on one line</td>

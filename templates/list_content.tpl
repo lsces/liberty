@@ -8,7 +8,7 @@
 			<div class="input-append pull-right">
 			{html_options onchange="submit();" options=$contentTypes name=content_type_guid id=content_type selected=$contentSelect}
 
-			{if $gBitSystem->isFeatureActive( 'liberty_display_status' ) && $gBitUser->hasPermission( 'p_liberty_view_all_status' )}
+			{if $gBitSystem->isFeatureActive( 'liberty_display_status' ) and $gBitUser->hasPermission( 'p_liberty_view_all_status' )}
 				{html_options options=$content_statuses values=$content_statuses name=content_status_id id=content_status_id class="input-xs" selected=$smarty.request.content_status_id|default:''}
 				{formhelp note="Limit selection to a given status."}
 			{/if}

@@ -77,7 +77,7 @@ console.log( childNode );
 			if (xml.attributes.length > 0) {
 				for (var j = 0; j < xml.attributes.length; j++) {
 					var attribute = xml.attributes.item(j);
-					if( attribute.nodeName == "structure_id" || attribute.nodeName == "content_id" ) {
+					if( attribute.nodeName == "structure_id" or attribute.nodeName == "content_id" ) {
 						obj[attribute.nodeName] = attribute.value;
 					}
 				}

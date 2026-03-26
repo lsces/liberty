@@ -10,7 +10,7 @@
 			{formfeedback warning="No Individual permissions set. Global Permissions apply."}
 		{/if}
 
-		{if $contentPerms.assigned || $gBitThemes->isJavascriptEnabled()}
+		{if $contentPerms.assigned or $gBitThemes->isJavascriptEnabled()}
 			{smartlink ititle="Clear all custom content permissions" action=expunge content_id=$gContent->mContentId}
 		{/if}
 

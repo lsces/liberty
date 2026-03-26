@@ -18,7 +18,7 @@
 
 	{* this condition is a temporary hack to disable ajax uploads on new content to avoid bogus entires in liberty_attachments.
 	 * we all want to see this working asap and are thinking of the best way to fix this - xing - Wednesday Nov 14, 2007   18:38:18 CET *}
-	{if $gBitSystem->getConfig('liberty_attachment_style') != 'ajax' || $gContent->isValid()}
+	{if $gBitSystem->getConfig('liberty_attachment_style') != 'ajax' or $gContent->isValid()}
 
 		{if $gBitUser->hasPermission('p_liberty_attach_attachments') }
 			{foreach from=$gLibertySystem->mPlugins item=plugin key=guid}

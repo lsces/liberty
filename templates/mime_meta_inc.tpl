@@ -6,7 +6,7 @@
 	{/forminput}
 </div>
 
-{if $display && $attachment.display_url}
+{if $display and $attachment.display_url}
 	<div class="form-group">
 		{formlabel label="View" for=""}
 		{forminput}
