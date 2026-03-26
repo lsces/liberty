@@ -102,7 +102,7 @@ function urlcache_store($url, $data = '') {
 	// Request data for URL if nothing given in parameters
 	// (reuse $data var)
 	if( $data == '' ) {
-		$data = bit_http_request( $url );
+		$data = KernelTools::bit_http_request( $url );
 	}
 
 	// If stuff inside [] is *really* malformatted, $data

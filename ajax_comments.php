@@ -9,6 +9,7 @@
  * required setup
  */
 namespace Smarty;
+use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyBase;
 use Bitweaver\Liberty\LibertyContent;
 require_once '../kernel/includes/setup_inc.php';
@@ -19,7 +20,7 @@ $XMLContent = "";
 
 if( !$gContent->hasUserPermission( 'p_liberty_post_comments', true, true)) {
 	$statusCode = 401;
-	$XMLContent = tra( "You do not have the required permissions to post new comments" );
+	$XMLContent = KernelTools::tra( "You do not have the required permissions to post new comments" );
 } elseif( $gContent->isCommentable() ) {
 	/**
 	 * If we are receiving ajax comments request make sure our results also
@@ -52,12 +53,12 @@ if( !$gContent->hasUserPermission( 'p_liberty_post_comments', true, true)) {
 	$gBitSmarty->assign( 'commentsParentId', $commentsParentId );
 	if( !empty( $formfeedback )){
 		$statusCode = 400;
-		$XMLContent = smarty_function_formfeedback( $formfeedback, $gBitSmarty );
+		$XMLContent = \Smarty::smarty_function_formfeedback( $formfeedback, $gBitSmarty );
 	}
 	$XMLContent .= $gBitSmarty->fetch( 'bitpackage:liberty/display_comment.tpl' );
 } else {
 	$statusCode = 405;
-	$XMLContent = tra( "Sorry, you can not post a comment here." );
+	$XMLContent = KernelTools::tra( "Sorry, you can not post a comment here." );
 }
 
 // We return XML with a status code

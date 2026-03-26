@@ -11,6 +11,7 @@
 namespace Smarty;
 use Bitweaver\BitBase;
 use Bitweaver\HttpStatusCodes;
+use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyBase;
 
 require_once '../kernel/includes/setup_inc.php';
@@ -26,16 +27,16 @@ if( $gContent == null ) {
 // Process the form
 // send the user to the content page if he wants to
 if( !empty( $_REQUEST['back'] )) {
-	bit_redirect( $gContent->getDisplayUrl() );
+	KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 }
 
 // Update database if needed
 if( !empty( $_REQUEST['action'] ) && BitBase::verifyId( $gContent->mContentId )) {
 	if( $_REQUEST["action"] == 'expunge' ) {
 		if( $gContent->expungeContentPermissions() ) {
-			$feedback['success'] = tra( 'The content permissions were successfully removed.' );
+			$feedback['success'] = KernelTools::tra( 'The content permissions were successfully removed.' );
 		} else {
-			$feedback['error'] = tra( 'The content permissions were not removed.' );
+			$feedback['error'] = KernelTools::tra( 'The content permissions were not removed.' );
 		}
 	}
 
@@ -73,18 +74,18 @@ $gBitSmarty->assign( 'contentPerms', $contentPerms );
 
 // if we've called this page as part of an ajax update, we output the appropriate data
 if( $gBitThemes->isAjaxRequest() ) {
-	$size = count( $contentPerms['roles'] ) <= 10 ? 'large/' : 'small/';
+	$size = \count( $contentPerms['roles'] ) <= 10 ? 'large/' : 'small/';
 
 	$gid = $_REQUEST['group_id'];
 	$perm = $_REQUEST['perm'];
 
 	// we're applying the same logic as in the template. if you fix / change anything here, please update the template as well.
-	$biticon = array(
+	$biticon = [
 		'ipackage' => 'icons',
-		'iname'    => $size.'media-playback-stop',
+		'iname'    => "{$size}media-playback-stop",
 		'iexplain' => '',
 		'iforce'   => 'icon',
-	);
+	];
 	$action = 'assign';
 	if( !empty( $contentPerms['groups'][$gid]['perms'][$perm] )) {
 		$biticon['iname'] = $size.'dialog-ok';
@@ -109,4 +110,4 @@ if( $gBitThemes->isAjaxRequest() ) {
 	die;
 }
 
-$gBitSystem->display( 'bitpackage:liberty/content_permissions.tpl', tra( 'Content Permissions' ), array( 'display_mode' => 'display' ));
+$gBitSystem->display( 'bitpackage:liberty/content_permissions.tpl', KernelTools::tra( 'Content Permissions' ), [ 'display_mode' => 'display' ]);

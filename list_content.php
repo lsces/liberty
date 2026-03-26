@@ -101,11 +101,14 @@ if( !empty( $_REQUEST['output'] )) {
 		 * Recommend that this be standardized, but 
 		 * a package dependency somewhere is likely an issue
 		 */
-		require_once UTIL_PKG_PATH.'javascript/suggest/suggest_lib.php';
 		foreach( array_keys( $contentList ) as $row ) {
 			$xmlList[$contentList[$row]['content_id']] = $contentList[$row]['title'];
 		}
-		$xml = SuggestLib::exportXml( $xmlList, $_REQUEST['id'] );
+		$xml = '<?xml version="1.0" ?><ajax-response><response type="object" id="'.$_REQUEST['id'].'_updater"><matches>';
+		foreach( $xmlList as $value=>$name ) {
+			$xml .= "<entry><text>".htmlentities( $name )."</text><value>".htmlentities( $value )."</value></entry>";
+		}
+		$xml .= "</matches></response></ajax-response>";
 		header( "Content-Type: text/xml\n\n" );
 		print $xml;
 		break;

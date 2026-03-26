@@ -1,6 +1,7 @@
 <?php
 namespace Bitweaver\Liberty;
 use Bitweaver\KernelTools;
+use function in_array;
 
 /**
  * @version  $Header$
@@ -70,7 +71,7 @@ function maketoc_postparsefilter( &$pData, &$pFilterHash ) {
 				} elseif( $level == $headers[1][$key - 1] ) {
 					$counter[$level]++;
 				} elseif( $level < $headers[1][$key - 1] ) {
-					$counter[$level] = $counter[$level] + 1;
+					$counter[$level] += 1;
 				} else {
 					$counter[$level] = 1;
 				}
@@ -100,11 +101,11 @@ function maketoc_postparsefilter( &$pData, &$pFilterHash ) {
 		}
 
 		if( !empty( $outputs ) ) {
-			$tocHash = array(
+			$tocHash = [
 				'outputs' => $outputs,
 				'ids'     => $ids,
 				'levels'  => $headers[1],
-			);
+			];
 
 			// (<br[ |\/]*>){0,1} removes up to one occurance of <br> | <br > | <br /> | <br/> or similar variants
 			$sections = preg_split( "/\{maketoc.*?\}(<br[ |\/]*>){0,1}/i", $pData );
