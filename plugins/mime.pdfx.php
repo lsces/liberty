@@ -8,6 +8,7 @@ use Bitweaver\KernelTools;
  * @version		$Header: /cvsroot/bitweaver/_bit_liberty/plugins/mime.pdf.php,v 1.2 2009/04/29 14:29:24 wjames5 Exp $
  *
  * @author		xing  <xing@synapse.plus.com>
+ *				Reworked to remove swf and add text layer management
  * @version		$Revision: 1.2 $
  * created		Thursday May 08, 2008
  * @package		liberty
@@ -71,14 +72,13 @@ function mime_pdfx_store( &$pStoreRow ) {
 	$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_PDFX;
 	$pStoreRow['log'] = [];
 
-	// if storing works, we process the image
-	if( $ret = mime_default_store( $pStoreRow )) {
-/*		if( !mime_pdfx_convert_pdf2swf( $pStoreRow )) {
-			// if it all goes tits up, we'll know why
-			$pStoreRow['errors'] = $pStoreRow['log'];
-			$ret = false;
-		}
-*/
+	// We process the pdf to extract the text layer to include with the save.
+	if( mime_pdfx_text_extract( $pStoreRow ) ) {
+		$ret = mime_default_update( $pStoreRow );
+	} else {
+		// if it all goes tits up, we'll know why
+		$pStoreRow['errors'] = $pStoreRow['log'];
+		$ret = false;
 	}
 
 	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' ) {
@@ -106,14 +106,15 @@ function mime_pdfx_update( &$pStoreRow, $pParams = null ) {
 	// this will set the correct pluign guid, even if we let default handle the store process
 	$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_PDFX;
 
-	// if storing works, we process the image
-	if( !empty( $pStoreRow['upload'] ) && $ret = mime_default_update( $pStoreRow )) {
-/*		if( !mime_pdfx_convert_pdf2swf( $pStoreRow )) {
+	// We process the pdf to extract the text layer to include with the save.
+	if( !empty( $pStoreRow['upload'] ) ) {
+		if( mime_pdfx_text_extract( $pStoreRow ) ) {
+			$ret = mime_default_update( $pStoreRow );
+		} else {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
 			$ret = false;
 		}
-*/
 	}
 
 	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' ) {
@@ -148,71 +149,47 @@ function mime_pdfx_load( &$pFileHash, &$pPrefs, $pParams = null ) {
 }
 
 /**
- * mime_pdf_convert_pdf2swf Convert a PDF to a SWF video
+ * mime_pdf_text_extract Download text layer from a PDF
+ *		This will be saved as ['data'] and stored in the liberty base object
  *
  * @param array $pFileHash file details.
- * @param array $pFileHash[upload] should contain a complete hash from $_FILES
+ * @var array $pFileHash[upload] should contain a complete hash from $_FILES
  * @access public
  * @return bool true on success, false on failure
  */
-function mime_pdfx_convert_pdf2swf( $pFileHash ) {
+function mime_pdfx_text_extract( $pFileHash ) {
 	global $gBitSystem;
+return true;
 	if( !empty( $pFileHash['upload'] ) && BitBase::verifyId( $pFileHash['attachment_id'] )) {
 		// get file paths
 
-		$pdf2swf    = trim( $gBitSystem->getConfig( 'swf2pdf_path', shell_exec( 'which pdf2swf' )));
-		$swfcombine = trim( $gBitSystem->getConfig( 'swfcombine_path', shell_exec( 'which swfcombine' )));
+		$stock_command = shell_exec( 'which pdftotext' ) ?? "/usr/bin/pdftotext";
+		$pdftotext = trim( $gBitSystem->getConfig( 'pdftotext_path', $stock_command ) );
 
-		if( is_executable( $pdf2swf ) && is_executable( $swfcombine )) {
-			$source    = STORAGE_PKG_PATH.$pFileHash['upload']['dest_branch'];
-			if ( $gBitSystem->isFeatureActive( 'liberty_jpeg_originals' ) ) {
-				$source .= 'original.jpg';
-			} else {
-				$source .= $pFileHash['upload']['name'];
-			}
-			$dest_branch = dirname( $source );
-
-			$tmp_file  = "$dest_branch/tmp.swf";
-			$swf_file  = "$dest_branch/pdf.swf";
-
-			$pdfviewer = UTIL_PKG_PATH."javascript/pdfviewer/fdviewer.swf";
-			$swfloader = UTIL_PKG_PATH."javascript/pdfviewer/loader.swf";
-
-			$pdf2swfcommand = "$pdf2swf -s insertstop -s jpegquality=".$gBitSystem->getConfig( 'liberty_thumbnail_quality', 85 )." '$source' -o '$tmp_file'";
-			$combinecommand = "$swfcombine '$pdfviewer' loader='$swfloader' '#1'='$tmp_file' -o '$swf_file'";
-
-			shell_exec( $pdf2swfcommand );
-			if( is_file( $tmp_file ) && filesize( $tmp_file ) > 0 ) {
-				shell_exec( $combinecommand );
-				if( !is_file( $swf_file ) || filesize( $swf_file ) == 0 ) {
-					// combination went wrong. remove swf file
-					$pFileHash['log']['swfcombine'] = "There was a problem combining the PDF SWF with the viewer.";
-					@unlink( $swf_file );
-				}
-			} else {
-				$pFileHash['log']['pdf2swf'] = "There was a problem converting the PDF to SWF.";
-			}
-
-			// remove temp file
-			@unlink( $tmp_file );
+		if( is_executable( $pdftotext ) ) {
+//			$source = STORAGE_PKG_PATH.$pFileHash['upload']['dest_branch'].$pFileHash['upload']['name'];
+			$source = $pFileHash['upload']['source_file'];
+			$pdftotextcommand = "\$pdftotext \"$source\" - 2>&1";
+			$pFileHash['data'] = shell_exec( $pdftotextcommand );
 		} else {
-			$pFileHash['log']['pdf2swf'] = "PDF to SWF functions not installed.";
+			$pFileHash['log']['pdftotext'] = "PDF to Text function not installed.";
 		}
 	}
 	return empty( $pFileHash['log'] );
 }
 
 /**
- * mime_pdf_convert_pdf2swf Convert a PDF to a SWF video
+ * mime_pdfx_thumbnail Build a thumbnail set from the pdf
  *
  * @param array $pFileHash file details.
- * @param array $pFileHash[upload] should contain a complete hash from $_FILES
+ * @var array $pFileHash[upload] should contain a complete hash from $_FILES
  * @access public
  * @return bool true on success, false on failure
  */
 function mime_pdfx_thumbnail( $pFileHash ) {
 	global $gBitSystem;
-		$mwconvert  = trim( $gBitSystem->getConfig( 'mwconvert_path', shell_exec( 'which convert' )));
+		$stock_command = shell_exec( 'which convert' ) ?? "/usr/bin/convert";
+		$mwconvert  = trim( $gBitSystem->getConfig( 'mwconvert_path', $stock_command ));
 
 		if( is_executable( $mwconvert ) && $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' ) {
 			$source    = STORAGE_PKG_PATH.$pFileHash['upload']['dest_branch'];
@@ -224,7 +201,7 @@ function mime_pdfx_thumbnail( $pFileHash ) {
 			$dest_branch = dirname( $source );
 
 			$thumb_file  = "$dest_branch/thumb.jpg";
-			$mwccommand = "$mwconvert '$source' '$thumb_file'";
+			$mwccommand = "$mwconvert '$source' '$thumb_file' 2>&1";
 
 			shell_exec( $mwccommand );
 			if( is_file( $thumb_file ) && filesize( $thumb_file ) > 0 ) {
