@@ -1,7 +1,7 @@
 {if $gBitSystem->isFeatureActive( 'liberty_display_status' ) and 
 	$gBitSystem->isFeatureActive( 'liberty_display_status_menu' ) and 
 	$gContent->getAvailableContentStatuses() &&
-	($gBitUser->hasPermission('p_liberty_edit_content_status') or $gBitUser->hasPermission('p_liberty_edit_all_status'))
+	($gBitUser->hasPermission('p_liberty_edit_content_status') || $gBitUser->hasPermission('p_liberty_edit_all_status'))
 	}
 	<div class="form-group">
 		{formlabel label="Status" for="content_status_id"}

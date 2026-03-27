@@ -2,7 +2,7 @@
 <div class="item">
 	{assign var=thumbsize value=$thumbsize|default:'small'}
 	{if $attachment.thumbnail_url.$thumbsize}
-		{if !$attachment.is_primary or ( $attachment.is_primary and !$hideprimary )}
+		{if !$attachment.is_primary || ( $attachment.is_primary && !$hideprimary )}
 			<a href="{$attachment.display_url}">
 				<img class="img-responsive" src="{$attachment.thumbnail_url.$thumbsize}" alt="{$attachment.filename}" title="{$attachment.filename}"/>
 			</a>

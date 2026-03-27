@@ -19,7 +19,7 @@
 		{if $gBitSystem->isFeatureActive( 'wiki_book_show_navigation' )}
 			<div class="navigation">
 				<span class="left">
-					{if $structureInfo.prev and $structureInfo.prev.structure_id}
+					{if $structureInfo.prev && $structureInfo.prev.structure_id}
 						<a href="index.php?structure_id={$structureInfo.prev.structure_id}">
 							{if $wikibook_use_icons eq 'y'}
 								{booticon iname="fa-arrow-left" iexplain=Previous}
@@ -31,7 +31,7 @@
 				</span>
 
 				<span class="right">
-					{if $structureInfo.next and $structureInfo.next.structure_id}
+					{if $structureInfo.next && $structureInfo.next.structure_id}
 						<a href="index.php?structure_id={$structureInfo.next.structure_id}">
 							{if $wikibook_use_icons eq 'y'}
 								{biticon ipackage="icons" iname="go-next" iexplain=Next}

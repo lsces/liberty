@@ -20,7 +20,7 @@
 					{assign var=icon value="icons/media-playback-stop"}
 					{assign var=action value="assign"}
 					{foreach from=$contentPerms.assigned item=ass}
-						{if $ass.group_id == $group.group_id and $ass.perm_name == $perm.perm_name}
+						{if $ass.group_id == $group.group_id && $ass.perm_name == $perm.perm_name}
 							{assign var=icon value="icons/dialog-ok"}
 							{assign var=action value="remove"}
 						{/if}

@@ -4,7 +4,7 @@
 		{tr}In{/tr} <a href="{$quote.cite_url}" title="{$quote.title}">{$quote.title}</a> ({$quote.created|reltime:short})
 	{/if}
 	
-	{if $quote.user_url and $quote.user_display_name}
+	{if $quote.user_url && $quote.user_display_name}
 		<a href="{$quote.user_url}" title="{$quote.user_display_name}">{$quote.user_display_name}</a>
 	{else}
 		{$quote.login}

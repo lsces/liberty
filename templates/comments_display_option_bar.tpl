@@ -1,4 +1,4 @@
-		{if $comments and $gBitSystem->isFeatureActive('comments_display_option_bar')}
+		{if $comments && $gBitSystem->isFeatureActive('comments_display_option_bar')}
 			{form action="`$comments_return_url`#editcomments"}
 				<input type="hidden" name="post_comment_reply_id" value="{$post_comment_reply_id}" />
 				<input type="hidden" name="post_comment_id" value="{$post_comment_id}" />

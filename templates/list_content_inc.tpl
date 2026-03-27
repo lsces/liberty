@@ -13,7 +13,7 @@
 <form id="bulkcontentform" action="{$smarty.const.LIBERTY_PKG_URL}list_content.php?{$smarty.server.QUERY_STRING}" method="POST">
 {/if}
 
-{assign var=showStatus value=($gBitSystem->isFeatureActive( 'liberty_display_status' ) and $gBitUser->hasPermission( 'p_liberty_view_all_status' ))}
+{assign var=showStatus value=($gBitSystem->isFeatureActive( 'liberty_display_status' ) && $gBitUser->hasPermission( 'p_liberty_view_all_status' ))}
 <table class="table data clear">
 	<caption>{tr}Available Content{/tr} <span class="total">[ {$listInfo.total_records} ]</span></caption>
 	<tr>

@@ -1,6 +1,6 @@
 {strip}
 {if !empty($gContent)}
-	{if $gBitSystem->isFeatureActive( 'liberty_cache' ) and $gContent and $gContent->isCached( $serviceHash.content_id ) and $gBitUser->hasPermission( 'p_users_view_icons_and_tools' )}
+	{if $gBitSystem->isFeatureActive( 'liberty_cache' ) && $gContent && $gContent->isCached( $serviceHash.content_id ) && $gBitUser->hasPermission( 'p_users_view_icons_and_tools' )}
 		{assign var=url value=$gContent->getDisplayUrl()|default:$serviceHash.display_url}
 		{if (not empty($url)) and strstr($url, "?") }
 			{assign var="amp" value="&amp;"}
@@ -11,7 +11,7 @@
 			{booticon iname="fa-recycle" iexplain="Refresh cache"}
 		</a>
 	{/if}
-	{if $gBitUser->hasPermission( 'p_liberty_assign_content_perms' ) and $serviceHash.content_id}
+	{if $gBitUser->hasPermission( 'p_liberty_assign_content_perms' ) && $serviceHash.content_id}
 		{if $gContent->hasUserPermissions()}
 			{assign var=iconClass value="highlight"}
 		{else}

@@ -61,7 +61,7 @@
 				{capture name="popup"}{include file="bitpackage:kernel/popup_box.tpl" content="`$attachment.filename`<br />{tr}Size{/tr}: `$smarty.capture.size`" noclose=true}{/capture}
 				{if $attachment.thumbnail_url.$thumbsize}
 					{* by setting hideprimary, you can hide the primary thumbnail * }
-					{if !$attachment.is_primary or ( $attachment.is_primary and !$hideprimary )}
+					{if !$attachment.is_primary || ( $attachment.is_primary && !$hideprimary )}
 						<div class="item">
 							<h3>
 							{if $attachment.source_url}<a href="{$attachment.source_url}">{/if}
