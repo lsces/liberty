@@ -1,6 +1,6 @@
 <?php
-
 use Bitweaver\KernelTools;
+
 require_once '../../../kernel/includes/setup_inc.php';
 include_once KERNEL_PKG_INCLUDE_PATH . 'simple_form_functions_lib.php';
 
@@ -9,21 +9,25 @@ $gBitSystem->verifyPermission( 'p_admin' );
 $feedback = [];
 
 $pdfSettings = [
-	'pdf2swf_path'    => [
-		'label' => 'Path to pdf2swf',
-		'note'  => 'Path to the pdf2swf executable.',
+	'pdftotext_path'  => [
+		'label' => 'Path to pdf text layer extractor',
+		'note'  => 'Path to pdftotext executable.',
 		'type'  => 'text',
 	],
-	'swfcombine_path' => [
-		'label' => 'Path to swfcombine',
-		'note'  => 'Path to the swfcombine executable.',
+	'convert_path'  => [
+		'label' => 'Path to image extractor from pdf file',
+		'note'  => 'Path to convert executable.',
 		'type'  => 'text',
+	],
+	'pdf_thumbnails'  => [
+		'label' => 'PDF Upload Thumbnails',
+		'note'  => 'Create thumbnails for PDF uploads.',
+		'type'  => 'checkbox',
 	],
 ];
 
 if( function_exists( 'shell_exec' )) {
-	$pdfSettings['pdf2swf_path']['default']    =  shell_exec( 'which pdf2swf' );
-	$pdfSettings['swfcombine_path']['default'] =  shell_exec( 'which swfcombine' );
+	$pdfSettings['pdftotext_path']['default'] =  shell_exec( 'which pdftotext' );
 } else {
 	$feedback['error'] = "You can not execute binaries on your server. You can not make use of this plugin.";
 }

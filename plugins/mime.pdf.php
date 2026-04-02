@@ -8,7 +8,8 @@ use Bitweaver\KernelTools;
  * @version		$Header$
  *
  * @author		xing  <xing@synapse.plus.com>
- * @version		$Revision$
+ *				Reworked to remove swf and add text layer management
+ * @version		$Revision: 1.3 $
  * created		Thursday May 08, 2008
  * @package		liberty
  * @subpackage	liberty_mime_handler
@@ -35,10 +36,10 @@ $pluginParams = [
 	'load_function'       => 'mime_pdf_load',
 	'download_function'   => 'mime_default_download',
 	'expunge_function'    => 'mime_default_expunge',
-	//'help_function'       => 'mime_pdf_help',
+	'help_function'       => 'mime_pdf_help',
 	// Brief description of what the plugin does
-	'title'               => 'Browsable PDFs',
-	'description'         => 'Convert PDFs to flash files that can be browsed online.',
+	'title'               => 'Browsable PDFs with thumbnails',
+	'description'         => 'View PDFs in browser online and provides thumbnail images for the galleries and links.',
 	// Templates to display the files
 	'view_tpl'            => 'bitpackage:liberty/mime/pdf/view.tpl',
 	//'attachment_tpl'      => 'bitpackage:liberty/mime/image/attachment.tpl',
@@ -50,7 +51,7 @@ $pluginParams = [
 	'auto_activate'       => false,
 	// Help page on bitweaver.org
 	//'help_page'           => 'LibertyMime+Image+Plugin',
-	// this should pick up all image
+	// this should pick up all raw pdf files
 	'mimetypes'           => [
 		'#.*/pdf#i',
 	],
@@ -65,13 +66,23 @@ $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_PDF, $pluginParams );
  * @return bool true on success, false on failure - $pStoreRow[errors] will contain reason
  */
 function mime_pdf_store( &$pStoreRow ) {
+	global $gBitSystem;
+
 	// this will set the correct pluign guid, even if we let default handle the store process
 	$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_PDF;
 	$pStoreRow['log'] = [];
 
-	// if storing works, we process the image
-	if( $ret = mime_default_store( $pStoreRow )) {
-		if( !mime_pdf_convert_pdf2swf( $pStoreRow )) {
+	// We process the pdf to extract the text layer to include with the save.
+	if( mime_pdf_text_extract( $pStoreRow ) ) {
+		$ret = mime_default_store( $pStoreRow );
+	} else {
+		// if it all goes tits up, we'll know why
+		$pStoreRow['errors'] = $pStoreRow['log'];
+		$ret = false;
+	}
+
+	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' ) {
+		if( !mime_pdf_thumbnail( $pStoreRow )) {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
 			$ret = false;
@@ -95,10 +106,24 @@ function mime_pdf_update( &$pStoreRow, $pParams = null ) {
 	// this will set the correct pluign guid, even if we let default handle the store process
 	$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_PDF;
 
-	// if storing works, we process the image
-	if( !empty( $pStoreRow['upload'] ) && $ret = mime_default_update( $pStoreRow )) {
+	// We process the pdf to extract the text layer to include with the save.
+	if( !empty( $pStoreRow['upload'] ) ) {
+		if( mime_pdf_text_extract( $pStoreRow ) ) {
+			$ret = mime_default_update( $pStoreRow );
+		} else {
+			// if it all goes tits up, we'll know why
+			$pStoreRow['errors'] = $pStoreRow['log'];
+			$ret = false;
+		}
 	}
 
+	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' ) {
+		if( !mime_pdf_thumbnail( $pStoreRow )) {
+			// if it all goes tits up, we'll know why
+			$pStoreRow['errors'] = $pStoreRow['log'];
+			$ret = false;
+		}
+	}
 	return $ret;
 }
 
@@ -117,65 +142,86 @@ function mime_pdf_load( &$pFileHash, &$pPrefs, $pParams = null ) {
 	if( $ret = mime_default_load( $pFileHash, $pPrefs )) {
 		if( !empty( $ret['source_file'] )) {
 			$source_path = dirname( $ret['source_file'] ).'/';
-			// if the swf file exists, we pass it back that it can be viewed.
-			if( is_file( $source_path.'pdf.swf' )) {
-				$ret['media_url'] = KernelTools::storage_path_to_url( dirname( $ret['source_url'] ).'/pdf.swf' );
-			}
 		}
 	}
 	return $ret;
 }
 
 /**
- * mime_pdf_convert_pdf2swf Convert a PDF to a SWF video
+ * mime_pdf_text_extract Download text layer from a PDF
+ *		This will be saved as ['data'] and stored in the liberty base object
  *
  * @param array $pFileHash file details.
- * @param array $pFileHash[upload] should contain a complete hash from $_FILES
+ * @var array $pFileHash[upload] should contain a complete hash from $_FILES
  * @access public
  * @return bool true on success, false on failure
  */
-function mime_pdf_convert_pdf2swf( $pFileHash ) {
+function mime_pdf_text_extract( &$pFileHash ) {
 	global $gBitSystem;
+
 	if( !empty( $pFileHash['upload'] ) && BitBase::verifyId( $pFileHash['attachment_id'] )) {
 		// get file paths
-		$pdf2swf    = trim( $gBitSystem->getConfig( 'swf2pdf_path', shell_exec( 'which pdf2swf' )));
-		$swfcombine = trim( $gBitSystem->getConfig( 'swfcombine_path', shell_exec( 'which swfcombine' )));
 
-		if( is_executable( $pdf2swf ) && is_executable( $swfcombine )) {
+		$stock_command = shell_exec( 'which pdftotext' ) ?? "/usr/bin/pdftotext";
+		$pdftotext = trim( $gBitSystem->getConfig( 'pdftotext_path', $stock_command ) );
+
+		if( is_executable( $pdftotext ) ) {
+//			$source = STORAGE_PKG_PATH.$pFileHash['upload']['dest_branch'].$pFileHash['upload']['name'];
+			$source = $pFileHash['upload']['source_file'];
+			chmod($source, 0666);
+			$pdftotextcommand = $pdftotext. " \"$source\" \"$source.txt\" ";
+			shell_exec( $pdftotextcommand );
+			$pFileHash['data'] = file_get_contents($source.'.txt');
+		} else {
+			$pFileHash['log']['pdftotext'] = "PDF to Text function not installed.";
+		}
+	}
+	return empty( $pFileHash['log'] );
+}
+
+/**
+ * mime_pdf_thumbnail Build a thumbnail set from the pdf
+ *
+ * @param array $pFileHash file details.
+ * @var array $pFileHash[upload] should contain a complete hash from $_FILES
+ * @access public
+ * @return bool true on success, false on failure
+ */
+function mime_pdf_thumbnail( $pFileHash ) {
+	global $gBitSystem;
+		$stock_command = shell_exec( 'which convert' ) ?? "/usr/bin/convert";
+		$mwconvert  = trim( $gBitSystem->getConfig( 'mwconvert_path', $stock_command ));
+
+		if( is_executable( $mwconvert ) && $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' ) {
 			$source    = STORAGE_PKG_PATH.$pFileHash['upload']['dest_branch'];
 			if ( $gBitSystem->isFeatureActive( 'liberty_jpeg_originals' ) ) {
 				$source .= 'original.jpg';
 			} else {
 				$source .= $pFileHash['upload']['name'];
 			}
-			$destPath = dirname( $source );
+			$dest_branch = dirname( $source );
 
-			$tmp_file  = "$destPath/tmp.swf";
-			$swf_file  = "$destPath/pdf.swf";
+			$thumb_file  = "$dest_branch/thumb.jpg";
+			$mwccommand = "$mwconvert '$source' '$thumb_file' 2>&1";
 
-			$pdfviewer = UTIL_PKG_PATH."javascript/pdfviewer/fdviewer.swf";
-			$swfloader = UTIL_PKG_PATH."javascript/pdfviewer/loader.swf";
-
-			$pdf2swfcommand = "$pdf2swf -s insertstop -s jpegquality=".$gBitSystem->getConfig( 'liberty_thumbnail_quality', 85 )." '$source' -o '$tmp_file'";
-			$combinecommand = "$swfcombine '$pdfviewer' loader='$swfloader' '#1'='$tmp_file' -o '$swf_file'";
-
-			shell_exec( $pdf2swfcommand );
-			if( is_file( $tmp_file ) && filesize( $tmp_file ) > 0 ) {
-				shell_exec( $combinecommand );
-				if( !is_file( $swf_file ) || filesize( $swf_file ) == 0 ) {
-					// combination went wrong. remove swf file
-					$pFileHash['log']['swfcombine'] = "There was a problem combining the PDF SWF with the viewer.";
-					@unlink( $swf_file );
-				}
-			} else {
-				$pFileHash['log']['pdf2swf'] = "There was a problem converting the PDF to SWF.";
+			shell_exec( $mwccommand );
+			if( is_file( $thumb_file ) && filesize( $thumb_file ) > 0 ) {
 			}
-
-			// remove temp file
-			@unlink( $tmp_file );
+			else if( is_file( "$dest_branch/thumb-0.jpg" ) ) {
+				$thumb_file = "$dest_branch/thumb-0.jpg";
+			}
+			$genHash = [
+				'attachment_id'	=> $pFileHash['attachment_id'],
+				'dest_branch'		=> $pFileHash['upload']['dest_branch'],
+				'source_file'		=> $thumb_file,
+				'type'				=> 'image/jpeg',
+				'thumbnail_sizes'	=> [ 'extra-large', 'large', 'medium', 'small', 'avatar', 'icon' ],
+			];
+			if( liberty_generate_thumbnails( $genHash )) {
+			}
+			$mask = "$dest_branch/thumb*.jpg";
+   			array_map( "unlink", glob( $mask ) );
 		}
-	}
-
 	return empty( $pFileHash['log'] );
 }
 
