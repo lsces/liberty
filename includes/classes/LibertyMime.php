@@ -90,8 +90,8 @@ class LibertyMime extends LibertyContent {
 
 				foreach( $pParamHash['upload_store']['files'] as $key => $upload ) {
 					// if we don't have an upload, we'll simply update the file settings using the mime plugins
-					if( empty( $upload['tmp_name'] )) {
-						if( BitBase::verifyId( $upload['attachment_id'] )) {
+					if( empty( $upload['tmp_name'] ) ) {
+						if( BitBase::verifyId( $upload['attachment_id'] ?? -3 )) {
 							// since the form might have all options unchecked, we need to call the update function regardless
 							// currently i can't think of a better way to get the plugin guid back when $pParamHash[plugin] is
 							// empty. - xing - Friday Jul 11, 2008   20:21:18 CEST
@@ -786,7 +786,7 @@ class LibertyMime extends LibertyContent {
 	 * @param string $pPrefName
 	 * @param string $pPrefValue Value for the prefs hash key
 	 */
-	public function storeAttachmentPreference( int $pAttachmentId, string $pPrefName, string $pPrefValue = ''): bool {
+	public static function storeAttachmentPreference( int $pAttachmentId, string $pPrefName, string $pPrefValue = ''): bool {
 		global $gBitSystem;
 		$ret = false;
 		if( BitBase::verifyId( $pAttachmentId ) && !empty( $pPrefName )) {
@@ -800,9 +800,9 @@ class LibertyMime extends LibertyContent {
 			}
 
 			// this function might be called statically
-			if( !empty( $this ) && $this->isValid() ) {
-				$this->mStoragePrefs[$pAttachmentId][$pPrefName] = $pPrefValue;
-			}
+//			if( !empty( $this ) && $this->isValid() ) {
+//				$this->mStoragePrefs[$pAttachmentId][$pPrefName] = $pPrefValue;
+//			}
 
 			$ret = true;
 		}
@@ -852,7 +852,7 @@ class LibertyMime extends LibertyContent {
 	 * @param array $pAttachmentId attachemnt we want to remove the prefs for
 	 * @return bool true on success, false on failure
 	 */
-	public function expungeAttachmentPreferences( $pAttachmentId ) {
+	public static function expungeAttachmentPreferences( $pAttachmentId ) {
 		global $gBitSystem;
 		$ret = false;
 		if( BitBase::verifyId( $pAttachmentId ) ) {
@@ -1025,10 +1025,10 @@ class LibertyMime extends LibertyContent {
 	 * @param int $pAttachmentId Attachment ID of attachment
 	 * @return bool
 	 */
-	public function expungeMetaData( $pAttachmentId ) {
+	public static function expungeMetaData( $pAttachmentId ) {
 		global $gBitSystem;
 		if( BitBase::verifyId( $pAttachmentId )) {
-			return $gBitSystem->mDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_attachment_meta_data` WHERE `attachment_id` = ?", array( $pAttachmentId ));
+			return $gBitSystem->mDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_attachment_meta_data` WHERE `attachment_id` = ?", [ $pAttachmentId ]);
 		}
 		return false;
 	}

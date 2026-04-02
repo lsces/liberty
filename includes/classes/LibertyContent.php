@@ -3379,7 +3379,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * @param array $pParamHash
 	 * @return bool true on success, false on failure - mErrors will contain reason for failure
 	 */
-	public function storeActionLogFromHash( $pParamHash = null ): void {
+	public static function storeActionLogFromHash( $pParamHash = null ): void {
 		global $gBitSystem;
 
 		if( $gBitSystem->isFeatureActive( 'liberty_action_log' ) && $this->verifyActionLog( $pParamHash ) ) {
