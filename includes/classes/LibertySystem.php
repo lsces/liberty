@@ -396,14 +396,15 @@ class LibertySystem extends BitSingleton {
 
 				global $gBitDbType, $gBitDbHost, $gBitDbUser, $gBitDbPassword, $gBitDbName;
 				$db = \ADONewConnection( $gBitDbType );
-				if( $db->Connect( $gBitDbHost, $gBitDbUser, $gBitDbPassword, $gBitDbName )) {
-					$dict = NewDataDictionary( $db );
+				if( $db->Connect( $gBitDbHost, $gBitDbUser, $gBitDbPassword, ( $gBitDbType == 'pdo' ? null : $gBitDbName ) ) ) {
+					// need to pick up the pdf sub driver, hard coded to firebird as a hack
+					$dict = NewDataDictionary( $db, 'firebird' );
 
 					if( !$gBitSystem->mDb->getCaseSensitivity() ) {
 						$dict->connection->nameQuote = '';
 					}
 
-					if( $dbTables = $gBitSystem->mDb->MetaTables( 'TABLES', false, $prefix ? $prefix.'%' : null ) ) {
+					if( $dbTables = $gBitSystem->mDb->MetaTables( 'TABLES', false, $prefix ? $prefix.'%' : false ) ) {
 						// If we use MySql check which storage engine to use
 							$build = isset( $_SESSION['use_innodb'] )
 								? ( $_SESSION['use_innodb'] == true ? [ 'NEW', 'MYSQL' => 'ENGINE=INNODB' ] : [ 'NEW', 'MYSQL' => 'ENGINE=MYISAM' ] )
