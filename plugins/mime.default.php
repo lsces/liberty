@@ -170,6 +170,12 @@ if( !function_exists( '\Bitweaver\Liberty\mime_default_update' )) {
 					$gBitSystem->mDb->query( $sql, [ $pStoreRow['upload']['name'], $pStoreRow['upload']['type'], $pStoreRow['upload']['size'], $pStoreRow['user_id'], $pStoreRow['file_id'] ] );
 				}
 
+				// store pdf text layer in main content
+				if ( !empty( $pStoreRow['data'] ) ) {
+					$sql = "UPDATE `".BIT_DB_PREFIX."liberty_content` SET `data` = ? WHERE `content_id` = ?";
+					$gBitSystem->mDb->query( $sql, [ $pStoreRow['data'], $pStoreRow['content_id'] ] );
+				}
+
 				// ensure we have the correct guid in the db
 				if( empty( $pStoreRow['attachment_plugin_guid'] )) {
 					$pStoreRow['attachment_plugin_guid'] = LIBERTY_DEFAULT_MIME_HANDLER;
@@ -177,8 +183,8 @@ if( !function_exists( '\Bitweaver\Liberty\mime_default_update' )) {
 
 				$gBitSystem->mDb->associateUpdate(
 					BIT_DB_PREFIX."liberty_attachments",
-					array( 'attachment_plugin_guid' => $pStoreRow['attachment_plugin_guid'] ),
-					array( 'attachment_id' => $pStoreRow['attachment_id'] )
+					[ 'attachment_plugin_guid' => $pStoreRow['attachment_plugin_guid'] ],
+					[ 'attachment_id' => $pStoreRow['attachment_id'] ]
 				);
 			}
 		}
@@ -219,6 +225,12 @@ if( !function_exists( '\Bitweaver\Liberty\mime_default_store' )) {
 				"user_id"                => $pStoreRow['user_id'],
 			];
 			$gBitSystem->mDb->associateInsert( BIT_DB_PREFIX."liberty_attachments", $storeHash );
+
+			// add text layer from attachment pdf and the like
+			if ( !empty( $pStoreRow['data'] ) ) {
+				$sql = "UPDATE `".BIT_DB_PREFIX."liberty_content` SET `data` = ? WHERE `content_id` = ?";
+				$gBitSystem->mDb->query( $sql, [ $pStoreRow['data'], $pStoreRow['content_id'] ] );
+			}
 
 			$ret = true;
 		} else {
