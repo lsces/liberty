@@ -25,14 +25,14 @@
 						{foreach from=$gLibertySystem->mPlugins item=plugin key=guid}
 							{if $plugin.plugin_type eq $plugin_type}
 								<dt>
-									{*<div class="pull-right actionicon">
-										{if $plugin.help_page}
+									<div class="pull-right actionicon">
+										{if !empty( $plugin.help_page )}
 											{jspopup href="http://www.bitweaver.org/wiki/`$plugin.help_page`" ibiticon="icons/dialog-information" title=$plugin.help_page class="external"}
 										{/if}
-										{if $plugin.plugin_settings_url}
+										{if !empty( $plugin.plugin_settings_url )}
 											<a href="{$plugin.plugin_settings_url}">{booticon iname="fa-pen-to-square" iexplain="Plugin Settings"}</a>
 										{/if}
-									</div>*}
+									</div>
 									<div class="checkbox" for="{$guid}"><label><strong>
 										{if $plugin.is_active == 'x'}
 											[Missing]
