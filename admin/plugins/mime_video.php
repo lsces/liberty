@@ -27,7 +27,6 @@ $options = [
 		'mp3'        => 'mp3',
 	],
 	'video_codec' => [
-		'flv'        => 'Flashvideo using flv codec',
 		'h264'       => 'MP4/AVC using h264 codec',
 		'h264-2pass' => 'MP4/AVC using h264 codec - 2 passes',
 	],

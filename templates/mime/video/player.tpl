@@ -1,23 +1,15 @@
 {strip}
 {if $attachment.media_url}
-	{assign var=id value="video_`$caller``$attachment.attachment_id`"}
-	{if $uploadTab}{assign var=id value="`$id`_tab"}{/if}
-	<div id="{$id}"><a href="http://www.macromedia.com/go/getflashplayer">Get the Flash Player</a> to see this video.</div>
-	<script>/* <![CDATA[ */
-		{if $thumbsize eq "small"}
-			{assign var=width value=160}
-			{math width=$width scrollbar=20 original_width=$attachment.meta.width original_height=$attachment.meta.height equation="original_height / original_width * width + scrollbar" assign=height}
-			var so = new SWFObject('{$smarty.const.UTIL_PKG_URL}javascript/flv_player/mediaplayer.swf','player','{$width}','{$height}','7');
-		{else}
-			var so = new SWFObject('{$smarty.const.UTIL_PKG_URL}javascript/flv_player/mediaplayer.swf','player','{$attachment.meta.width}','{$attachment.meta.height+20}','7');
-		{/if}
-		so.addVariable("file","{$attachment.media_url}");
-		so.addVariable("image","{$attachment.thumbnail_url.$thumbsize|default:$attachment.thumbnail_url.large}");
-		so.addVariable("overstretch","fit");
-		so.addVariable("usefullscreen","false");
-		so.addVariable("frontcolor","0x{$gBitSystem->getConfig('mime_video_frontcolor','FFFFFF')}");
-		so.addVariable("backcolor","0x{$gBitSystem->getConfig('mime_video_backcolor','000000')}");
-		so.write('{$id}');
-	/* ]]> */</script>
+<link href="{$smarty.const.UTIL_PKG_URL}javascript/videojs/src/video-js.css" rel="stylesheet" />
+<script src="{$smarty.const.UTIL_PKG_URL}javascript/videojs/src/video.js"></script>
+
+<video id="my-video" class="video-js" controls preload="auto" width="100%" height="600px">
+  <source src="{$attachment.source_url}" type="video/mp4">
+  <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video</p>
+</video>
+
+<script>
+  var player = videojs('my-video');
+</script>
 {/if}
 {/strip}

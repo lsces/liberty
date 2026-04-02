@@ -3,14 +3,6 @@
 	<div class="form-group aligncenter">
 		{include file="bitpackage:liberty/mime/video/player.tpl"}
 	</div>
-
-	<div class="pagination">
-		{tr}View other sizes{/tr}<br />
-		{foreach name=size key=size from=$attachment.thumbnail_url item=url}
-			<a href="{$attachment.display_url|escape}{if strpos($attachment.display_url,'?')}&amp;{else}?{/if}size={$size}">{tr}{$size}{/tr}</a>
-			{if !$smarty.foreach.size.last}&nbsp;&bull;&nbsp;{/if}
-		{/foreach}
-	</div>
 {elseif $attachment.status.processing}
 	<div class="form-group aligncenter">
 		<a href="{$attachment.download_url}">
@@ -31,7 +23,7 @@
 	{formfeedback error="{tr}The Video could not be processed. You can upload a different version of the film or simply leave as is.{/tr}"}
 {/if}
 
-{if $attachment.meta.duration}
+{if !empty( $attachment.meta.duration )}
 	<div class="form-group">
 		{formlabel label="Duration" for=""}
 		{forminput}
@@ -40,5 +32,5 @@
 	</div>
 {/if}
 
-{include file=bitpackage:liberty/mime_meta_inc.tpl}
+{include file="bitpackage:liberty/mime_meta_inc.tpl"}
 {/strip}

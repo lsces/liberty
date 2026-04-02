@@ -3,6 +3,7 @@
 namespace Bitweaver\Liberty;
 use Bitweaver\BitBase;
 use Bitweaver\BitDate;
+use Bitweaver\KernelTools;
 
 /**
  * @version		$Header$
@@ -26,7 +27,7 @@ global $gLibertySystem;
  */
 define( 'PLUGIN_MIME_GUID_VIDEO', 'mimevideo' );
 
-$pluginParams = array (
+$pluginParams = [
 	// Set of functions and what they are called in this paricular plugin
 	// Use the GUID as your namespace
 	'preload_function'    => 'mime_video_preload',
@@ -37,8 +38,8 @@ $pluginParams = array (
 	'download_function'   => 'mime_default_download',
 	'expunge_function'    => 'mime_default_expunge',
 	// Brief description of what the plugin does
-	'title'               => 'Convert Video to Flash Video',
-	'description'         => 'This plugin will use ffmpeg to convert any compatible uploaded video to flash video. It will also make the video available for viewing if you have flash installed. Please consult the README on how to use this plugin.',
+	'title'               => 'Manage Video Content',
+	'description'         => 'This plugin will handle the creation of thumbnails of videos uploaded via fisheye and display them in video.js player.',
 	// Templates to display the files
 	'view_tpl'            => 'bitpackage:liberty/mime/video/view.tpl',
 	'inline_tpl'          => 'bitpackage:liberty/mime/video/inline.tpl',
@@ -46,7 +47,7 @@ $pluginParams = array (
 	'attachment_tpl'      => 'bitpackage:liberty/mime/video/attachment.tpl',
 	'edit_tpl'            => 'bitpackage:liberty/mime/video/edit.tpl',
 	// url to page with options for this plugin
-	'plugin_settings_url' => LIBERTY_PKG_URL.'admin/plugins/mime_video.php',
+	'plugin_settings_url' => LIBERTY_PKG_URL . 'admin/plugins/mime_video.php',
 	// This should be the same for all mime plugins
 	'plugin_type'         => MIME_PLUGIN,
 	// Set this to true if you want the plugin active right after installation
@@ -54,10 +55,10 @@ $pluginParams = array (
 	// Help page on bitweaver.org
 	'help_page'           => 'LibertyMime+Video+Plugin',
 	// this should pick up all videos
-	'mimetypes'           => array(
+	'mimetypes'           => [
 		'#video/.*#i',
-	),
-);
+	],
+];
 $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_VIDEO, $pluginParams );
 
 /**
@@ -68,7 +69,6 @@ $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_VIDEO, $pluginParams );
  */
 function mime_video_preload() {
 	global $gBitThemes;
-	$gBitThemes->loadJavascript( UTIL_PKG_PATH."javascript/flv_player/swfobject.js", false, 25 );
 }
 
 /**
@@ -86,10 +86,13 @@ function mime_video_store( &$pStoreRow ) {
 
 	// if storing works, we process the video
 	if( $ret = mime_default_store( $pStoreRow )) {
-		if( !mime_video_converter( $pStoreRow )) {
-			$pStoreRow['errors'] = $pStoreRow['log'];
-			$ret = false;
-		}
+			$source = STORAGE_PKG_PATH.$pStoreRow['upload']['dest_branch'].$pStoreRow['upload']['name'];
+			mime_video_create_thumbnail( $source, 60 );
+
+//		if( !mime_video_converter( $pStoreRow )) {
+//			$pStoreRow['errors'] = $pStoreRow['log'];
+//			$ret = false;
+//		}
 	}
 	return $ret;
 }
@@ -113,11 +116,13 @@ function mime_video_update( &$pStoreRow, $pParams = null ) {
 
 		// if storing works, we process the video
 		if( !empty( $pStoreRow['upload'] ) && $ret = mime_default_update( $pStoreRow )) {
-			if( !mime_video_converter( $pStoreRow )) {
-				// if it all goes tits up, we'll know why
-				$pStoreRow['errors'] = $pStoreRow['log'];
-				$ret = false;
-			}
+			$source = STORAGE_PKG_PATH.$pStoreRow['upload']['dest_branch'].$pStoreRow['upload']['name'];
+			mime_video_create_thumbnail( $source, 60 );
+//			if( !mime_video_converter( $pStoreRow )) {
+//				// if it all goes tits up, we'll know why
+//				$pStoreRow['errors'] = $pStoreRow['log'];
+//				$ret = false;
+//			}
 		}
 
 		// if there was no upload we'll process the file parameters
@@ -161,10 +166,8 @@ function mime_video_load( $pFileHash, &$pPrefs, $pParams = null ) {
 				$ret['status']['error'] = true;
 			} elseif( is_file( $source_path.'processing' )) {
 				$ret['status']['processing'] = true;
-			} elseif( is_file( $source_path.'flick.flv' )) {
-				$ret['media_url'] = \Bitweaver\storage_path_to_url( dirname( $ret['source_file'] ).'/flick.flv' );
-			} elseif( is_file( $source_path.'flick.mp4' )) {
-				$ret['media_url'] = \Bitweaver\storage_path_to_url( dirname( $ret['source_file'] ).'/flick.mp4' );
+			} else {
+				$ret['media_url'] = $ret['source_file'];
 			}
 		}
 
@@ -192,13 +195,13 @@ function mime_video_add_process( $pStoreRow ) {
 			WHERE `content_id`=? AND `process_status`=?";
 		$gBitSystem->mDb->query( $query, array( 'defunkt', $pStoreRow['content_id'], 'pending' ));
 
-		$storeHash = array (
+		$storeHash = [
 			'content_id'           => $pStoreRow['content_id'],
 			'queue_date'           => $gBitSystem->getUTCTime(),
 			'process_status'       => 'pending',
-			'processor'            => dirname( __FILE__ ).'/mime.video.php',
+			'processor'            => dirname( __FILE__ ) . '/mime.video.php',
 			'processor_parameters' => mime_video_converter( $pStoreRow, true ),
-		);
+		];
 		$gBitSystem->mDb->associateInsert( BIT_DB_PREFIX."liberty_process_queue", $storeHash );
 		$ret = true;
 	}
@@ -210,7 +213,7 @@ function mime_video_add_process( $pStoreRow ) {
  *
  * @param array $pParamHash
  * @access public
- * @return bool true on success, false on failure - mErrors will contain reason for failure
+ * @return bool|string true on success, false on failure - mErrors will contain reason for failure
  */
 function mime_video_converter( &$pParamHash, $pOnlyGetParameters = false ) {
 	global $gBitSystem;
@@ -509,13 +512,15 @@ function mime_video_create_thumbnail( $pFile, $pOffset = 60 ) {
 		$destPath = dirname( $pFile );
 
 		// try to use an app designed specifically to extract a thumbnail
-		if( shell_exec( shell_exec( 'which ffmpegthumbnailer' ).' -h' )) {
-			$thumbnailer = trim( shell_exec( 'which ffmpegthumbnailer' ));
-		} elseif( shell_exec( shell_exec( 'which ffmpegvideothumbnailer' ).' -h' )) {
-			$thumbnailer = trim( shell_exec( 'which ffmpegvideothumbnailer' ));
-		}
+//		if( shell_exec( shell_exec( 'which ffmpegthumbnailer' ).' -h' )) {
+			$thumbnailer = trim( shell_exec( 'which ffmpegthumbnailer' ) ?? '/usr/bin/ffmpegthumbnailer');
+//		} elseif( shell_exec( shell_exec( 'which ffmpegvideothumbnailer' ).' -h' )) {
+//			$thumbnailer = trim( shell_exec( 'which ffmpegvideothumbnailer' ));
+//		}
+			$ffmpeg = trim( $gBitSystem->getConfig( 'ffmpeg_path', '/usr/bin/ffmpeg') );
 
 		if( !empty( $thumbnailer ) && is_executable( $thumbnailer )) {
+//			shell_exec( "$ffmpeg -i '$pFile'  -ss 00:00:05 -vframes 1 -vf \"scale=1024:-1\" '$destPath/thumb.jpg' ");
 			shell_exec( "$thumbnailer -i '$pFile' -o '$destPath/thumb.jpg' -s 1024" );
 		}
 
@@ -530,7 +535,8 @@ function mime_video_create_thumbnail( $pFile, $pOffset = 60 ) {
 			@unlink( "$destPath/thumb.jpg" );
 		} else {
 			// fall back to using ffmepg
-			$ffmpeg = trim( $gBitSystem->getConfig( 'ffmpeg_path', shell_exec( 'which ffmpeg' )));
+			$ffmpeg_prog = shell_exec( 'which ffmpeg' );
+			$ffmpeg = trim( $gBitSystem->getConfig( 'ffmpeg_path', $ffmpeg_prog) );
 			shell_exec( "$ffmpeg -i '$pFile' -an -ss $pOffset -t 00:00:01 -r 1 -y '$destPath/preview%d.jpg'" );
 			if( is_file( "$destPath/preview1.jpg" )) {
 				$fileHash['type']            = 'image/jpg';
