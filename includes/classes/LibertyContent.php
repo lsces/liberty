@@ -397,7 +397,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			}
 
 			// store content preferences
-			if( @is_array( $pParamHash['preferences_store'] ) ) {
+			if( !empty( $pParamHash['preferences_store'] ) ) {
 				foreach( $pParamHash['preferences_store'] as $pref => $value ) {
 					$this->storePreference( $pref, $value );
 				}

@@ -413,7 +413,7 @@ class LibertySystem extends BitSingleton {
 						// create tables
 						foreach( $reqs['schema']['tables'] as $table => $tableDict ) {
 							$fullTable = $prefix.$table;
-							if( !in_array( $fullTable, $dbTables )) {
+							if( !\in_array( $fullTable, $dbTables ) and !$gBitSystem->mDb->tableExists( $fullTable ) ) {
 								if( $sql = $dict->CreateTableSQL( $fullTable, $tableDict, $build )) {
 									$ret = $dict->ExecuteSQLArray( $sql );
 									if( $ret === false ) {
@@ -594,15 +594,17 @@ class LibertySystem extends BitSingleton {
 	 * @return void
 	 **/
 	public function loadContentTypes( $pCacheTime=BIT_QUERY_CACHE_TIME ) {
-		if( $rs = $this->mDb->query( "SELECT * FROM `".BIT_DB_PREFIX."liberty_content_types`", null, BIT_QUERY_DEFAULT, BIT_QUERY_DEFAULT ) ) {
-			while( $row = $rs->fetchRow() ) {
-				// translate name
-				// content_description backward compatibility for now
-				$row['content_description'] = $row['content_name'] = KernelTools::tra( $row['content_name'] );
-				if( !empty( $row['content_name_plural'] ) ){
-					$row['content_name_plural'] = KernelTools::tra( $row['content_name_plural'] );
+		if ( $this->mDb->tableExists( 'liberty_content_types' ) ) {
+			if( $rs = $this->mDb->query( "SELECT * FROM `".BIT_DB_PREFIX."liberty_content_types`", null, BIT_QUERY_DEFAULT, BIT_QUERY_DEFAULT ) ) {
+				while( $row = $rs->fetchRow() ) {
+					// translate name
+					// content_description backward compatibility for now
+					$row['content_description'] = $row['content_name'] = KernelTools::tra( $row['content_name'] );
+					if( !empty( $row['content_name_plural'] ) ){
+						$row['content_name_plural'] = KernelTools::tra( $row['content_name_plural'] );
+					}
+					$this->mContentTypes[$row['content_type_guid']] = $row;
 				}
-				$this->mContentTypes[$row['content_type_guid']] = $row;
 			}
 		}
 	}
