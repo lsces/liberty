@@ -1,4 +1,4 @@
-{if !empty($translateFrom)}
+{if empty($translateFrom)}
 	{foreach from=$gLibertySystem->mServices item=service key=service_guid}
 		{if !empty($service.services.$serviceFile) && (empty($gContent) || $gContent->hasService( $service_guid ))}
 			{if strpos($serviceFile,'mini')}<div class="service">{/if}
