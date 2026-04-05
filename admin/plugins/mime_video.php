@@ -121,4 +121,4 @@ if( !empty( $_REQUEST['plugin_settings'] )) {
 }
 
 $gBitSmarty->assign( 'feedback', $feedback );
-$gBitSystem->display( 'bitpackage:liberty/mime/video/admin.tpl', KernelTools::tra( 'Flashvideo Plugin Settings' ), [ 'display_mode' => 'admin' ] );
+$gBitSystem->display( 'bitpackage:liberty/mime/video/admin.tpl', KernelTools::tra( 'Mime Video Plugin Settings' ), [ 'display_mode' => 'admin' ] );
