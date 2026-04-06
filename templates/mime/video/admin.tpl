@@ -7,7 +7,7 @@
 	<div class="body">
 		{form legend="Flashvideo specific settings"}
 			<p class="formhelp">
-				You can find some information relating to this plugin on the <a class="external" href="http://www.bitweaver.org/wiki/LibertyMime+Flv+Plugin">LibertyMime Flv Plugin page</a> at bitweaver.org.
+				You can find some information relating to this plugin on the <a class="external" href="https://www.bitweaver.org/wiki/LibertyMime+Flv+Plugin">LibertyMime Flv Plugin page</a> at bitweaver.org.
 			</p>
 
 			{if $ffmpeg_extension}

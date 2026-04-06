@@ -62,7 +62,7 @@ function htmlpure_filter( &$pString, &$pFilterHash, $pObject ) {
 				$config = htmlpure_getDefaultConfig( $htmlp_version, $pObject );
 
 
-				// As suggested here:  http://www.bitweaver.org/forums/index.php?t=8554
+				// As suggested here:  https://www.bitweaver.org/forums/index.php?t=8554
 				$gHtmlPurifier = new \HTMLPurifier($config);
 
 				// how plugins are registered changed in v3.1 

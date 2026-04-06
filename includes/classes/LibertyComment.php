@@ -34,7 +34,7 @@ class LibertyComment extends LibertyMime {
 			'handler_class'     => 'LibertyComment',
 			'handler_package'   => 'liberty',
 			'handler_file'      => 'LibertyComment.php',
-			'maintainer_url'    => 'http://www.bitweaver.org',
+			'maintainer_url'    => 'https://www.bitweaver.org',
 		] );
 		$this->mCommentId = (int)$pCommentId;
 		$this->mContentId = (int)$pContentId;

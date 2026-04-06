@@ -27,7 +27,7 @@
 								<dt>
 									<div class="pull-right actionicon">
 										{if !empty( $plugin.help_page )}
-											{jspopup href="http://www.bitweaver.org/wiki/`$plugin.help_page`" ibiticon="icons/dialog-information" title=$plugin.help_page class="external"}
+											{jspopup href="https://www.bitweaver.org/wiki/`$plugin.help_page`" ibiticon="icons/dialog-information" title=$plugin.help_page class="external"}
 										{/if}
 										{if !empty( $plugin.plugin_settings_url )}
 											<a href="{$plugin.plugin_settings_url}">{booticon iname="fa-pen-to-square" iexplain="Plugin Settings"}</a>

@@ -145,7 +145,7 @@ function data_object_help() {
 		.'</table>'
 
 		. KernelTools::tra("Example: ") . "{OBJECT type=flash src=../liberty/icons/Mind-Reader.swf}<br />"
-		. KernelTools::tra("Example: ") . "{OBJECT type=flash src=http://www.bitweaver.org/liberty/icons/Mind-Reader.swf width='100%' height='600' quality='high'}<br />"
+		. KernelTools::tra("Example: ") . "{OBJECT type=flash src=https://www.bitweaver.org/liberty/icons/Mind-Reader.swf width='100%' height='600' quality='high'}<br />"
 		. KernelTools::tra('Both of these examples display "The Flash Mind Reader" by Andy Naughton. The first example is on your site and is not very large. The second example is located on the bitweaver.org site and takes the width of the center column with an appropriate height.');
 	return $help;
 }
