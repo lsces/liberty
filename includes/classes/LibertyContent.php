@@ -3403,6 +3403,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		if( !empty( $this->mInfo['title'] ) ) {
 			$pParamHash['action_log']['title'] = $this->mInfo['title'];
 		}
+		if( empty($pParamHash['action_log']['user_id']) && !empty( $pParamHash['user_id'] ) ) {
+			$pParamHash['action_log']['user_id'] = $pParamHash['user_id'];
+		}
 		$log_message = '';
 		if( empty( $pParamHash['action_log']['log_message'] ) && !empty( $this->mLogs ) ) {
 			foreach( $this->mLogs as $key => $msg ) {
