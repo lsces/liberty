@@ -18,7 +18,7 @@ global $gLibertySystem;
 define( 'PLUGIN_GUID_TIKIWIKI', 'tikiwiki' );
 
 $pluginParams = [
-	'auto_activate'    => true,
+	'auto_activate'    => false,
 	'store_function'   => 'tikiwiki_save_data',
 	'load_function'    => 'tikiwiki_parse_data',
 	'verify_function'  => 'tikiwiki_verify_data',

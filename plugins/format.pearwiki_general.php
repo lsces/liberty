@@ -62,7 +62,7 @@ foreach( $reg->listPackages() as $package ) {
 			'description' => "Pear Wiki Parser for $parser Syntax.",
 			'edit_label' => "$parser Syntax, parsed by Pear::Text_Wiki$p",
 			'help_page' => "{$parser}Syntax",
-			'auto_activate' => true,
+			'auto_activate' => false,
 		];
 		$gLibertySystem->registerPlugin( $guid, array_merge($genPluginParams,$insPluginParams) );
 
