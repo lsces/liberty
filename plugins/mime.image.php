@@ -51,7 +51,7 @@ $pluginParams = [
 	// This should be the same for all mime plugins
 	'plugin_type'         => MIME_PLUGIN,
 	// Set this to true if you want the plugin active right after installation
-	'auto_activate'       => false,
+	'auto_activate'       => true,
 	// Help page on bitweaver.org
 	//'help_page'           => 'LibertyMime+Image+Plugin',
 	// this should pick up all image
@@ -203,7 +203,7 @@ function mime_image_store_exif_data( $pFileHash ) {
 		}
 
 		if( !empty( $exifHash['EXIF'] )) {
-		    //			LibertyMime::storeMetaData( $pFileHash['attachment_id'], $exifHash['EXIF'], 'EXIF' );
+		    LibertyMime::storeMetaData( $pFileHash['attachment_id'], $exifHash['EXIF'], 'EXIF' );
 		}
 	}
 

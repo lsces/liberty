@@ -730,7 +730,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * Removes a specific version of a page
 	 *
 	 * @param int $pVersion Version number to roll back to
-	 * @param string $Comment Comment text to be added to the action log
+	 * @param string $pComment Comment text to be added to the action log
 	 * @return bool true if completed successfully
 	 */
 	public function expungeVersion( int $pVersion = 0, $pComment = '' ): bool {
@@ -2240,13 +2240,13 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * @param array different possibilities depending on derived class
 	 * @return string Formated URL address to display the page.
 	 */
-	public function getPreviewUrl( $pContentId = null, $pMixed = null ) {
+	public static function getPreviewUrl( $pContentId = 0, $pMixed = null ) {
 		if( BitBase::verifyId( $pContentId ) ) {
 			$ret = LIBERTY_PKG_URL.'preview.php?content_id='.$pContentId;
 		} elseif( BitBase::verifyId( $pMixed['content_id'] ) ) {
 			$ret = LIBERTY_PKG_URL.'preview.php?content_id='.$pMixed['content_id'];
-		} elseif( $this->isValid() ) {
-			$ret = LIBERTY_PKG_URL.'preview.php?content_id='.$this->mContentId;
+//		} elseif( $this->isValid() ) {
+//			$ret = LIBERTY_PKG_URL.'preview.php?content_id='.$this->mContentId;
 		} else {
 			$ret = '#';
 		}
@@ -3318,7 +3318,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	/**
 	 * Delete liberty cache
 	 *
-	 * @param array $pContentId
 	 * @access public
 	 * @return bool true on success, false on failure
 	 */
@@ -3382,7 +3381,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	public static function storeActionLogFromHash( $pParamHash = null ): void {
 		global $gBitSystem;
 
-		if( $gBitSystem->isFeatureActive( 'liberty_action_log' ) && $this->verifyActionLog( $pParamHash ) ) {
+		if( $gBitSystem->isFeatureActive( 'liberty_action_log' ) && $gBitSystem->verifyActionLog( $pParamHash ) ) {
 			$gBitSystem->mDb->associateInsert( BIT_DB_PREFIX."liberty_action_log", $pParamHash['action_log_store'] );
 		}
 	}
@@ -3433,7 +3432,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * @param array $pParamHash
 	 * @return bool true on success, false on failure
 	 */
-	public function verifyActionLog( &$pParamHash ) {
+	public static function verifyActionLog( &$pParamHash ) {
 		global $gBitUser, $gBitSystem;
 
 		// we will set $ret false if there is a problem along the way
@@ -3472,8 +3471,8 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 
 		// the log message
 		$log_message = '';
-		if( empty( $pParamHash['action_log']['log_message'] ) && !empty( $this ) && !empty( $this->mLogs ) ) {
-			foreach( $this->mLogs as $key => $msg ) {
+		if( empty( $pParamHash['action_log']['log_message'] ) && !empty( $gBitSystem ) && !empty( $gBitSystem->mLogs ) ) {
+			foreach( $gBitSystem->mLogs as $key => $msg ) {
 				$log_message .= "$msg";
 			}
 		} elseif( !empty( $pParamHash['action_log']['log_message'] ) ) {

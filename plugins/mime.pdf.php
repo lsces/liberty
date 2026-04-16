@@ -48,7 +48,7 @@ $pluginParams = [
 	// This should be the same for all mime plugins
 	'plugin_type'         => MIME_PLUGIN,
 	// Set this to true if you want the plugin active right after installation
-	'auto_activate'       => false,
+	'auto_activate'       => true,
 	// Help page on bitweaver.org
 	//'help_page'           => 'LibertyMime+Image+Plugin',
 	// this should pick up all raw pdf files
@@ -81,7 +81,7 @@ function mime_pdf_store( &$pStoreRow ) {
 		$ret = false;
 	}
 
-	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' ) {
+	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' && !empty( $pStoreRow['source_file'] ) ) {
 		if( !mime_pdf_thumbnail( $pStoreRow )) {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
@@ -117,7 +117,7 @@ function mime_pdf_update( &$pStoreRow, $pParams = null ) {
 		}
 	}
 
-	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' ) {
+	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' && !empty( $pStoreRow['source_file'] ) ) {
 		if( !mime_pdf_thumbnail( $pStoreRow )) {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
@@ -189,20 +189,24 @@ function mime_pdf_text_extract( &$pFileHash ) {
  */
 function mime_pdf_thumbnail( $pFileHash ) {
 	global $gBitSystem;
-		$stock_command = shell_exec( 'which convert' ) ?? "/usr/bin/convert";
+		$stock_command = shell_exec( 'which magick' ) ?? "/bin/magick";
 		$mwconvert  = trim( $gBitSystem->getConfig( 'mwconvert_path', $stock_command ));
 
 		if( is_executable( $mwconvert ) && $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' ) {
-			$source    = STORAGE_PKG_PATH.$pFileHash['upload']['dest_branch'];
-			if ( $gBitSystem->isFeatureActive( 'liberty_jpeg_originals' ) ) {
-				$source .= 'original.jpg';
+			if ( !empty($pFileHash['upload']) ) {
+				$source = STORAGE_PKG_PATH.$pFileHash['upload']['dest_branch'];
+				if ( $gBitSystem->isFeatureActive( 'liberty_jpeg_originals' ) ) {
+					$source .= 'original.jpg';
+				} else {
+					$source .= $pFileHash['upload']['name'];
+				}
 			} else {
-				$source .= $pFileHash['upload']['name'];
+				$source = $pFileHash['source_file'];
 			}
 			$dest_branch = dirname( $source );
 
 			$thumb_file  = "$dest_branch/thumb.jpg";
-			$mwccommand = "$mwconvert '$source' '$thumb_file' 2>&1";
+			$mwccommand = "$mwconvert '$source'\[0\] -thumbnail 1024x1024 -background white -flatten '$thumb_file' 2>&1";
 
 			shell_exec( $mwccommand );
 			if( is_file( $thumb_file ) && filesize( $thumb_file ) > 0 ) {
@@ -212,7 +216,7 @@ function mime_pdf_thumbnail( $pFileHash ) {
 			}
 			$genHash = [
 				'attachment_id'	=> $pFileHash['attachment_id'],
-				'dest_branch'		=> $pFileHash['upload']['dest_branch'],
+				'dest_branch'		=> $pFileHash['upload']['dest_branch'] ?? dirname( $source ),
 				'source_file'		=> $thumb_file,
 				'type'				=> 'image/jpeg',
 				'thumbnail_sizes'	=> [ 'extra-large', 'large', 'medium', 'small', 'avatar', 'icon' ],

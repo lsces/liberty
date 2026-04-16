@@ -264,13 +264,13 @@ class LibertyMime extends LibertyContent {
 	 * getThumbnailUrl will fetch the primary thumbnail for a given content. If nothing has been set, it will fetch the last thumbnail it can find.
 	 *
 	 * @param string $pSize
-	 * @param array $pInfoHash
+	 * @param array $mInfo
 	 * @access public
 	 * @return bool true on success, false on failure - $this->mErrors will contain reason for failure
 	 */
 	public function getThumbnailUrl(  string $pSize = 'small', ?array $mInfo = null, ?int $pSecondaryId = null, ?int $pDefault = null ): string|null {
 		$ret = null;
-		if( !empty( $pInfoHash ) ) {
+		if( !empty( $mInfo ) ) {
 			// do some stuff if we are given a hash of stuff
 		} elseif( $this->isValid() && !empty( $this->mStorage ) ) {
 			foreach( array_keys( $this->mStorage ) as $attachmentId ) {
@@ -283,7 +283,7 @@ class LibertyMime extends LibertyContent {
 			}
 		}
 		if( $pDefault && empty( $ret ) ) {
-			$ret = parent::getThumbnailUrl( $pSize, $pInfoHash, $pSecondaryId );
+			$ret = parent::getThumbnailUrl( $pSize, $mInfo, $pSecondaryId );
 		}
 		return $ret;
 	}
@@ -893,15 +893,15 @@ class LibertyMime extends LibertyContent {
 		global $gBitSystem;
 		$ret = false;
 		if( BitBase::verifyId( $pAttachmentId ) && !empty( $pType ) && !empty( $pParamHash )) {
-			if( is_array( $pParamHash )) {
+			if( \is_array( $pParamHash )) {
 				foreach( $pParamHash as $key => $data ) {
-					if( !is_array( $data )) {
+					if( !\is_array( $data )) {
 						// store the data in the meta table
-						$meta = array(
+						$meta = [
 							'attachment_id' => $pAttachmentId,
 							'meta_type_id'  => LibertyMime::storeMetaId( $pType, 'type' ),
 							'meta_title_id' => LibertyMime::storeMetaId( $key, 'title' ),
-						);
+						];
 
 						// remove this entry from the database if it already exists
 						$gBitSystem->mDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_attachment_meta_data` WHERE `attachment_id` = ? AND `meta_type_id` = ? AND `meta_title_id` = ?", $meta );
@@ -1082,7 +1082,7 @@ class LibertyMime extends LibertyContent {
 /**
  * mime_get_storage_sub_dir_name get a filename based on the uploaded file
  *
- * @param array $pFileHash File information provided in $_FILES
+ * @param array pFileHash File information provided in $_FILES
  * @access public
  * @return string appropriate sub dir name
  */

@@ -13,7 +13,7 @@
 			<a href="{$attachment.display_url}">{$attachment.file_name}</a>
 		{/forminput}
 	</div>
-{elseif $attachment.download_url}
+{elseif !empty($attachment.download_url)}
 	<div class="form-group">
 		{formlabel label="Download" for=""}
 		{forminput}
@@ -32,7 +32,7 @@
 <div class="form-group">
 	{formlabel label="Last Modified" for=""}
 	{forminput}
-		{$attachment.last_modified|bit_long_datetime}
+		{$attachment.last_modified|default:'---'|bit_long_datetime}
 	{/forminput}
 </div>
 
