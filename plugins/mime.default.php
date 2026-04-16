@@ -55,7 +55,7 @@ $pluginParams = [
 	// This needs to be specified by plugins that are included by other plugins
 	'file_name'          => 'mime.default.php',
 	// Set this to true if you want the plugin active right after installation
-	'auto_activate'      => true,
+	'auto_activate'      => false,
 	// Help page on bitweaver.org
 	//'help_page'          => 'MimeHelpPage',
 
@@ -341,21 +341,28 @@ if( !function_exists( '\Bitweaver\Liberty\mime_default_download' )) {
 			}
 
 			// set up header
-			header( "Cache-Control: no-cache,must-revalidate" );
-			header( "Expires: 0" );
-			header( "Accept-Ranges: bytes" );
-			header( "Pragma: public" );
 			header( "Last-Modified: ".gmdate( "D, d M Y H:i:s T", $pFileHash['last_modified'] ), true, 200 );
 			header( 'Content-Disposition: attachment; filename="'.$pFileHash['file_name'].'"' );
 			header( "Content-type: ".$pFileHash['mime_type'] );
-			header( "Content-Description: File Transfer" );
-			header( "Content-Length: ".filesize( $pFileHash['source_file'] ));
-			header( "Content-Transfer-Encoding: binary" );
-			//header( "Connection: close" );
 
-			@ob_clean();
-			flush();
-			readfile( $pFileHash['source_file'] );
+			if( $gBitSystem->isFeatureActive( 'site_nginx' )) {
+				// Nginx - most efficient
+				header( 'X-Accel-Redirect: '.$pFileHash['source_file'] );
+			} elseif( $gBitSystem->isFeatureActive( 'site_apache_xsendfile' )) {
+				// Apache with mod_xsendfile installed
+				header( 'X-Sendfile: '.$pFileHash['source_file'] );
+			} else {
+				// Fallback - any web server, no module needed
+				header( "Cache-Control: no-cache,must-revalidate" );
+				header( "Expires: 0" );
+				header( "Accept-Ranges: bytes" );
+				header( "Pragma: public" );
+				header( "Content-Length: ".filesize( $pFileHash['source_file'] ));
+				header( "Content-Transfer-Encoding: binary" );
+				@ob_clean();
+				flush();
+				readfile( $pFileHash['source_file'] );
+			}
 			$ret = true;
 		} else {
 			$pFileHash['errors']['no_file'] = KernelTools::tra( 'No matching file found.' );
