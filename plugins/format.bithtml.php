@@ -14,6 +14,7 @@ global $gLibertySystem;
 define( 'PLUGIN_GUID_BITHTML', 'bithtml' );
 
 $pluginParams = [
+	'auto_activate'   => true,
 	'load_function'   => 'bithtml_parse_data',
 	'verify_function' => 'bithtml_verify_data',
 	'description'     => 'HTML Syntax Format Parser',

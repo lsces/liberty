@@ -237,11 +237,11 @@ class LibertySystem extends BitSingleton {
 			// if no current default format or no format plugins active
 			// activate format.tikiwiki and make it the default format plugin
 			// This happens during installation and therefore requires that we include the plugin file for the constant definitions
-			$plugin_file = $this->mPluginPath.'format.tikiwiki.php';
+			$plugin_file = $this->mPluginPath.'format.bithtml.php';
 			if( $format_plugin_count == 0 || $default_format_found == 0 && is_file( $plugin_file ) ) {
 				require_once $plugin_file;
-				$this->setActivePlugin( PLUGIN_GUID_TIKIWIKI );
-				$gBitSystem->storeConfig( 'default_format', PLUGIN_GUID_TIKIWIKI, $this->mSystem );
+				$this->setActivePlugin( PLUGIN_GUID_BITHTML );
+				$gBitSystem->storeConfig( 'default_format', PLUGIN_GUID_BITHTML, $this->mSystem );
 				//make memory match db
 				$this->loadActivePlugins();
 			}
@@ -594,7 +594,7 @@ class LibertySystem extends BitSingleton {
 	 * @return void
 	 **/
 	public function loadContentTypes( $pCacheTime=BIT_QUERY_CACHE_TIME ) {
-		if ( $this->mDb->tableExists( 'liberty_content_types' ) ) {
+		if ( $this->mDb->mDb && $this->mDb->tableExists( 'liberty_content_types' ) ) {
 			if( $rs = $this->mDb->query( "SELECT * FROM `".BIT_DB_PREFIX."liberty_content_types`", null, BIT_QUERY_DEFAULT, BIT_QUERY_DEFAULT ) ) {
 				while( $row = $rs->fetchRow() ) {
 					// translate name
@@ -821,15 +821,7 @@ class LibertySystem extends BitSingleton {
 				'iexplain' => $ext,
 				'url' => 'only',
 			];
-
-/*			if( !$ret = BitIcon::read( $biticon ) ) {
-				$biticon['iname'] = strtolower( $pExt );
-				if( !$ret = BitIcon::read( $biticon  ) ) {
-					$biticon['iname'] = 'generic';
-					$ret = BitIcon::read( $biticon  );
-				}
-			}
-*/
+			$ret = \Bitweaver\Plugins\smarty_function_biticon( $biticon );
 		}
 		return $ret;
 	}
