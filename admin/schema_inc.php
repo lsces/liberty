@@ -356,10 +356,10 @@ $gBitInstaller->registerUserPermissions( LIBERTY_PKG_NAME, [
 ]);
 
 // Package Requirements
-$gBitInstaller->registerRequirements( LIBERTY_PKG_NAME, array(
+$gBitInstaller->registerRequirements( LIBERTY_PKG_NAME, [
 	'users'     => [ 'min' => '5.0.0' ],
 	'kernel'    => [ 'min' => '5.0.0' ],
 	'themes'    => [ 'min' => '5.0.0' ],
 	'languages' => [ 'min' => '5.0.0' ],
-//	'storage'   => [ 'min' => '0.0.0' ],
-));
+	//	'storage'   => [ 'min' => '5.0.0' ],
+]);

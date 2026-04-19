@@ -16,6 +16,7 @@ use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyMime;
 use Bitweaver\Liberty\LibertyBase;
+use function Bitweaver\Liberty\attachment_filter_get_usage;
 
 $feedback = [];
 
@@ -59,7 +60,7 @@ if( $gContent = LibertyBase::getLibertyObject( $attachment['content_id'] ) ) {
 	$gBitSmarty->assign( 'view_template', $gLibertySystem->getMimeTemplate( 'view', $attachment['attachment_plugin_guid'] ));
 	$gBitSmarty->assign( 'edit_template', $gLibertySystem->getMimeTemplate( 'edit', $attachment['attachment_plugin_guid'] ));
 
-	$gBitSystem->display( 'bitpackage:liberty/mime_view.tpl', KernelTools::tra( "View File" ), array( 'display_mode' => 'display' ));
+	$gBitSystem->display( 'bitpackage:liberty/mime_view.tpl', KernelTools::tra( "View File" ), [ 'display_mode' => 'display' ]);
 } else {
 	$gBitSystem->fatalError( 'Not Found', null, null, HttpStatusCodes::HTTP_GONE );
 }
