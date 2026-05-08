@@ -2751,7 +2751,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 							// here we provide getDisplay(Link|Url) with user-specific information that we get the correct links to display in pages
 							$userInfo = $gBitUser->getUserInfo( ['content_id' => $aux['content_id'] ] );
 							$aux['title']        = $type['handler_class']::getTitleFromHash( $userInfo );
-							$aux['display_link'] = $type['handler_class']::getDisplayLinkFromHash( $userInfo, $userInfo['login'] );
+							$aux['display_link'] = $type['handler_class']::getDisplayLinkFromHash( $userInfo, $userInfo['login'] ?? '' );
 							$aux['display_url']  = $type['handler_class']::getDisplayUrlFromHash( $userInfo );
 						} else {
 							$aux['title']        = $type['handler_class']::getTitleFromHash( $aux );
