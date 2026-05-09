@@ -20,7 +20,7 @@
 			<a rel="nofollow" href="{$attachment.display_url|escape}{if strpos($attachment.display_url,'?')}&amp;{else}?{/if}size={$size}">{tr}{$size}{/tr}</a>
 			{if !$smarty.foreach.size.last} &bull; {/if}
 		{/foreach}
-		{if !empty($attachment.original)} &bull; <a rel="nofollow" href="{$attachment.source_url|escape}">{tr}Original File{/tr}</a> {/if}
+		{if !empty($attachment.original)} &bull; <a rel="nofollow" href="{$attachment.display_url|escape}">{tr}Original File{/tr}</a> {/if}
 	</div>
 {/if}
 {include file="bitpackage:liberty/mime_meta_inc.tpl"}
