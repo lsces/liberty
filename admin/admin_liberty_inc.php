@@ -97,13 +97,6 @@ $imageProcessors = [
 		'note'         => 'This pecl extension is a popular and frequently used extension. This extension is recommended and works with most image types. We support the older version 0.* and the new 2.* extension (please note that version 2.* is still in beta and some versions might not work as well as others).',
 		'recommended'  => true,
 	],
-	'magickwand' => [
-		'installed'    => extension_loaded( 'magickwand' ) ? true : false,
-		'install_note' => 'To use MagickWand, you need to install the magickwand php extension. Unix and Windows users can find source code at <a href="http://www.magickwand.org/download/php/">the ImageMagick downloads website.</a>.',
-		'label'        => 'PHP - Magickwand',
-		'note'         => 'The PHP imagick pecl extension is a rather new interface between PHP and ImageMagick. It is probably the best of the currently available image processing extensions.',
-		'recommended'  => true,
-	],
 ];
 $gBitSmarty->assign( 'imageProcessors', $imageProcessors );
 
