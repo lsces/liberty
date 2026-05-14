@@ -47,7 +47,7 @@ function htmlpure_filter( &$pString, &$pFilterHash, $pObject ) {
 		$pear_version = false;
 
 		if (@include_once "PEAR.php") {
-			if(@include_once UTIL_PKG_INCLUDE_PATH."/htmlpurifier-4.15.0/library/HTMLPurifier.php") {
+			if(@include_once EXTERNAL_LIBS_PATH.'htmlpurifier/library/HTMLPurifier.php') {
 				// for backward compatibility checks
 				$htmlp_version = null;
 
