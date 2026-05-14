@@ -41,10 +41,10 @@ function stylepure_filter( &$pData, &$pFilterHash ) {
 	// strip_tags has doesn't recognize that css within the style tags are not document text. To fix this do something similar to the following:
 	if( !$gBitUser->hasPermission( 'p_liberty_edit_html_style' )) {
 		$pattern = [
-            "!<style[^>]*>.*</style>!siU",             // <style>...</style>
-            '![\s\n]*(style|class)\s*=\s*"[^">]*"?!i', // style="..." | class="..."
-            "![\s\n]*(style|class)\s*=\s*'[^'>]*'?!i", // style='...' | class='...'
-            "![\s\n]*(style|class)\s*=\s*[^\s>]*!i",   // style=...   | class=...
+			"!<style[^>]*>.*</style>!siU",             // <style>...</style>
+			'![\s\n]*(style|class)\s*=\s*"[^">]*"?!i', // style="..." | class="..."
+			"![\s\n]*(style|class)\s*=\s*'[^'>]*'?!i", // style='...' | class='...'
+			"![\s\n]*(style|class)\s*=\s*[^\s>]*!i",   // style=...   | class=...
 		];
 		$pData = preg_replace( $pattern, '', $pData );
 	}

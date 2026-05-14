@@ -1,8 +1,8 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
-use Bitweaver\Liberty\LibertyContent;
 
 /**
  * @version  $Revision$
@@ -25,7 +25,7 @@ $pluginParams = [
 	'description'   => KernelTools::tra( "This plugin will sort the lines within a {sort} block." ),
 	'help_function' => '\data_sort_help',
 	'syntax'        => "{sort sort= }".KernelTools::tra( "Lines to be sorted" )."{sort}",
-	'plugin_type'   => DATA_PLUGIN
+	'plugin_type'   => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATASORT, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATASORT );

@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -43,11 +44,10 @@ $pluginParams = [
 	'description' => KernelTools::tra("This plugin displays a Flash, Tcl or Java applet/object."),
 	'help_function' => '\data_object_help',
 	'syntax' => "{OBJECT type= src= width= height=}",
-	'plugin_type' => DATA_PLUGIN
+	'plugin_type' => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAOBJECT, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAOBJECT );
-
 
 function data_object_help() {
 	$help =
@@ -150,10 +150,9 @@ function data_object_help() {
 	return $help;
 }
 
-
 function data_object ($data, $params) {
 	// Need these plugin parameters
-	foreach (array("type", "src") as $parameter) {
+	foreach (["type", "src"] as $parameter) {
 		if (!array_key_exists($parameter, $params))
 			return '<span class="warning">'.KernelTools::tra('When using <strong>{object}</strong>, a <strong>type</strong> and <strong>src</strong> parameter is required.').'</span>';
 	}

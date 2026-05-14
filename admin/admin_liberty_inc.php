@@ -107,7 +107,6 @@ $imageProcessors = [
 ];
 $gBitSmarty->assign( 'imageProcessors', $imageProcessors );
 
-
 $cacheTimes = [
 	0       => KernelTools::tra( "(no cache)" ),
 	60      => "1 " . KernelTools::tra( "minute" ),
@@ -122,7 +121,6 @@ $cacheTimes = [
 	2419200 => "1 " . KernelTools::tra( "month" ),
 ];
 $gBitSmarty->assign( "cacheTimes", $cacheTimes );
-
 
 $formCaptcha = [
 	"liberty_use_captcha_freecap" => [

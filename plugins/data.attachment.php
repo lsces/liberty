@@ -1,8 +1,7 @@
 <?php
 
 namespace Bitweaver;
-use Bitweaver\BitBase;
-use Bitweaver\KernelTools;
+
 use Bitweaver\Liberty\LibertyBase;
 use Bitweaver\Liberty\LibertyContent;
 use Bitweaver\Wiki\BitPage;
@@ -47,7 +46,6 @@ $pluginParams = [
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAATTACHMENT, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAATTACHMENT );
-
 
 function data_attachment_help() {
 	$help =

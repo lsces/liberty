@@ -238,8 +238,8 @@ foreach( array_keys( $tables ) AS $tableName ) {
 
 // Constraints which must be installed after table creation
 $constraints = [
-	'liberty_content_permissions' => array( 'liberty_content_perm_group_ref' => 'FOREIGN KEY (`group_id`) REFERENCES `' . BIT_DB_PREFIX . 'users_groups` (`group_id`)' ),
-	'liberty_process_queue'       => array( 'liberty_process_queue_ref' => 'FOREIGN KEY (`content_id`) REFERENCES `' . BIT_DB_PREFIX . 'liberty_content`( `content_id` )' ),
+	'liberty_content_permissions' => [ 'liberty_content_perm_group_ref' => 'FOREIGN KEY (`group_id`) REFERENCES `' . BIT_DB_PREFIX . 'users_groups` (`group_id`)' ],
+	'liberty_process_queue'       => [ 'liberty_process_queue_ref' => 'FOREIGN KEY (`content_id`) REFERENCES `' . BIT_DB_PREFIX . 'liberty_content`( `content_id` )' ],
 
 ];
 
@@ -272,9 +272,9 @@ $indices = [
 ];
 
 if ( defined( 'ROLE_MODEL' ) ) {
-	$constraints['liberty_content_permissions'] = array('liberty_content_perm_role_ref' => 'FOREIGN KEY (`role_id`) REFERENCES `'.BIT_DB_PREFIX.'users_roles` (`role_id`)');
+	$constraints['liberty_content_permissions'] = ['liberty_content_perm_role_ref' => 'FOREIGN KEY (`role_id`) REFERENCES `'.BIT_DB_PREFIX.'users_roles` (`role_id`)'];
 	unset($indices['liberty_content_perm_group_idx']);
-	$indices['liberty_content_perm_role_idx'] =  array( 'table' => 'liberty_content_permissions', 'cols' => 'role_id', 'opts' => null );
+	$indices['liberty_content_perm_role_idx'] =  [ 'table' => 'liberty_content_permissions', 'cols' => 'role_id', 'opts' => null ];
 
 }
 foreach( array_keys($constraints) AS $tableName ) {
@@ -301,7 +301,7 @@ $sequences = [
 $gBitInstaller->registerSchemaSequences( LIBERTY_PKG_NAME, $sequences );
 
 // ### Default Preferences
-$gBitInstaller->registerPreferences( LIBERTY_PKG_NAME, array(
+$gBitInstaller->registerPreferences( LIBERTY_PKG_NAME, [
 	//array(LIBERTY_PKG_NAME, 'liberty_cache_images','n'),
 	//array(LIBERTY_PKG_NAME, 'liberty_cache_pages','n'),
 	[ LIBERTY_PKG_NAME, 'liberty_auto_display_attachment_thumbs', 'small' ],
@@ -312,7 +312,7 @@ $gBitInstaller->registerPreferences( LIBERTY_PKG_NAME, array(
 //	array(LIBERTY_PKG_NAME, 'liberty_attachment_style', 'standard'),
 	// The default for new installs is htmlpurifier old stays simple
 	[ LIBERTY_PKG_NAME, 'liberty_html_purifier', 'htmlpurifier' ],
-) );
+] );
 
 $gBitInstaller->registerSchemaDefault( LIBERTY_PKG_NAME, [
 	"INSERT INTO `" . BIT_DB_PREFIX . "liberty_content_status` (`content_status_id`,`content_status_name`) VALUES (-999, 'Deleted')",
@@ -331,7 +331,6 @@ $gBitInstaller->registerSchemaDefault( LIBERTY_PKG_NAME, [
 	"INSERT INTO `" . BIT_DB_PREFIX . "liberty_content_status` (`content_status_id`,`content_status_name`) VALUES (999, 'Copy Protected')",
 	"UPDATE `" . BIT_DB_PREFIX . "liberty_content` SET `content_status_id`=50",
 ] );
-
 
 // ### Default UserPermissions
 $gBitInstaller->registerUserPermissions( LIBERTY_PKG_NAME, [

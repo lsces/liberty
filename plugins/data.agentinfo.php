@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -38,7 +39,7 @@ $pluginParams = [
 	'description' => KernelTools::tra("This plugin will display the viewer's IP address, the Browser they are using, or the info about the site's Server software."),
 	'help_function' => '\data_agentinfo_help',
 	'syntax' => "{AGENTINFO info= }",
-	'plugin_type' => DATA_PLUGIN
+	'plugin_type' => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAAGENTINFO, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAAGENTINFO );
@@ -69,19 +70,19 @@ function data_agentinfo_help() {
 
 // Load Function
 function data_agentinfo($data, $params) {
-    $info = 'IP';
+	$info = 'IP';
 	extract ($params, EXTR_SKIP);
 	switch (strtoupper ($info)) {
 		case 'SVRSW': // To maintain Pre-Clyde Parameters
-	    case 'SERVER':
-    		  $ret = $_SERVER["SERVER_SOFTWARE"];
-	          return $ret;
-	    case 'BROWSER':
-    		  $ret = $_SERVER["HTTP_USER_AGENT"];
-	          return $ret;
-	    default:
-    		  $ret = $_SERVER["REMOTE_ADDR"];
-	          return $ret;
+		case 'SERVER':
+			  $ret = $_SERVER["SERVER_SOFTWARE"];
+			  return $ret;
+		case 'BROWSER':
+			  $ret = $_SERVER["HTTP_USER_AGENT"];
+			  return $ret;
+		default:
+			  $ret = $_SERVER["REMOTE_ADDR"];
+			  return $ret;
 	}
 
 }

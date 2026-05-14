@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -38,7 +39,7 @@ $pluginParams = [
 	'description'   => KernelTools::tra("Display a module block in content"),
 	'help_function' => '\datamodule_help',
 	'syntax'        => "{module module= align='right'}",
-	'plugin_type'   => DATA_PLUGIN
+	'plugin_type'   => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAMODULE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAMODULE );
@@ -115,7 +116,7 @@ function data_datamodule( $pData, $pParams ) {
 
 	// deal with custom styling
 	$style = '';
-	$style_options = array( 'float', 'width', 'background', 'color' );
+	$style_options = [ 'float', 'width', 'background', 'color' ];
 	foreach( $pParams as $param => $value ) {
 		if( in_array( $param, $style_options ) ) {
 			$style .= $param.':'.$value.';';

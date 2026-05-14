@@ -12,6 +12,7 @@
  * required setup
  */
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 
 global $gContent;

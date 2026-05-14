@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -30,7 +31,7 @@ use Bitweaver\KernelTools;
 ******************/
 global $gLibertySystem;
 define( 'PLUGIN_GUID_DATAADSENSE', 'dataadsense' );
-$pluginParams = array (
+$pluginParams =  [
 	'tag' => 'ADSENSE',
 	'auto_activate' => false,
 	'requires_pair' => false,
@@ -40,8 +41,8 @@ $pluginParams = array (
 	'description' => KernelTools::tra("This plugin adds Adsense Code to page."),
 	'help_function' => '\data_adsense_help',
 	'syntax' => "{ADSENSE}",
-	'plugin_type' => DATA_PLUGIN
-);
+	'plugin_type' => DATA_PLUGIN,
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAADSENSE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAADSENSE );
 

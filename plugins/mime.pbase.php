@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 
 /**

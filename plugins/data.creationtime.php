@@ -1,7 +1,6 @@
 <?php
 
 namespace Bitweaver;
-use Bitweaver\KernelTools;
 
 /**
  * @version  $Revision$
@@ -37,7 +36,7 @@ $pluginParams = [
 	'description'   => KernelTools::tra("This plugin will display the creation time of a page."),
 	'help_function' => '\data_creationtime_help',
 	'syntax'        => "{creationtime}",
-	'plugin_type'   => DATA_PLUGIN
+	'plugin_type'   => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATA_CREATIONTIME, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATA_CREATIONTIME );
@@ -47,7 +46,7 @@ function data_creationtime_help() {
 	return KernelTools::tra( "Example: " )."{creationtime}<br />";
 }
 
-//The actual handler for the plugin 
+//The actual handler for the plugin
 function data_creationtime( $data, $params, &$pCommonObject ) {
 	return \Bitweaver\Liberty\smarty_modifier_bit_short_datetime( $pCommonObject->mInfo['created'] );
 }

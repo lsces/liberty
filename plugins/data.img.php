@@ -1,7 +1,6 @@
 <?php
 
 namespace Bitweaver;
-use Bitweaver\KernelTools;
 
 /**
  * @version  $Revision$
@@ -27,7 +26,7 @@ $pluginParams = [
 	'syntax'        => "{img src=http://www.google.at/logos/olympics06_ski_jump.gif}",
 	'plugin_type'   => DATA_PLUGIN,
 	'booticon'       => '{booticon iname="icon-picture" iexplain="Web Image"}',
-	'taginsert'     => '{img src= width= height= align= description= link=}'
+	'taginsert'     => '{img src= width= height= align= description= link=}',
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAIMG, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAIMG );

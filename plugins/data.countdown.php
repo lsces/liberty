@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -28,7 +29,7 @@ use Bitweaver\KernelTools;
  */
 define( 'PLUGIN_GUID_DATACOUNTDOWN', 'datacountdown' );
 global $gLibertySystem;
-$pluginParams = array (
+$pluginParams =  [
 	'tag' => 'COUNTDOWN',
 	'auto_activate' => false,
 	'requires_pair' => false,
@@ -38,8 +39,8 @@ $pluginParams = array (
 	'description' => KernelTools::tra("Displays a Count-Down until a date:time is reached - then - negative numbers indicate how long it has been since that date. The Count-Down is displayed in the format of (X days, X hours, X minutes and X seconds)."),
 	'help_function' => '\data_countdown_help',
 	'syntax' => "{COUNTDOWN enddate= localtime= class= punct= text=}",
-	'plugin_type' => DATA_PLUGIN
-);
+	'plugin_type' => DATA_PLUGIN,
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATACOUNTDOWN, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATACOUNTDOWN );
 
@@ -66,17 +67,17 @@ function data_countdown_help() {
 				.'<td>class</td>'
 				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra("(optional)") . '</td>'
 				.'<td>' . KernelTools::tra( "Classname of the SPAN surrounding the countdown. The date/time segments are each wrapped in a VAR-Tag. Default = countdown") . '</td>'
-			.'</tr>'			
+			.'</tr>'
 			.'<tr class="even">'
 				.'<td>punct</td>'
 				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra("(optional)") . '</td>'
 				.'<td>' . KernelTools::tra( "Any kind of punctuation to divide the date/time segments from each other, a comma, a colon, a pipe ... Default = space. To put a non breaking space, use HTML: &amp;nbsp;") . '</td>'
-			.'</tr>'			
+			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>text</td>'
 				.'<td>' . KernelTools::tra( "string") . '<br />' . KernelTools::tra("(optional)") . '</td>'
 				.'<td>' . KernelTools::tra( "Text to be displayed after the date/time string. It's wrapped in &lt;em&gt;.") . '</td>'
-			.'</tr>'			
+			.'</tr>'
 		.'</table>'
 		.'<p>' . KernelTools::tra("Example 1: ") . '<input value="{COUNTDOWN enddate=\'8:02pm May 10 2004\' localtime=\'on\' text=\'' . KernelTools::tra(" - Time Passes So Slowly") . '\'}" type="text" size="40" /></p>'
 		.'<p>' . KernelTools::tra("Example 2: ") . '<input value="{COUNTDOWN enddate=\'2012-12-22 00:01\' class=\'alert red\' punct=\', \' text=\'Purple Haze\'}" type="text" size="40" /></p>'
@@ -90,26 +91,26 @@ function data_countdown($data,$params) {
 	global $gLibertySystem;
 	$pluginParams = $gLibertySystem->mPlugins[PLUGIN_GUID_DATACOUNTDOWN];
 	extract ($params, EXTR_SKIP);
-	
+
 	if (!isset($enddate) ) {  // The Mandatory Parameter is missing
 		$ret = KernelTools::tra("The required parameter ") . "<strong>enddate</strong>" . KernelTools::tra(" was missing from the plugin ") . '<strong>"' . $pluginParams['tag'] . '"</strong>';
 		$ret.= data_countdown_help();
 		return $ret;
 	}
-	
+
 	$then = strtotime ($enddate);
-	
+
 	if ($then == -1) { // strtotime failed so enddate was not a valid date
 		$ret = KernelTools::tra("__Error__ - The plugin ") . '<strong>"' . $pluginParams['tag'] . '"</strong>' . KernelTools::tra(" was not given a valid date. The date given was:\n") . "enddate=$enddate";
 		return $ret;
 	}
-	
+
 	$tz = isset($localtime) && $localtime == 'on' && isset($_COOKIE['tz_offset']) ?  $_COOKIE['tz_offset'] : 0;
-	
+
 	if (!isset($class)) {
 		$class = 'countdown';
 	}
-	
+
 	if (!isset($punct)) {
 		$punct = " ";
 	}
@@ -118,17 +119,16 @@ function data_countdown($data,$params) {
 		$text = "";
 	}
 
-	
 	$now = strtotime ("now") + $tz;
 	$difference = $then - $now;
 	$num = $difference/86400;
-	$days = intval($num);
+	$days = (int) $num;
 	$num2 = ($num - $days)*24;
-	$hours = intval($num2);
+	$hours = (int) $num2;
 	$num3 = ($num2 - $hours)*60;
-	$mins = intval($num3);
+	$mins = (int) $num3;
 	$num4 = ($num3 - $mins)*60;
-	$secs = intval($num4);
+	$secs = (int) $num4;
 	$ret = "
 		<span class='".$class."'>"
 		. "<var>" . $days  . " " . KernelTools::tra("days")    . "</var>" . $punct

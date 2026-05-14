@@ -10,6 +10,7 @@
  * required setup
  */
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
 
@@ -107,7 +108,7 @@ class LibertyStructure extends LibertyBase {
 		$ret = false;
 		if( !empty( $this->mInfo['content_object'] ) && is_a( $this->mInfo['content_object'], 'LibertyContent' ) ) {
 			return $this->mInfo['content_object']->hasUpdatePermission( $pVerifyAccessControl ) || empty( $this->mInfo['content_object']->mViewContentPerm ) || $this->mInfo['content_object']->hasUserPermission( $this->mInfo['content_object']->mViewContentPerm, $pVerifyAccessControl );
-		} 
+		}
 		return $ret;
 	}
 
@@ -179,7 +180,6 @@ class LibertyStructure extends LibertyBase {
 			}
 		}
 	}
-
 
 	public function isValid() {
 		return $this->verifyId( $this->mStructureId );
@@ -383,7 +383,7 @@ class LibertyStructure extends LibertyBase {
 		if( !empty( $pListHash['find'] ) ) {
 			$findesc = '%' . $pListHash['find'] . '%';
 			$mid = " (`parent_id` is null or `parent_id`=0) and (lc.`title` like ?)";
-			$bindVars=array($findesc);
+			$bindVars=[$findesc];
 		} else {
 			$mid = " (`parent_id` is null or `parent_id`=0) ";
 			$bindVars=[];
@@ -474,7 +474,6 @@ class LibertyStructure extends LibertyBase {
 //vd( $storeNodes );
 			}
 
-			
 			// deprecated flat tree store, code is unused AFAIK.-- spiderr
 			if( !empty( $pParamHash['structure'] ) ) {
 	//			LibertyStructure::embellishStructureHash( $pParamHash['structure'] );
@@ -581,13 +580,13 @@ class LibertyStructure extends LibertyBase {
 				$pParamHash['alias'] = '';
 			}
 			$pParamHash['max'] = isset( $pParamHash['after_ref_id'] )
-				? $this->mDb->getOne("select `pos` from `".BIT_DB_PREFIX."liberty_structures` where `structure_id`=?",array((int)$pParamHash['after_ref_id'])) 
-				: $this->mDb->getOne("select max(`pos`) from `".BIT_DB_PREFIX."liberty_structures` where `parent_id`=?",array((int)$pParamHash['parent_id']));
+				? $this->mDb->getOne("select `pos` from `".BIT_DB_PREFIX."liberty_structures` where `structure_id`=?",[(int)$pParamHash['after_ref_id']])
+				: $this->mDb->getOne("select max(`pos`) from `".BIT_DB_PREFIX."liberty_structures` where `parent_id`=?",[(int)$pParamHash['parent_id']]);
 
 			if( $pParamHash['max'] > 0 ) {
 				// For example, if max is 5 then we are inserting after position 5 so we'll insert 5 and move all the others
 				$query = "update `".BIT_DB_PREFIX."liberty_structures` set `pos`=`pos`+1 where `pos`>? and `parent_id`=?";
-				$result = $this->mDb->query($query,array((int)$pParamHash['max'], (int)$pParamHash['parent_id']));
+				$result = $this->mDb->query($query,[(int)$pParamHash['max'], (int)$pParamHash['parent_id']]);
 			}
 			$pParamHash['max']++;
 
@@ -625,9 +624,9 @@ class LibertyStructure extends LibertyBase {
 			$result = $this->mDb->query( $query, [ $pParamHash['structure_id'], $pParamHash['parent_id'], (int)$pParamHash['content_id'], (int)$pParamHash['root_structure_id'], $pParamHash['alias'], $pParamHash['max'] ] );
 			$this->CompleteTrans();
 			$ret = (int) $pParamHash['structure_id'];
-		} else {
-			//vd( $this->mErrors );
 		}
+			//vd( $this->mErrors );
+
 		return $ret;
 	}
 
@@ -664,11 +663,11 @@ class LibertyStructure extends LibertyBase {
 		if( $this->isValid() ) {
 			$this->StartTrans();
 			$query = "select `structure_id`, `pos` from `".BIT_DB_PREFIX."liberty_structures` where `pos`<? and `parent_id`=? order by `pos` desc";
-			$result = $this->mDb->query($query,array($this->mInfo["pos"], (int)$this->mInfo["parent_id"]));
+			$result = $this->mDb->query($query,[$this->mInfo["pos"], (int)$this->mInfo["parent_id"]]);
 			if ($previous = $result->fetchRow()) {
 				//Get last child nodes for previous sibling
 				$query = "select `pos` from `".BIT_DB_PREFIX."liberty_structures` where `parent_id`=? order by `pos` desc";
-				$result = $this->mDb->query($query,array((int)$previous["structure_id"]));
+				$result = $this->mDb->query($query,[(int)$previous["structure_id"]]);
 				$pos = ($res = $result->fetchRow()) ? $res["pos"] : 0;
 
 				$query = "update `".BIT_DB_PREFIX."liberty_structures` set `parent_id`=?, `pos`=(? + 1) where `structure_id`=?";
@@ -690,13 +689,13 @@ class LibertyStructure extends LibertyBase {
 		if( $this->isValid() ) {
 			$this->StartTrans();
 			$query = "select `structure_id`, `pos` from `".BIT_DB_PREFIX."liberty_structures` where `pos`>? and `parent_id`=? order by `pos` asc";
-			$result = $this->mDb->query($query,array((int)$this->mInfo["pos"], (int)$this->mInfo["parent_id"]));
+			$result = $this->mDb->query($query,[(int)$this->mInfo["pos"], (int)$this->mInfo["parent_id"]]);
 			$res = $result->fetchRow();
 			if ($res) {
 				//Swap position values
 				$query = "update `".BIT_DB_PREFIX."liberty_structures` set `pos`=? where `structure_id`=?";
-				$this->mDb->query($query,array((int)$this->mInfo["pos"], (int)$res["structure_id"]) );
-				$this->mDb->query($query,array((int)$res["pos"], (int)$this->mInfo["structure_id"]) );
+				$this->mDb->query($query,[(int)$this->mInfo["pos"], (int)$res["structure_id"]] );
+				$this->mDb->query($query,[(int)$res["pos"], (int)$this->mInfo["structure_id"]] );
 			}
 			$this->CompleteTrans();
 		}
@@ -711,29 +710,19 @@ class LibertyStructure extends LibertyBase {
 		if( $this->isValid() ) {
 			$this->StartTrans();
 			$query = "select `structure_id`, `pos` from `".BIT_DB_PREFIX."liberty_structures` where `pos`<? and `parent_id`=? order by `pos` desc";
-			$result = $this->mDb->query($query,array((int)$this->mInfo["pos"], (int)$this->mInfo["parent_id"]));
+			$result = $this->mDb->query($query,[(int)$this->mInfo["pos"], (int)$this->mInfo["parent_id"]]);
 			$res = $result->fetchRow();
 			if ($res) {
 				//Swap position values
 				$query = "update `".BIT_DB_PREFIX."liberty_structures` set `pos`=? where `structure_id`=?";
-				$this->mDb->query($query,array((int)$res["pos"], (int)$this->mInfo["structure_id"]) );
-				$this->mDb->query($query,array((int)$this->mInfo["pos"], (int)$res["structure_id"]) );
+				$this->mDb->query($query,[(int)$res["pos"], (int)$this->mInfo["structure_id"]] );
+				$this->mDb->query($query,[(int)$this->mInfo["pos"], (int)$res["structure_id"]] );
 			}
 			$this->CompleteTrans();
 		}
 	}
 
-
-
-
-
-
-
-
-
 	// ============== OLD struct_lib STUFF
-
-
 
 	public function removeStructureNode( $structure_id, $delete=false ) {
 		// Now recursively remove
@@ -883,7 +872,6 @@ class LibertyStructure extends LibertyBase {
 		return $ret;
 	}
 
-
 	/**
 	 * buildSubtreeToc
 	 *
@@ -895,7 +883,7 @@ class LibertyStructure extends LibertyBase {
 	public function buildSubtreeToc( $id, $order='asc', $tocPrefix='', $pPrefixDepth=1, $pDepth=1 ) {
 		global $gLibertySystem, $gBitSystem;
 		$back = [];
-		$cant = $this->mDb->getOne("select count(*) from `".BIT_DB_PREFIX."liberty_structures` where `parent_id`=?",array((int)$id));
+		$cant = $this->mDb->getOne("select count(*) from `".BIT_DB_PREFIX."liberty_structures` where `parent_id`=?",[(int)$id]);
 		if ($cant) {
 			$query = "SELECT `structure_id`, `root_structure_id`, `parent_id`, `page_alias`, `pos`, `structure_level`, lc.`user_id`, lc.`title`, lc.`content_type_guid`, uu.`login`, uu.`real_name`, lc.`content_id`, lc.`last_modified`, lct.*
 					  FROM `".BIT_DB_PREFIX."liberty_structures` ls
@@ -904,7 +892,7 @@ class LibertyStructure extends LibertyBase {
 						LEFT JOIN `".BIT_DB_PREFIX."users_users` uu ON ( uu.`user_id` = lc.`user_id` )
 					  WHERE `parent_id`=?
 					  ORDER BY ".$this->mDb->convertSortmode("pos_".$order);
-			$result = $this->mDb->query($query,array((int)$id));
+			$result = $this->mDb->query($query,[(int)$id]);
 			$prefix = 1;
 			$contentTypes = $gLibertySystem->mContentTypes;
 			while ($res = $result->fetchRow()) {
@@ -1011,7 +999,7 @@ class LibertyStructure extends LibertyBase {
 	 * @param int $structure_id
 	 * @param bool $deep
 	 * @return int
-	 */ 
+	 */
 	public function getNextStructureNode($structure_id, $deep = true) {
 		// If we have children then get the first child
 		if ($deep) {
@@ -1019,7 +1007,7 @@ class LibertyStructure extends LibertyBase {
 					   FROM `".BIT_DB_PREFIX."liberty_structures` ls
 					   WHERE `parent_id`=?
 					   ORDER BY ".$this->mDb->convertSortmode("pos_asc");
-			$result1 = $this->mDb->query($query,array((int)$structure_id));
+			$result1 = $this->mDb->query($query,[(int)$structure_id]);
 
 			if ($result1->numRows()) {
 				$res = $result1->fetchRow();
@@ -1039,15 +1027,15 @@ class LibertyStructure extends LibertyBase {
 				   FROM `".BIT_DB_PREFIX."liberty_structures` ls
 				   WHERE `parent_id`=? and `pos`>?
 				   ORDER BY ".$this->mDb->convertSortmode("pos_asc");
-		$result2 = $this->mDb->query($query,array((int)$parent_id, (int)$page_pos));
+		$result2 = $this->mDb->query($query,[(int)$parent_id, (int)$page_pos]);
 
 		if ($result2->numRows()) {
 			$res = $result2->fetchRow();
 			return $res["structure_id"];
 		}
-		else {
+
 			return $this->getNextStructureNode($parent_id, false);
-		}
+
 	}
 
 	/**
@@ -1064,7 +1052,7 @@ class LibertyStructure extends LibertyBase {
 			$query .= "from `".BIT_DB_PREFIX."liberty_structures` ls ";
 			$query .= "where `parent_id`=? ";
 			$query .= "order by ".$this->mDb->convertSortmode("pos_desc");
-			$result = $this->mDb->query($query,array($structure_id));
+			$result = $this->mDb->query($query,[$structure_id]);
 
 			if ($result->numRows()) {
 				//There are more children
@@ -1086,7 +1074,7 @@ class LibertyStructure extends LibertyBase {
 		$query .= "from `".BIT_DB_PREFIX."liberty_structures` ls ";
 		$query .= "where `parent_id`=? and `pos`<? ";
 		$query .= "order by ".$this->mDb->convertSortmode("pos_desc");
-		$result =  $this->mDb->query($query,array((int)$parent_id, (int)$pos));
+		$result =  $this->mDb->query($query,[(int)$parent_id, (int)$pos]);
 
 		if ($result->numRows()) {
 			//There is a previous sibling
@@ -1112,7 +1100,7 @@ class LibertyStructure extends LibertyBase {
 			FROM `".BIT_DB_PREFIX."liberty_structures` ls, `".BIT_DB_PREFIX."liberty_content` lc
 			WHERE ls.`content_id` = lc.`content_id` AND `parent_id`=? ";
 		$query .= "order by ".$this->mDb->convertSortmode("pos_asc");
-		$result = $this->mDb->query($query,array((int)$pParentId));
+		$result = $this->mDb->query($query,[(int)$pParentId]);
 		while ($res = $result->fetchRow()) {
 			//$ret[] = $this->populate_page_info($res);
 			$ret[] = $res;

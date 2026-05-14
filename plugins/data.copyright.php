@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -41,7 +42,7 @@ $pluginParams = [
 	'description' => KernelTools::tra("This plugin is used to insert CopyRight notices."),
 	'help_function' => '\data_copyright_help',
 	'syntax' => "{COPYRIGHT title= year= authors= }",
-	'plugin_type' => DATA_PLUGIN
+	'plugin_type' => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATACOPYRIGHT, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATACOPYRIGHT );
@@ -97,9 +98,9 @@ function data_copyright($data, $params) { // Pre-Clyde Changes
 		$pos2 = strlen($data) - $pos1;
 		$authors = substr( $data, $pos1, $pos2);
 	} else {
-		$title = isset( $title) ? $title : ' ';
-		$year = isset( $year) ? $year : ' ';
-		$authors = isset( $authors) ? $authors : ' ';
+		$title = $title ?? ' ';
+		$year = $year ?? ' ';
+		$authors = $authors ?? ' ';
 	}
 	$ret = 'The plugin <strong>"' . $pluginParams['tag'] . '"</strong> has not been completed as yet. ';
 	return $ret;

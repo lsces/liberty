@@ -6,8 +6,7 @@
  */
 
  namespace Bitweaver\Liberty;
- use Bitweaver\KernelTools;
- 
+
 /**
  * definitions ( guid character limit is 16 chars )
  */
@@ -15,7 +14,7 @@ define( 'PLUGIN_GUID_FILTERHTMLPURIFIER', 'filterhtmlpure' );
 
 global $gLibertySystem;
 
-$pluginParams = array (
+$pluginParams =  [
 	// plugin title
 	'title'                    => 'HTMLPurifier',
 	// help page on bitweaver org that explains this plugin
@@ -38,7 +37,7 @@ $pluginParams = array (
 	//	'presplit_function'  => '\Bitweaver\Liberty\htmlpure_filter',
 	// called after the data has been parsed if there is a split
 	'postsplit_function' => '\Bitweaver\Liberty\htmlpure_filter',
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_FILTERHTMLPURIFIER, $pluginParams );
 
 function htmlpure_filter( &$pString, &$pFilterHash, $pObject ) {
@@ -47,7 +46,7 @@ function htmlpure_filter( &$pString, &$pFilterHash, $pObject ) {
 	if (!isset($gHtmlPurifier)) {
 		$pear_version = false;
 
-		if (@include_once "PEAR.php") {		
+		if (@include_once "PEAR.php") {
 			if(@include_once UTIL_PKG_INCLUDE_PATH."/htmlpurifier-4.15.0/library/HTMLPurifier.php") {
 				// for backward compatibility checks
 				$htmlp_version = null;
@@ -61,11 +60,10 @@ function htmlpure_filter( &$pString, &$pFilterHash, $pObject ) {
 
 				$config = htmlpure_getDefaultConfig( $htmlp_version, $pObject );
 
-
 				// As suggested here:  https://www.bitweaver.org/forums/index.php?t=8554
 				$gHtmlPurifier = new \HTMLPurifier($config);
 
-				// how plugins are registered changed in v3.1 
+				// how plugins are registered changed in v3.1
 				// old way of adding plugins before v3.1
 				if ( !$htmlp_version >= 3.1 ) {
 					htmlpure_legacyAddFilters();
@@ -75,7 +73,7 @@ function htmlpure_filter( &$pString, &$pFilterHash, $pObject ) {
 	}
 
 	// Did we manage to create one?
-	if (isset($gHtmlPurifier)) { 
+	if (isset($gHtmlPurifier)) {
 		/* Clean up the paragraphs a bit */
 		//		$start = $pData;
 		$pString = htmlpure_cleanupPeeTags($pString);
@@ -103,8 +101,8 @@ function htmlpure_filter( &$pString, &$pFilterHash, $pObject ) {
 
 		// If we have another parse step they may be escaping
 		// entities so change quotes back.
-		if (empty($pFilterHash['format_guid']) || 
-		    $pFilterHash['format_guid'] != 'bithtml') {
+		if (empty($pFilterHash['format_guid']) ||
+			$pFilterHash['format_guid'] != 'bithtml') {
 		  $pString = preg_replace('|&quot;|', '"', $pString);
 		  $pString = preg_replace('|&#039;|', "'", $pString);
 		}
@@ -140,7 +138,6 @@ function htmlpure_getDefaultConfig( &$htmlp_version, $pObject=null ){
 	//$config->set('HTML.DefinitionRev', 1);
 	//$config->set('Cache.DefinitionImpl', null); // remove this later!
 
-
 	// Set the cache path
 	$config->set('Cache.SerializerPath', rtrim( TEMP_PKG_PATH, '/' ) );
 
@@ -171,7 +168,7 @@ function htmlpure_getDefaultConfig( &$htmlp_version, $pObject=null ){
 					INNER JOIN `".BIT_DB_PREFIX."users_group_permissions` ugp ON (ugp.`group_id`=ugm.`group_id`) 
 				  WHERE ugm.`user_id`=? AND (ugp.`perm_name`=? OR ugp.`perm_name`='p_admin')";
 		// cache for 15 minutes
-		$hasAdmin = $pObject->mDb->getOne( $query, array( $pObject->getField( 'modifier_user_id' ), $pObject->mAdminContentPerm ), null, null, 900 );
+		$hasAdmin = $pObject->mDb->getOne( $query, [ $pObject->getField( 'modifier_user_id' ), $pObject->mAdminContentPerm ], null, null, 900 );
 	}
 
 	if( $hasAdmin ) {
@@ -179,11 +176,11 @@ function htmlpure_getDefaultConfig( &$htmlp_version, $pObject=null ){
 		$config->set( 'CSS.AllowTricky', true );
 
 		$css = $config->getCSSDefinition();
-        $css->info['position'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_Enum(['absolute', 'fixed', 'relative', 'static', 'inherit'] ) ] );
-        $css->info['top'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_CSS_Length() ] );
-        $css->info['left'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_CSS_Length() ] );
-        $css->info['bottom'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_CSS_Length() ] );
-        $css->info['right'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_CSS_Length() ] );
+		$css->info['position'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_Enum(['absolute', 'fixed', 'relative', 'static', 'inherit'] ) ] );
+		$css->info['top'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_CSS_Length() ] );
+		$css->info['left'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_CSS_Length() ] );
+		$css->info['bottom'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_CSS_Length() ] );
+		$css->info['right'] = new \HTMLPurifier_AttrDef_CSS_Composite([ new \HTMLPurifier_AttrDef_CSS_Length() ] );
 //$def =& $config->getHTMLDefinition();
 //$def->addAttribute('a', 'target', 'Enum#_blank,_self,_target,_top');
 	} else {
@@ -277,7 +274,7 @@ function htmlpure_legacyAddFilters(){
 function htmlpure_cleanupPeeTags( $pee ) {
 
 	// Convert us some form feeds for better cross platform support
-	$pee = str_replace(array("\r\n", "\r"), "\n", $pee);
+	$pee = str_replace(["\r\n", "\r"], "\n", $pee);
 
 	// Strip out lots of duplicate newlines now
 	$pee = preg_replace("#\n\n+#", "\n\n", $pee);
@@ -292,7 +289,7 @@ function htmlpure_cleanupPeeTags( $pee ) {
 	$pee = preg_replace('#(<pre.*?(?:[^>]*)>)(.*?)</pre>#si',
 		" '$1' . preg_replace('#<br[\s/]*(?:[^>]*)/>#', '"."\n"."',
 		preg_replace('#<p[\s]*(?:[^>]*)>#', '"."\n"."',
-		preg_replace('#</p[\s]*(?:[^>]*)>#', '', '$2'))). '</pre>'", $pee);
+		preg_replace('#</p[\s]*(?:[^>]*)>#', '', '$2'))). '</pre>'", $pee, );
 
 	// Fixup align divs so we can keep them.
 	$pee = preg_replace('#<div(.*?)align="(.*?)"(.*?)>#', '<div$1style="text-align:$2;"$3>', $pee);

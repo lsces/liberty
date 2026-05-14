@@ -6,8 +6,9 @@
  */
 
  namespace Bitweaver\Liberty;
+
  use Bitweaver\KernelTools;
- 
+
 /**
  * definitions ( guid character limit is 16 chars )
  */
@@ -42,11 +43,11 @@ function backtotop_postparsefilter( &$pData, &$pFilterHash ) {
 		$params['max'] = 6;
 		$params = array_merge( $params, KernelTools::parse_xml_attributes( $backtotop[1] ));
 
-		$biticon = array(
+		$biticon = [
 			'ipackage' => 'icons',
 			'iname'    => 'go-top',
 			'iexplain' => 'Back to top',
-		);
+		];
 
 		// get all headers into an array
 		preg_match_all( "/<h(\d[^>]*)>.*?<\/h\d>/i", $pData, $headers );

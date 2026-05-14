@@ -57,7 +57,7 @@ if( empty( $contentListHash ) ) {
 		'thumbnail_size'    => !empty( $_REQUEST["thumbnail_size"] ) ? $_REQUEST["thumbnail_size"] : null,
 	];
 
-	if( !empty( $_REQUEST['output'] ) && ( $_REQUEST['output'] == 'json' || $_REQUEST['output'] == 'ajax' ) ) {	
+	if( !empty( $_REQUEST['output'] ) && ( $_REQUEST['output'] == 'json' || $_REQUEST['output'] == 'ajax' ) ) {
 		foreach( $_REQUEST as $key => $value ) {
 			if ( !is_array($value) ){
 				if( strstr( $value, ',' ) ) {

@@ -1,7 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
-use Bitweaver\Liberty\LibertyBase;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -39,7 +39,7 @@ $pluginParams = [
 	'description' => KernelTools::tra("Will join the contents from several sources in a Tabbed Interface."),
 	'help_function' => 'data_addjstabs_help',
 	'syntax' => "{ADDTABS tab1= tab2= tab3= . . . tab99= }",
-	'plugin_type' => DATA_PLUGIN
+	'plugin_type' => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAADDJSTABS, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAADDJSTABS );
@@ -97,7 +97,7 @@ function data_addjstabs($data, $params) {
 	}
 	if( !empty( $html )) {
 		return \Bitweaver\Liberty\smarty_block_jstabs( [], $html, $gBitSmarty, '' );
-	} else {
-		return $html;
 	}
+		return $html;
+
 }

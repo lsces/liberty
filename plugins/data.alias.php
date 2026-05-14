@@ -1,7 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
-use Bitweaver\Liberty\LibertyContent;
+
 use Bitweaver\Wiki\BitPage;
 use Bitweaver\KernelTools;
 
@@ -30,7 +30,7 @@ $pluginParams = [
 	'description' => KernelTools::tra( "This plugin allows you to easily create an alias for a page." ),
 	'help_function' => '\data_alias_help',
 	'syntax' => "{alias page='title'}",
-	'plugin_type' => DATA_PLUGIN
+	'plugin_type' => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAalias, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAalias );

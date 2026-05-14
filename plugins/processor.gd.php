@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -67,7 +68,6 @@ function liberty_gd_resize_image( &$pFileHash ) {
 			$t = imagecreate( $tw, $ty );
 			//$imagegallib->ImageCopyResampleBicubic($t, $img, 0, 0, 0, 0, $tw, $ty, $size_x, $size_y);
 		}
-
 
 		// override $mimeExt if we have a custom setting for it
 		if( $gBitSystem->isFeatureActive( 'liberty_thumbnail_format' )) {
@@ -194,9 +194,9 @@ function get_gd_version( $pFullVersion = false ) {
 
 	if( $pFullVersion ) {
 		return $_SESSION['gd_version'];
-	} else {
-		return preg_replace( "!^(\d)+.*$!", "$1", $_SESSION['gd_version'] );
 	}
+		return preg_replace( "!^(\d)+.*$!", "$1", $_SESSION['gd_version'] );
+
 }
 
 // nicked from http://at2.php.net/manual/en/function.gd-info.php
@@ -212,7 +212,7 @@ if( !function_exists( 'gd_info' )) {
 			"JPG Support"        => 0,
 			"PNG Support"        => 0,
 			"WBMP Support"       => 0,
-			"XBM Support"        => 0
+			"XBM Support"        => 0,
 		];
 		$gif_support = 0;
 

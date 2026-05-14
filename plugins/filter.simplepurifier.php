@@ -17,7 +17,7 @@ global $gLibertySystem;
 // Set of default acceptable HTML tags
 define( 'DEFAULT_ACCEPTABLE_TAGS', '<a><br><blockquote><cite><code><div><dd><dl><dt><em><h1><h2><h3><h4><hr>'
 		.'<it><img><li><ol><p><pre><span><strong><table><tbody><div><tr><td><th><u><ul>'
-		.'<button><fieldset><form><label><input><option><select><textarea>' );
+		.'<button><fieldset><form><label><input><option><select><textarea>', );
 
 $pluginParams = [
 	// plugin title

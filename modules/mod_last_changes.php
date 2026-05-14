@@ -34,13 +34,13 @@ if( !empty( $module_params['show_date'] ) ) {
 
 $gBitSmarty->assign( 'contentType', !empty( $module_params['content_type_guid'] ) );
 
-$listHash = array(
+$listHash = [
 	'content_type_guid' => !empty( $module_params['content_type_guid'] ) ? $module_params['content_type_guid'] : null,
 	'offset' => 0,
 	'max_records' => $module_rows,
 	'sort_mode' => 'last_modified_desc',
 	'user_id' => $userId,
-);
+];
 $modLastContent = $gBitUser->getContentList( $listHash );
 $gBitSmarty->assign( 'modLastContent', $modLastContent );
 ?>

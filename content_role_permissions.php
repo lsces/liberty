@@ -9,6 +9,7 @@
  * bit setup
  */
 namespace Smarty;
+
 use Bitweaver\BitBase;
 use Bitweaver\HttpStatusCodes;
 
@@ -108,4 +109,4 @@ if( $gBitThemes->isAjaxRequest() ) {
 	die;
 }
 
-$gBitSystem->display( 'bitpackage:liberty/content_role_permissions.tpl', tra( 'Content Permissions' ), array( 'display_mode' => 'display' ));
+$gBitSystem->display( 'bitpackage:liberty/content_role_permissions.tpl', tra( 'Content Permissions' ), [ 'display_mode' => 'display' ]);

@@ -1,8 +1,8 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
-use Bitweaver\Liberty\LibertyContent;
 
 /**
  * @version  $Revision$
@@ -37,7 +37,6 @@ $pluginParams = [
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAJSTABS, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAJSTABS );
 
-
 function data_jstabs( $pData, $pParams, $pCommonObject ) {
 	global $gBitSmarty;
 
@@ -67,9 +66,9 @@ function data_jstabs( $pData, $pParams, $pCommonObject ) {
 
 	if( !empty( $html )) {
 		return \Bitweaver\Liberty\smarty_block_jstabs( [], $html, $gBitSmarty, '' );
-	} else {
-		return ' ';
 	}
+		return ' ';
+
 }
 
 function data_jstabs_help() {

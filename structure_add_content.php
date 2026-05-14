@@ -33,9 +33,9 @@ if( !empty( $_SERVER['HTTP_REFERER'] ) ) {
 
 if( $gBitThemes->isAjaxRequest() ) {
 	header( 'Content-Type: text/html; charset=utf-8' );
-	print $gBitSmarty->fetch( "bitpackage:liberty/structure_add_feedback_inc.tpl" ); 
+	print $gBitSmarty->fetch( "bitpackage:liberty/structure_add_feedback_inc.tpl" );
 	exit;
-} else {
+}
 
 	$_REQUEST['thumbnail_size'] = 'icon';
 	include_once( LIBERTY_PKG_INCLUDE_PATH.'get_content_list_inc.php' );
@@ -62,6 +62,5 @@ if( $gBitThemes->isAjaxRequest() ) {
 			bit_redirect( $gContent->getDisplayUri() );
 		}
 	}
-	$gBitSystem->display( 'bitpackage:liberty/structure_add_content.tpl', "Add Content" , array( 'display_mode' => 'display' ));
-}
+	$gBitSystem->display( 'bitpackage:liberty/structure_add_content.tpl', "Add Content" , [ 'display_mode' => 'display' ]);
 

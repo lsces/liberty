@@ -22,6 +22,7 @@
  * required setup
  */
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 use Bitweaver\BitCacheable;
 use Bitweaver\BitSystem;
@@ -131,7 +132,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		// new feature, cache by default in development systems only
 		return !$gBitSystem->isLive();
 	}
-
 
 	public function isCacheableObject() {
 		return parent::isCacheableObject() && !empty( $this->mContentId );
@@ -410,7 +410,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			// store any messages in the logs
 			$this->storeActionLog( $pParamHash );
 
-
 			$this->CompleteTrans();
 		}
 		return count( $this->mErrors ) == 0;
@@ -432,7 +431,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			}
 		}
 		parent::expunge();
-		return;
+
 	}
 
 	/**
@@ -636,8 +635,8 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			$data = [];
 			while( !$result->EOF ) {
 				$aux = $result->fields;
-				$aux['creator'] = isset( $aux['creator_real_name'] ) ? $aux['creator_real_name'] : $aux['creator_user'];
-				$aux['editor'] = isset( $aux['modifier_real_name'] ) ? $aux['modifier_real_name'] : $aux['modifier_user'];
+				$aux['creator'] = $aux['creator_real_name'] ?? $aux['creator_user'];
+				$aux['editor'] = $aux['modifier_real_name'] ?? $aux['modifier_user'];
 				$data[] = $aux;
 				//array_push( $ret, $aux );
 				$result->MoveNext();
@@ -676,10 +675,10 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 				$res = $result->fetchRow();
 				$this->rollbackVersion( $res["version"] );
 				$this->expungeVersion( $res["version"] );
-			} else {
+			}
 // @TODO Build missing function
 //				$this->remove_all_versions($page);
-			}
+
 			$action = "Removed last version";
 			$t = $gBitSystem->getUTCTime();
 			$query = "insert into `".BIT_DB_PREFIX."liberty_action_log`( `log_message`, `content_id`, `last_modified`, `user_id`, `ip`, `error_message`) values( ?, ?, ?, ?, ?, ?)";
@@ -842,7 +841,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		} elseif( $this->isValid() && @$this->verifyId( $this->mInfo['user_id'] ?? 0 ) ) {
 			$user_id = $this->mInfo['user_id'];
 		} else {
-		    $user_id = ANONYMOUS_USER_ID;
+			$user_id = ANONYMOUS_USER_ID;
 	   }
 	   return $user_id != ANONYMOUS_USER_ID && BitBase::verifyId( $user_id ) && $user_id == $gBitUser->mUserId;
 	}
@@ -1180,7 +1179,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		}
 	}
 
-
 	// -------------------------------- Content Permission Functions
 
 	/**
@@ -1370,7 +1368,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 					INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON( lcperm.`content_id`=lc.`content_id` )
 					LEFT OUTER JOIN `".BIT_DB_PREFIX."users_permissions` up ON( up.`perm_name`=lcperm.`perm_name` )
 				ORDER BY ".$gBitSystem->mDb->convertSortmode( 'content_type_guid_asc' ).", ".$gBitSystem->mDb->convertSortmode( 'title_asc' );
-	
+
 		$perms = $gBitSystem->mDb->getAll( $query );
 		foreach( $perms as $perm ) {
 			$ret[$perm['content_type_guid']][$perm['content_id']][] = $perm;
@@ -1468,9 +1466,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gBitSystem;
 		if( $this->hasAdminPermission( $pVerifyAccessControl ) ) {
 			return true;
-		} else {
-			$gBitSystem->fatalPermission( $this->mAdminContentPerm );
 		}
+			$gBitSystem->fatalPermission( $this->mAdminContentPerm );
+
 		return false;
 	}
 
@@ -1493,9 +1491,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gBitSystem;
 		if( $this->hasExpungePermission( $pVerifyAccessControl ) ) {
 			return true;
-		} else {
-			$gBitSystem->fatalPermission( $this->mExpungeContentPerm );
 		}
+			$gBitSystem->fatalPermission( $this->mExpungeContentPerm );
+
 		return false;
 	}
 
@@ -1530,9 +1528,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gBitSystem;
 		if( $this->hasUpdatePermission( $pVerifyAccessControl ) ) {
 			return true;
-		} else {
-			$gBitSystem->fatalPermission( $this->mUpdateContentPerm );
 		}
+			$gBitSystem->fatalPermission( $this->mUpdateContentPerm );
+
 		return false;
 	}
 
@@ -1565,9 +1563,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gBitSystem;
 		if( !$this->isValid() && $this->hasCreatePermission( $pVerifyAccessControl ) ) {
 			return true;
-		} else {
-			$gBitSystem->fatalPermission( $this->mCreateContentPerm );
 		}
+			$gBitSystem->fatalPermission( $this->mCreateContentPerm );
+
 		return false;
 	}
 
@@ -1593,9 +1591,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gBitSystem;
 		if( $this->hasViewPermission( $pVerifyAccessControl ) ) {
 			return true;
-		} else {
-			$gBitSystem->fatalPermission( $this->mViewContentPerm );
 		}
+			$gBitSystem->fatalPermission( $this->mViewContentPerm );
+
 		return false;
 	}
 
@@ -1617,7 +1615,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 */
 	public function verifyPostCommentsPermission( $pVerifyAccessControl=true ) {
 		global $gBitSystem;
-// @TODO Missing function 
+// @TODO Missing function
 /*		if( $this->hasPostCommentPermission( $pVerifyAccessControl ) ) {
 			return true;
 		} else {
@@ -1759,7 +1757,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		return false;
 	}
 
-
 	// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Preferences Functions
 
 	/**
@@ -1831,7 +1828,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	public function setPreference( $pPrefName, $pPrefValue ) {
 		$this->mPrefs[$pPrefName] = $pPrefValue;
 	}
-
 
 	/**
 	 * Saves a preference to the liberty_content_prefs database table with the given pref name and value. If the value is null, the existing value will be delete and the value will not be saved. However, a zero will be stored. This will update the mPrefs hash.
@@ -1916,7 +1912,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		}
 		return true;
 	}
-
 
 	/**
 	 * Get Hits and Last Hit
@@ -2062,7 +2057,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * Get the display name of the content type
 	 * @param boolean $pPlural true will return the plural form of the content type display name
 	 * @return string the display name of the content type
- 	 */
+	 */
 	public function getContentTypeName( $pPlural=false ){
 		global $gLibertySystem;
 		return $gLibertySystem->getContentTypeName( $this->getContentType(), $pPlural );
@@ -2090,7 +2085,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		KernelTools::deprecated( 'You are calling the deprecated method getContentDescription, use getContentTypeName( $pPlural )' );
 		return $this->getContentTypeName();
 	}
-
 
 	/**
 	 * returns a path to the template type requested
@@ -2233,7 +2227,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		return $ret;
 	}
 
-
 	/**
 	 * Not-so-pure virtual function that returns Request_URI to the preview.
 	 * @param string Text for DisplayLink function
@@ -2253,7 +2246,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		return $ret;
 	}
 
-
 	/**
 	 * Not-so-pure virtual function that returns Request_URI to a content's thumbnail representation. It is up to the derived content what exactly this means
 	 * If not implemented in the content's class, this class will return null, which is an acceptable case meaning no thumbnail is available.
@@ -2271,7 +2263,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		return '';
 	}
 
-
 	public static function getThumbnailUrlFromHash( array &$pMixed, string $pSize = 'small', ?int $pSecondaryId = null, ?int $pDefault = null ): string {
 		$ret = '';
 		if( !empty( $pMixed['content_type']['handler_package'] ) ) {
@@ -2284,7 +2275,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		}
 		return $ret;
 	}
-
 
 	public function getThumbnailUri( string $pSize='small' ) {
 		if( $this->isValid() ) {
@@ -2301,7 +2291,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		return $ret;
 	}
 
-
 	public function getThumbnailFile( $pSize='small' ) {
 		if( $this->isValid() ) {
 			return $this->getThumbnailFileFromHash( $this->mInfo, $pSize );
@@ -2316,7 +2305,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		}
 		return BIT_ROOT_PATH.$ret;
 	}
-
 
 	/**
 	 * Validate inbound sort_mode parameter
@@ -2358,7 +2346,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		return $this->mDb->convertSortmode( $pSortMode );
 	}
 
-
 	/**
 	 * Liberty override to stuff content_status_id and prepares parameters with default values for any getList function
 	 * @param array pListHash hash of parameters for any getList() function
@@ -2366,9 +2353,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 */
 	public static function prepGetList( array &$pListHash ): void {
 		global $gBitUser;
-		$pListHash['min_content_status_id'] = $gBitUser->isAdmin() ? -9999 : 1; 
-//		if( !empty( $this ) && is_object( $this ) ) { 
-//			$pListHash['min_content_status_id'] = $this->hasAdminPermission() ? -999 
+		$pListHash['min_content_status_id'] = $gBitUser->isAdmin() ? -9999 : 1;
+//		if( !empty( $this ) && is_object( $this ) ) {
+//			$pListHash['min_content_status_id'] = $this->hasAdminPermission() ? -999
 //				: $this->hasUpdatePermission() ? -99 : 1;
 //		}
 
@@ -2485,7 +2472,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		}
 
 		$selectSql = !empty( $hashSql['select'] ) ? ','.implode( ',', $hashSql['select'] ) : '';
-	
+
 		$joinSql = implode( ' ', $hashSql['join'] );
 		if( !empty( $pListHash['join_sql'] ) ) {
 			$joinSql .= $pListHash['join_sql'];
@@ -2724,7 +2711,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			$pListHash['offset'] = $pListHash['max_records'] * $lastPageNumber;
 		}
 
-
 		if( !empty( $hashBindVars['select'] ) ) {
 			$bindVars = array_merge($hashBindVars['select'], $bindVars);
 		}
@@ -2737,9 +2723,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 				// quick alias for code readability
 				$type                       = &$contentTypes[$aux['content_type_guid']];
 				$aux['content_name'] 		= $type['content_name'];
-				$aux['creator']             = isset( $aux['creator_real_name'] ) ? $aux['creator_real_name'] : $aux['creator_user'];
-				$aux['real_name']           = isset( $aux['creator_real_name'] ) ? $aux['creator_real_name'] : $aux['creator_user'];
-				$aux['editor']              = isset( $aux['modifier_real_name'] ) ? $aux['modifier_real_name'] : $aux['modifier_user'];
+				$aux['creator']             = $aux['creator_real_name'] ?? $aux['creator_user'];
+				$aux['real_name']           = $aux['creator_real_name'] ?? $aux['creator_user'];
+				$aux['editor']              = $aux['modifier_real_name'] ?? $aux['modifier_user'];
 				$aux['user']                = $aux['creator_user'];
 				$aux['user_id']             = $aux['creator_user_id'];
 				if( !empty( $gBitSystem->mPackages[$type['handler_package']] ) ) {
@@ -3251,7 +3237,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gBitSystem;
 		$ret = null;
 		if( is_file( $pCacheFile ) && ( time() - filemtime( $pCacheFile )) < $gBitSystem->getConfig('liberty_cache') && filesize( $pCacheFile ) > 0 ) {
-		    // get contents from cacgmstrftime(he file
+			// get contents from cacgmstrftime(he file
 			$h = fopen( $pCacheFile, 'r' );
 			$ret = fread( $h, filesize( $pCacheFile ) );
 			fclose( $h );
@@ -3287,9 +3273,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	public static function getCacheFile( $pContentId = null, $pCacheExtension = null ) {
 		if( $ret = LibertyContent::getCachePath( $pContentId ) ) {
 			return $ret.$pContentId.( !empty( $pCacheExtension ) ? '.'.$pCacheExtension : '');
-		} else {
-			return false;
 		}
+			return false;
+
 	}
 
 	/**
@@ -3559,7 +3545,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 
 		while( $aux = $result->fetchRow() ) {
 			$aux['user']         = $aux['modifier_user'];
-			$aux['editor']       = isset( $aux['modifier_real_name'] ) ? $aux['modifier_real_name'] : $aux['modifier_user'];
+			$aux['editor']       = $aux['modifier_real_name'] ?? $aux['modifier_user'];
 			$aux['display_name'] = RoleUser::getDisplayNameFromHash( $aux );
 			$ret[]               = $aux;
 		}
@@ -3603,9 +3589,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gBitUser;
 		if( $gBitUser->hasPermission( 'p_liberty_edit_all_status' )) {
 			return $this->mDb->getAssoc( "SELECT `content_status_id`,`content_status_name` FROM `".BIT_DB_PREFIX."liberty_content_status` ORDER BY `content_status_id`" );
-		} else {
-			return $this->mDb->getAssoc( "SELECT `content_status_id`, `content_status_name` FROM `".BIT_DB_PREFIX."liberty_content_status` WHERE `content_status_id` > ? AND `content_status_id` < ? ORDER BY `content_status_id`", [ $pUserMinimum, $pUserMaximum ]);
 		}
+			return $this->mDb->getAssoc( "SELECT `content_status_id`, `content_status_name` FROM `".BIT_DB_PREFIX."liberty_content_status` WHERE `content_status_id` > ? AND `content_status_id` < ? ORDER BY `content_status_id`", [ $pUserMinimum, $pUserMaximum ]);
+
 	}
 
 	/**
@@ -3749,10 +3735,10 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	public function isCommentable() {
 		if( $this->getPreference( 'allow_comments' ) == 'y' ) {
 			return true;
-		} else {
+		}
 			$setting = $this->getField( 'allow_comments' );
 			return $setting == true || $setting == 'y';
-		}
+
 	}
 
 	/**

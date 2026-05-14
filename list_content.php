@@ -53,7 +53,7 @@ if( !empty( $_POST ) ) {
 	}
 	if( !empty( $delUsers ) ) {
 		$feedback['success'][] = KernelTools::tra( 'Content deleted' ).": <ul>$delUsers</ul>";
-	} 
+	}
 	if( !empty( $errDelUsers ) ) {
 		$feedback['error'][] = KernelTools::tra( 'Content not deleted' ).": <ul>$errDelUsers</ul>";
 	}
@@ -79,7 +79,7 @@ $contentListHash['listInfo']['ihash']['content_type_guid'] = $contentSelect;
 $contentListHash['listInfo']['ihash']['user_id'] = BitBase::verifyId( $_REQUEST['user_id'] ?? 0 ) ? $_REQUEST['user_id'] : null;
 $contentListHash['listInfo']['ihash']['find'] = $contentListHash['listInfo']['find'];
 $gBitSmarty->assign( 'listInfo', $contentListHash['listInfo'] );
-$gBitSmarty->assign( 'content_type_guids',  isset( $_REQUEST['content_type_guid'] ) ? $_REQUEST['content_type_guid'] : null );
+$gBitSmarty->assign( 'content_type_guids',  $_REQUEST['content_type_guid'] ?? null );
 
 //depricate 'ajax_xml', use 'output'
 //@todo clean out from other packages

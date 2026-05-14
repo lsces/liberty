@@ -12,9 +12,9 @@
  * Setup
  */
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
-use Bitweaver\Liberty\LibertyMime;
 require_once '../kernel/includes/setup_inc.php';
 
 // fetch the attachment details
@@ -33,7 +33,7 @@ if( $gContent = LibertyBase::getLibertyObject( $attachment['content_id'] ) ) {
 		if( $download_function( $attachment )) {
 			LibertyMime::addDownloadHit( $attachment['attachment_id'] );
 			die;
-		} else {
+		}
 			if( !empty( $attachment['errors'] )) {
 				$msg = '';
 				foreach( $attachment['errors'] as $error ) {
@@ -43,7 +43,7 @@ if( $gContent = LibertyBase::getLibertyObject( $attachment['content_id'] ) ) {
 			} else {
 				$gBitSystem->fatalError( KernelTools::tra( 'There was an undetermined problem trying to prepare the file for download.' ));
 			}
-		}
+
 	} else {
 		$gBitSystem->fatalError( KernelTools::tra( "No suitable download function found." ));
 	}

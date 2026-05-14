@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
 use Holiday\Metadata;
@@ -199,11 +200,11 @@ function mime_image_store_exif_data( $pFileHash ) {
 	if( BitBase::verifyId( $pFileHash['attachment_id'] ) && $exifHash = mime_image_get_exif_data( $upload ) ) {
 		// only makes sense to store the GPS data if we at least have latitude and longitude
 		if( !empty( $exifHash['GPS'] )) {
-		    LibertyMime::storeMetaData( $pFileHash['attachment_id'], $exifHash['GPS'], 'GPS' );
+			LibertyMime::storeMetaData( $pFileHash['attachment_id'], $exifHash['GPS'], 'GPS' );
 		}
 
 		if( !empty( $exifHash['EXIF'] )) {
-		    LibertyMime::storeMetaData( $pFileHash['attachment_id'], $exifHash['EXIF'], 'EXIF' );
+			LibertyMime::storeMetaData( $pFileHash['attachment_id'], $exifHash['EXIF'], 'EXIF' );
 		}
 	}
 

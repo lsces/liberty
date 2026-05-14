@@ -9,10 +9,10 @@
  * bit setup
  */
 namespace Smarty;
+
 use Bitweaver\BitBase;
 use Bitweaver\HttpStatusCodes;
 use Bitweaver\KernelTools;
-use Bitweaver\Liberty\LibertyBase;
 
 require_once '../kernel/includes/setup_inc.php';
 

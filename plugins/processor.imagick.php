@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 use Imagick;
 use ImagickPixel;
@@ -42,7 +43,7 @@ function liberty_imagick_resize_image( &$pFileHash ) {
 	$pFileHash['error'] = null;
 	$ret = null;
 	if( !empty( $pFileHash['source_file'] ) && file_exists( $pFileHash['source_file'] ) && is_file( $pFileHash['source_file'] ) && (filesize( $pFileHash['source_file'] ) > 0) ) {
-		try { 
+		try {
 			$im = new Imagick();
 			$im->readImage( $pFileHash['source_file'] );
 			if( !$im->valid()) {

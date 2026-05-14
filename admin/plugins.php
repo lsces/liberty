@@ -1,5 +1,6 @@
 <?php
 namespace Bitweaver\Liberty;
+
 require_once '../../kernel/includes/setup_inc.php';
 use Bitweaver\KernelTools;
 
@@ -7,7 +8,7 @@ include_once KERNEL_PKG_INCLUDE_PATH.'simple_form_functions_lib.php';
 
 $gBitSystem->verifyPermission( 'p_admin' );
 
-// this will clear out all plugin settings in the database. scanAllPlugins 
+// this will clear out all plugin settings in the database. scanAllPlugins
 // below will then reload all plugins and set them to their default setup.
 if( !empty( $_REQUEST['reset_all_plugins'] ) ) {
 	// because of include_once scenarios in scanAllPlugins, you need two complete page refreshes afternuking the plugin settings
@@ -39,7 +40,6 @@ if( isset( $_REQUEST['pluginsave'] ) && !empty( $_REQUEST['pluginsave'] ) ) {
 	$gBitSystem->storeConfig( 'content_allow_html', !empty( $_REQUEST['content_allow_html'] ) ? $_REQUEST['content_allow_html'] : null, LIBERTY_PKG_NAME );
 	$gBitSystem->storeConfig( 'content_force_allow_html', !empty( $_REQUEST['content_force_allow_html'] ) ? $_REQUEST['content_force_allow_html'] : null, LIBERTY_PKG_NAME );
 }
-
 
 // Sort the plugins to avoild splitting tables
 foreach( $gLibertySystem->mPlugins as $guid => $plugin ) {

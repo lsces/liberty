@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -36,7 +37,7 @@ $pluginParams = [
 	'description' => KernelTools::tra("This Plugin is an Example that does nothing. It functions as a template for the creation of new plugins."),
 	'help_function' => '\data_example_help',
 	'syntax' => "{EXAM x1= x2= }",
-	'plugin_type' => DATA_PLUGIN
+	'plugin_type' => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAEXAMPLE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAEXAMPLE );
@@ -65,7 +66,7 @@ function data_example_help() {
 					.'<br />' . KernelTools::tra( "The Default =") . ' <strong>3</strong> ' . KernelTools::tra( "Which means - What")
 				.'</td>'
 			.'</tr>'
- 		.'</table>'
+		.'</table>'
 		. KernelTools::tra("Example: ") . "{EXAM x1=' ' x2=5 }<br />"
 		. KernelTools::tra("This will display");
 	return $help;

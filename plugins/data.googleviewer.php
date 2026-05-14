@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -25,7 +26,7 @@ $pluginParams = [
 	'description'   => KernelTools::tra( "This plugin allows you to simply embed a PDF document in a page using the embeddable Google Viewer." ),
 	'help_function' => '\data_googleviewer_help',
 	'syntax'        => "{googleviewer url=}",
-	'plugin_type'   => DATA_PLUGIN
+	'plugin_type'   => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAGOOGLEVIEWER, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAGOOGLEVIEWER );
@@ -78,7 +79,7 @@ function data_googleviewer( $pData, $pParams ) {
 
 	if( !empty( $url )) {
 		return '<!--~np~--><iframe width="'.$width.'" height="'.$height.'" style="border:none;" src="http://docs.google.com/viewer?embedded=true&url='.urlencode($url).'"></iframe><!--~/np~-->';
-	} else {
-		return KernelTools::tra( 'No URL given' );
 	}
+		return KernelTools::tra( 'No URL given' );
+
 }

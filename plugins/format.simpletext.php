@@ -22,7 +22,7 @@ $pluginParams = [
 	'edit_field'      => PLUGIN_GUID_SIMPLETEXT,
 	'help_page'       => 'SimpleTextSyntax',
 	'plugin_type'     => FORMAT_PLUGIN,
-	'linebreak'       => '<br />'
+	'linebreak'       => '<br />',
 ];
 
 $gLibertySystem->registerPlugin( PLUGIN_GUID_SIMPLETEXT, $pluginParams );

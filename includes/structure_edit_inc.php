@@ -12,11 +12,10 @@
 // Licensed under the GNU LESSER GENERAL PUBLIC LICENSE. See http://www.gnu.org/copyleft/lesser.html for details.
 
 namespace Bitweaver\Liberty;
+
 require_once '../kernel/includes/setup_inc.php';
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
-use Bitweaver\Liberty\LibertyContent;
-use Bitweaver\Liberty\LibertyStructure;
 
 if( !BitBase::verifyId( $_REQUEST["structure_id"] ) ) {
 	$gBitSystem->fatalError( KernelTools::tra( "No structure indicated" ));

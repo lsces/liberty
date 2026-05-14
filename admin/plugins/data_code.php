@@ -7,7 +7,7 @@ $gBitSystem->verifyPermission( 'p_admin' );
 
 $feedback = [];
 
-$sources = array(
+$sources = [
 	'ASP'          => 'ASP',
 	'ActionScript' => 'ActionScript',
 	'Ada'          => 'Ada',
@@ -62,7 +62,7 @@ $sources = array(
 	'VisualFoxPro' => 'VisualFoxPro',
 	'XML'          => 'XML',
 	'ini'          => 'ini',
-);
+];
 $gBitSmarty->assign( 'sources', $sources );
 
 if( !empty( $_REQUEST['plugin_settings'] )) {
@@ -71,4 +71,4 @@ if( !empty( $_REQUEST['plugin_settings'] )) {
 }
 
 $gBitSmarty->assign( 'feedback', $feedback );
-$gBitSystem->display( 'bitpackage:liberty/plugins/data_code_admin.tpl', KernelTools::tra( 'Data Code Plugin Settings' ), array( 'display_mode' => 'admin' ));
+$gBitSystem->display( 'bitpackage:liberty/plugins/data_code_admin.tpl', KernelTools::tra( 'Data Code Plugin Settings' ), [ 'display_mode' => 'admin' ]);

@@ -1,9 +1,9 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 use Bitweaver\BitBase;
-use Bitweaver\Liberty\LibertyStructure;
 
 /**
  * @version  $Revision$
@@ -44,7 +44,7 @@ $pluginParams = [
 	'plugin_type'   => DATA_PLUGIN,
 	'booticon'       => '{booticon iname="icon-list-ol" iexplain="Structure Table of Contents"}',
 	'taginsert'     => '{toc}',
-	'structure_id'  => 'id of the structure to display'
+	'structure_id'  => 'id of the structure to display',
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATATOC, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATATOC );

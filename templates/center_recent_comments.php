@@ -40,7 +40,7 @@ foreach( $keys as $k ) {
 	if($modLastComments[$k]['parent_content_type_guid'] == 'feedstatus'){ //if comment is a reply to a status, use the poster as the object, otherwise our thumbnail will be of the content we commented on (the other user,status)
 		$user = new BitUser( $modLastComments[$k]['user_id'] );
 		$user->load();
- 		$modLastComments[$k]['object'] = $user;
+		$modLastComments[$k]['object'] = $user;
 	}else{ //If a comment on a piece of content, use piece of content as object in question
 		$modLastComments[$k]['object'] = LibertyBase::getLibertyObject( $modLastComments[$k]['root_id'], $modLastComments[$k]['root_content_type_guid'] );
 	}

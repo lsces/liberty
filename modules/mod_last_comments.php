@@ -19,10 +19,10 @@ if( !empty( $gQueryUser->mUserId ) ) {
 	$userId = $gQueryUser->mUserId;
 }
 
-$listHash = array(
+$listHash = [
 	'user_id' => $userId,
 	'max_records' => $moduleParams['module_rows'],
-);
+];
 
 if (!empty($params['full'])) {
 	$listHash['parse'] = true;

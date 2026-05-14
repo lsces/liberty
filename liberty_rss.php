@@ -12,7 +12,6 @@ require_once "../kernel/includes/setup_inc.php";
 require_once RSS_PKG_INCLUDE_PATH . 'rss_inc.php';
 use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyContent;
-use Bitweaver\Feed\FeedStatus;
 
 $gBitSystem->verifyPackage( 'rss' );
 $gBitSystem->verifyFeature( 'liberty_rss' );
@@ -55,7 +54,7 @@ foreach( $feeds as $feed ) {
 
 	$item->date = ( int )$feed['last_modified'];
 	$item->source = 'http://'.$_SERVER['HTTP_HOST'].LIBERTY_PKG_URL.'/list_content.php';
-	$item->author = $gBitUser->getDisplayName( false, array( 'real_name' => $feed['modifier_real_name'], 'login' => $feed['modifier_user'] ) );
+	$item->author = $gBitUser->getDisplayName( false, [ 'real_name' => $feed['modifier_real_name'], 'login' => $feed['modifier_user'] ] );
 
 	$item->descriptionTruncSize = $gBitSystem->getConfig( 'rssfeed_truncate', 5000 );
 	$item->descriptionHtmlSyndicated = false;

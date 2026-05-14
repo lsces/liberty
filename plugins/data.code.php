@@ -1,7 +1,6 @@
 <?php
 
 namespace Bitweaver;
-use Bitweaver\KernelTools;
 
 /**
  * @version  $Revision$
@@ -155,7 +154,6 @@ if( !function_exists( 'deCodeHTML' )) { // avoid name collisions
 	}
 }
 
-
 // Load Function
 function data_code( $pData, $pParams ) { // Pre-Clyde Changes
 	global $gBitSystem;
@@ -181,7 +179,7 @@ function data_code( $pData, $pParams ) { // Pre-Clyde Changes
 			break;
 		}
 	}
-	$num = isset( $num ) ? $num : false;
+	$num = $num ?? false;
 
 	// trim any trailing spaces
 	$code = '';
@@ -241,7 +239,7 @@ function data_code( $pData, $pParams ) { // Pre-Clyde Changes
 				}
 				$code = highlight_string( $code, true );
 				// Replacement-map to replace Colors
-				$convmap = array(
+				$convmap = [
 					// The Default Color
 					'#000000">' => '#004A4A">',
 					// Color for Functions/Variables/Numbers/&/Constants
@@ -251,8 +249,8 @@ function data_code( $pData, $pParams ) { // Pre-Clyde Changes
 					// Color for Constants
 					'#FF9900">' => '#BB4040">',
 					// Color for Strings
-					'#CC0000">' => '#903030">'
-				);
+					'#CC0000">' => '#903030">',
+				];
 				// <-- # Assigned by HighLight_String / --> # Color to be Displayed
 				// NOTE: The colors assigned by HighLight_String have changed with different versions of PHP - these are for PHP 4.3.4
 				// Change the Colors

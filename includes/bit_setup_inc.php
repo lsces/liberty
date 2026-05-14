@@ -8,6 +8,7 @@
  * @subpackage functions
  */
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
 
@@ -37,8 +38,8 @@ if( $gLibertySystem->mDb->isValid() ) { // install condition check
 	}
 }
 
-$gLibertySystem->registerService( 'liberty', 
-	LIBERTY_PKG_NAME, 
+$gLibertySystem->registerService( 'liberty',
+	LIBERTY_PKG_NAME,
 	[
 		'content_edit_mini_tpl'      => 'bitpackage:liberty/service_content_edit_mini_inc.tpl',
 		'content_edit_tab_tpl'       => 'bitpackage:liberty/service_content_edit_tab_inc.tpl',
@@ -52,10 +53,10 @@ $gLibertySystem->registerService( 'liberty',
 		'content_list_sql_function'  => 'liberty_content_list_sql',
 		'content_preview_function'   => 'liberty_content_preview',
 	],
-	[ 
+	[
 		'description' => KernelTools::tra( 'Provides core functionality, including enforcing some access control and dynamic layout components.' ),
 		'required' => true,
-	]
+	],
 );
 
 // delete cache file if requested

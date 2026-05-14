@@ -1,5 +1,6 @@
 <?php
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 use function in_array;
 
@@ -53,8 +54,8 @@ function maketoc_postparsefilter( &$pData, &$pFilterHash ) {
 		// get all headers into an array
 		preg_match_all( "/<h(\d)[^>]*>(.*?)<\/h\d>/i", $pData, $headers );
 
-		// clumsy way of finding out if index is set. since we can't allow 
-		// duplicate settings of index in one page, we either index everything 
+		// clumsy way of finding out if index is set. since we can't allow
+		// duplicate settings of index in one page, we either index everything
 		// or nothing.
 		foreach( $params as $p ) {
 			if( empty( $index )) {
@@ -125,7 +126,7 @@ function maketoc_postparsefilter( &$pData, &$pFilterHash ) {
 		}
 	}
 
-	$pData = isset( $ret ) ? $ret : preg_replace( "/\{maketoc[^\}]*\}\s*(<br[^>]*>)*/i", "", $pData );
+	$pData = $ret ?? preg_replace( "/\{maketoc[^\}]*\}\s*(<br[^>]*>)*/i", "", $pData );
 }
 
 function maketoc_create_list( $pTocHash, $pParams ) {

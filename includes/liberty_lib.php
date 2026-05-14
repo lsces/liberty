@@ -18,6 +18,7 @@
  * required setup
  */
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
 
@@ -182,7 +183,6 @@ function parse_protect( &$pData, &$pReplace ) {
 	}
 }
 
-
 // ================== Liberty Plugin Helper ==================
 /**
  * pass in the plugin parameters and out comes a hash with usable styling information
@@ -272,7 +272,6 @@ function liberty_plugins_wrapper_style( $pParamHash ) {
 
 	return $ret;
 }
-
 
 // ================== Liberty Service Functions ==================
 /**
@@ -415,7 +414,6 @@ function liberty_content_edit( $pObject, $pParamHash ) {
 	include_once LIBERTY_PKG_INCLUDE_PATH."edit_storage_inc.php";
 }
 
-
 // ================== Liberty File Processing Functions ==================
 
 /**
@@ -459,7 +457,7 @@ function liberty_process_upload( &$pFileHash, $pMoveFile = true ) {
 
 	// Thumbs.db is a windows My Photos/ folder file, and seems to really piss off imagick
 	$canThumbFunc = liberty_get_function( 'can_thumbnail' );
-	$ret =  !empty( $canThumbFunc ) && $canThumbFunc( $pFileHash['type'] ) && $pFileHash['name'] != 'Thumbs.db' 
+	$ret =  !empty( $canThumbFunc ) && $canThumbFunc( $pFileHash['type'] ) && $pFileHash['name'] != 'Thumbs.db'
 		? liberty_process_image( $pFileHash, $pMoveFile )
 		: liberty_process_generic( $pFileHash, $pMoveFile );
 
@@ -559,9 +557,9 @@ function liberty_process_archive( &$pFileHash ) {
 	if( preg_match( "!^/+$!", $destDir || '' )) {
 		// obviously something went horribly wrong
 		return false;
-	} else {
-		return $destDir;
 	}
+		return $destDir;
+
 }
 
 /**
@@ -606,7 +604,6 @@ function liberty_process_generic( &$pFileHash, $pMoveFile = true ) {
 
 	return $ret;
 }
-
 
 /**
  * liberty_process_image
@@ -712,7 +709,7 @@ function liberty_generate_thumbnails( $pFileHash ) {
 				// has a customer pdf rasterization function been defined?
 				if( function_exists( 'liberty_rasterize_pdf' ) && $rasteredFile = liberty_rasterize_pdf( $pFileHash['source_file'] ) ) {
 					$pFileHash['source_file'] = $rasteredFile;
-				} else {
+				}
 /*					$magickWand = NewMagickWand();
 					if( !$pFileHash['error'] = liberty_magickwand_check_error( MagickReadImage( $magickWand, $pFileHash['source_file'] ), $magickWand )) {
 						MagickSetFormat( $magickWand, 'JPG' );
@@ -732,7 +729,7 @@ function liberty_generate_thumbnails( $pFileHash ) {
 						}
 					}
 */
-				}
+
 			} else {
 				$pFileHash['dest_base_name'] = 'original';
 				$pFileHash['name'] = 'original.jpg';

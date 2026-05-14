@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -40,7 +41,7 @@ $pluginParams = [
 	'help_page' => 'DataPluginRenderer',
 	'description' => KernelTools::tra( "This plugin will render the given content as described by the content_type given." ),
 	'syntax' => "{renderer class= format_guid= }.. content ..{/renderer}",
-	'plugin_type' => DATA_PLUGIN
+	'plugin_type' => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATARENDERER, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATARENDERER );

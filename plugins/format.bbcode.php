@@ -10,7 +10,7 @@ global $gLibertySystem;
 
 /**
  * run 'pear install Text_Wiki_BBCode-alpha' to install the library,
- */ 
+ */
 if( @include_once 'doc/Text_Wiki_BBCode/doc/BBCodeParser.php' ) {
 
 /**
@@ -26,7 +26,7 @@ $pluginParams = [
 	'edit_field'      => PLUGIN_GUID_BBCODE,
 	'help_page'       => 'BBCodeSyntax',
 	'plugin_type'     => FORMAT_PLUGIN,
-	'linebreak'       => "\r\n"
+	'linebreak'       => "\r\n",
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_BBCODE, $pluginParams );
 
@@ -40,7 +40,7 @@ function bbcode_parse_data( &$pParseHash, &$pCommonObject ) {
 	$data = preg_replace( '/\[(quote|code):[0-9a-f]+=/', '[\1=', $data );
 	$data = preg_replace( '/:[0-9a-f]+\]/', ']', $data );
 
-	// get options from the ini file 
+	// get options from the ini file
 	// $config = parse_ini_file('BBCodeParser.ini', true);
 	$config = parse_ini_file('doc/Text_Wiki_BBCode/doc/BBCodeParser_V2.ini', true);
 	$options = \PEAR::getStaticProperty('HTML_BBCodeParser', '_options');

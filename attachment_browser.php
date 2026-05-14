@@ -32,10 +32,10 @@ if (isset($_REQUEST['attachment_id']) && is_numeric($_REQUEST['attachment_id']))
 }else{
 // we want a list of user attachments
 	$listHash = $_REQUEST;
-	$listHash = array(
-	    'page' => BitBase::verifyId( $_REQUEST['pgnPage'] ?? 0 ) ? $_REQUEST['pgnPage'] : null,
+	$listHash = [
+		'page' => BitBase::verifyId( $_REQUEST['pgnPage'] ?? 0 ) ? $_REQUEST['pgnPage'] : null,
 		'load_attached_to' => true,
-	);
+	];
 	$userAttachments = $gBitUser->getUserAttachments( $listHash );
 
 	// Fake the storage assignment for edit_storage_list.tpl

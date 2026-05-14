@@ -106,5 +106,5 @@ if( isset( $_REQUEST['liberty_attachments']['form_id'] ) ){
 	$gBitSmarty->assign( 'form_id', $_REQUEST['liberty_attachments']['form_id'] );
 }
 
-echo $gBitSystem->display( 'bitpackage:liberty/attachment_uploader.tpl', null, array( 'format'=>'none', 'display_mode' => 'display' ));
+echo $gBitSystem->display( 'bitpackage:liberty/attachment_uploader.tpl', null, [ 'format'=>'none', 'display_mode' => 'display' ]);
 ?>

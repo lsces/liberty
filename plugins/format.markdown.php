@@ -25,7 +25,7 @@ $pluginParams = [
 	'edit_label'      => 'Markdown',
 	'edit_field'      => PLUGIN_GUID_MARKDOWN,
 	'plugin_type'     => FORMAT_PLUGIN,
-	'linebreak'       => "\r\n"
+	'linebreak'       => "\r\n",
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_MARKDOWN, $pluginParams );
 

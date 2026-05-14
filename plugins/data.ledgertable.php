@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 // $Id$
@@ -30,7 +31,7 @@ $pluginParams = [
 	'description' => KernelTools::tra("This Plugin creates a ledger-like table with even/odd row colors, optional top- or left-placed headers, and support for row/column spans."),
 	'help_function' => '\data_ledgertable_help',
 	'syntax' => "{LEDGERTABLE loc= head= }",
-	'plugin_type' => DATA_PLUGIN
+	'plugin_type' => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATALEDGERTABLE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATALEDGERTABLE );
@@ -60,14 +61,14 @@ function data_ledgertable_help() {
 		.'</table>'
 		. KernelTools::tra("LedgerTable: ") . "{LEDGERTABLE loc=>left head=>Row1~|~Row2~|~Row3}<br />"
 		. KernelTools::tra("This will display")
-		. data_ledgertable('Example', array('loc' => 'left', 'head' => 'Row1~|~Row2~|~Row3'));
+		. data_ledgertable('Example', ['loc' => 'left', 'head' => 'Row1~|~Row2~|~Row3']);
 	return $help;
 }
 /****************
 * Load Function *
  ****************/
 function data_ledgertable($data, $params) {
-    global $gBitSystem;
+	global $gBitSystem;
 
 	if (empty($data)) {
 		return "<!-- Error:  No data passed to LEDGERTABLE plugin. -->";
@@ -77,76 +78,76 @@ function data_ledgertable($data, $params) {
 	}
 
 	$ret = '';
-    if (isset($params['loc'])) {
+	if (isset($params['loc'])) {
 		$ret .= "<!-- Header row set to $params[loc]. -->";
 		$plugdata_loc = $params['loc'];
 	} else {
 		$ret .= "<!-- Defaulting header row to top. -->";
-        $plugdata_loc = 'top';
-    }
-    if (isset($params['head'])) {
+		$plugdata_loc = 'top';
+	}
+	if (isset($params['head'])) {
 		$ret .= "<!-- Got headers. -->";
 		$plugdata_head = $params['head'];
-    } else {
+	} else {
 		$ret .= "<!-- No headers specified. -->";
-    }
-    if (isset($params['width'])) {
+	}
+	if (isset($params['width'])) {
 		$ret .= "<!-- Got width $params[width]. -->";
 		$plugdata_width = " style=\"width: " . $params['width'] . '"';
-    } else {
+	} else {
 		$plugdata_width = "";
-    }
+	}
 
-    $ret .= "<table class=\"ledgertable\"$plugdata_width>";
+	$ret .= "<table class=\"ledgertable\"$plugdata_width>";
 
-    if (isset($plugdata_head)) {
-        $headers = explode('~|~', $plugdata_head);
-        if ($plugdata_loc == 'top') {
-            $ret .= "    <!-- Placing header row on top. -->";
-            $ret .= "    <tr class=\"ledgertable header row\">";
-            foreach ($headers as $hdr) {
-                $ret .= "        <th class=\"header highlight\">$hdr</td>";
-            }
-            $ret .= "  </tr>";
+	if (isset($plugdata_head)) {
+		$headers = explode('~|~', $plugdata_head);
+		if ($plugdata_loc == 'top') {
+			$ret .= "    <!-- Placing header row on top. -->";
+			$ret .= "    <tr class=\"ledgertable header row\">";
+			foreach ($headers as $hdr) {
+				$ret .= "        <th class=\"header highlight\">$hdr</td>";
+			}
+			$ret .= "  </tr>";
 		}
 	}
 
-    $lines = mb_split("\n", $data);
-    $line_count = 0;
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if (strlen($line) <= 0) {
-            continue;
-        }
-        $line_count++;
+	$lines = mb_split("\n", $data);
+	$line_count = 0;
+	foreach ($lines as $line) {
+		$line = trim($line);
+		if (strlen($line) <= 0) {
+			continue;
+		}
+		$line_count++;
 
-        $ret .= "    <!-- Displaying row $line_count. -->";
-        $ret .= "    <tr class=\"" . (($line_count % 2) ? "odd" : "even") . "\">";
-        if (isset($plugdata_head) && ($plugdata_loc == "left")) {
-            $ret .= "        <!-- Placing header on left. -->";
-            $ret .= "        <th class=\"header highlight\"";
-            $header = array_shift($headers);
-            if (preg_match("/^~(row|col)span:(\d+)~(.*)$/", $header, $matches)) {
-                $ret .= " $matches[1]span=\"$matches[2]\"";
-                $header = $matches[3];
-            }
-            $ret .= ">$header</td>";
-        }
-        $cells = explode("~|~", $line);
-        foreach ($cells as $col) {
-            $ret .= "        <td class=\"" . (($line_count % 2) ? "odd" : "even") . "\"";
-            $col = trim($col);
-            if (!strcmp($col, "~blank~")) {
-                $col = "&nbsp;";
-            } else if (preg_match("/^~(row|col)span:(\d+)~(.*)$/", $col, $matches)) {
-                $ret .= " $matches[1]span=\"$matches[2]\"";
-                $col = $matches[3];
-            }
-            $ret .= ">$col</td>";
-        }
-        $ret .= "    </tr>";
-    }
-    $ret .= "</table>";
+		$ret .= "    <!-- Displaying row $line_count. -->";
+		$ret .= "    <tr class=\"" . (($line_count % 2) ? "odd" : "even") . "\">";
+		if (isset($plugdata_head) && ($plugdata_loc == "left")) {
+			$ret .= "        <!-- Placing header on left. -->";
+			$ret .= "        <th class=\"header highlight\"";
+			$header = array_shift($headers);
+			if (preg_match("/^~(row|col)span:(\d+)~(.*)$/", $header, $matches)) {
+				$ret .= " $matches[1]span=\"$matches[2]\"";
+				$header = $matches[3];
+			}
+			$ret .= ">$header</td>";
+		}
+		$cells = explode("~|~", $line);
+		foreach ($cells as $col) {
+			$ret .= "        <td class=\"" . (($line_count % 2) ? "odd" : "even") . "\"";
+			$col = trim($col);
+			if (!strcmp($col, "~blank~")) {
+				$col = "&nbsp;";
+			} else if (preg_match("/^~(row|col)span:(\d+)~(.*)$/", $col, $matches)) {
+				$ret .= " $matches[1]span=\"$matches[2]\"";
+				$col = $matches[3];
+			}
+			$ret .= ">$col</td>";
+		}
+		$ret .= "    </tr>";
+	}
+	$ret .= "</table>";
 
-    return $ret;
+	return $ret;
 }

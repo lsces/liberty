@@ -22,7 +22,7 @@ $pluginParams = [
 	'edit_field'      => PLUGIN_GUID_BITHTML,
 	'help_page'       => 'HTMLSyntax',
 	'plugin_type'     => FORMAT_PLUGIN,
-	'linebreak'       => '<br />'
+	'linebreak'       => '<br />',
 ];
 
 $gLibertySystem->registerPlugin( PLUGIN_GUID_BITHTML, $pluginParams );

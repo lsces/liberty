@@ -15,11 +15,11 @@
  * where plugins can insert their own tables<br>
  **/
 
-
 /**
  * setup
  */
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
 
@@ -105,7 +105,7 @@ if( !function_exists( '\Bitweaver\Liberty\mime_default_verify' )) {
 				$pStoreRow['attachment_id'] = $gBitSystem->mDb->GenID( 'liberty_attachments_id_seq' );
 			}
 			// try to generate thumbnails for the upload
-			$pStoreRow['upload']['thumbnail'] = isset( $pStoreRow['upload']['thumbnail'] ) ? $pStoreRow['upload']['thumbnail'] : true;
+			$pStoreRow['upload']['thumbnail'] = $pStoreRow['upload']['thumbnail'] ?? true;
 
 			// Generic values needed by the storing mechanism
 			$pStoreRow['upload']['source_file'] = $pStoreRow['upload']['tmp_name'];
@@ -184,7 +184,7 @@ if( !function_exists( '\Bitweaver\Liberty\mime_default_update' )) {
 				$gBitSystem->mDb->associateUpdate(
 					BIT_DB_PREFIX."liberty_attachments",
 					[ 'attachment_plugin_guid' => $pStoreRow['attachment_plugin_guid'] ],
-					[ 'attachment_id' => $pStoreRow['attachment_id'] ]
+					[ 'attachment_id' => $pStoreRow['attachment_id'] ],
 				);
 			}
 		}

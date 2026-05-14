@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -25,7 +26,7 @@ $pluginParams = [
 	'description'   => KernelTools::tra("This plugin allows Comments (Text that will not be displayed) to be added to a page."),
 	'help_function' => '\data__comment_help',
 	'syntax'        => "{comment}Data Not Displayed{/comment}",
-	'plugin_type'   => DATA_PLUGIN
+	'plugin_type'   => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATACOMMENT, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATACOMMENT );

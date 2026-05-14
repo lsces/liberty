@@ -6,6 +6,7 @@
  */
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 global $gLibertySystem, $gBitSystem, $gBitSmarty, $gBitThemes;
 
@@ -25,7 +26,7 @@ $pluginParams = [
 	'edit_label'         => 'Upload File',
 	'primary_edit_field' => '<input type="file" name="primary_attachment" size="40" />',
 	'edit_field'         => '<input type="file" name="upload" size="40" />',
-	'edit_help'          => 'After selecting the file you want to upload, please return to the edit area and click the save button.'
+	'edit_help'          => 'After selecting the file you want to upload, please return to the edit area and click the save button.',
 ];
 
 if( isset( $gBitSystem )) {
@@ -53,7 +54,6 @@ if( isset( $gBitSystem )) {
 //$gLibertySystem->registerPlugin( STORAGE_TYPE_BIT_FILES, $pluginParams );
 $gLibertySystem->registerPlugin( PLUGIN_GUID_BIT_FILES, $pluginParams );
 
-
 function bit_files_verify( &$pStoreRow ) {
 	$pStoreRow['plugin_guid'] = PLUGIN_GUID_BIT_FILES;
 	$pStoreRow['foreign_id'] = null;
@@ -79,7 +79,7 @@ function bit_files_store( &$pStoreRow ) {
 
 	if( BitBase::verifyId( $pStoreRow['foreign_id'] ) ) {
 		$sql = "UPDATE `".BIT_DB_PREFIX."liberty_files` SET `file_name`=?, `mime_type`=?, `file_size`=? WHERE `file_id` = ?";
-		$gBitSystem->mDb->query( $sql, array( $pStoreRow['upload']['name'], $pStoreRow['upload']['type'], $pStoreRow['upload']['size'], $pStoreRow['foreign_id'] ) );
+		$gBitSystem->mDb->query( $sql, [ $pStoreRow['upload']['name'], $pStoreRow['upload']['type'], $pStoreRow['upload']['size'], $pStoreRow['foreign_id'] ] );
 	} else {
 		$pStoreRow['foreign_id'] = $gBitSystem->mDb->GenID( 'liberty_files_id_seq' );
 		$sql = "INSERT INTO `".BIT_DB_PREFIX."liberty_files` ( `file_name`, `file_id`, `mime_type`, `file_size`, `user_id` ) VALUES ( ?, ?, ?, ?, ? )";
@@ -122,7 +122,7 @@ function bit_files_expunge( $pStorageId ) {
 		$sql = "SELECT * FROM `".BIT_DB_PREFIX."liberty_attachments` la
 					INNER JOIN `".BIT_DB_PREFIX."liberty_files` lf ON (lf.`file_id`=la.`foreign_id`)
 				WHERE la.`attachment_id` = ?";
-		if( $row = $gBitSystem->mDb->getRow( $sql, array( $pStorageId ))) {
+		if( $row = $gBitSystem->mDb->getRow( $sql, [ $pStorageId ])) {
 			$sourceFile = liberty_mime_get_source_file( $row );
 			if( $gBitUser->isAdmin() || $gBitUser->mUserId == $row['user_id'] ) {
 				if( file_exists( $sourceFile )) {
@@ -134,7 +134,7 @@ function bit_files_expunge( $pStorageId ) {
 					}
 				}
 				$query = "DELETE FROM `".BIT_DB_PREFIX."liberty_files` WHERE `file_id` = ?";
-				$gBitSystem->mDb->query($query, array($row['foreign_id']) );
+				$gBitSystem->mDb->query($query, [$row['foreign_id']] );
 				$ret = true;
 			}
 		}

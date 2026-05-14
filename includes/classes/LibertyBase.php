@@ -22,6 +22,7 @@
  * required setup
  */
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 
 /**
@@ -80,7 +81,7 @@ class LibertyBase extends BitBase {
 			$typeClass = null;
 			$pContentId = preg_replace( '/[\D]/', '', $pContentId );
 			if( empty( $pContentTypeGuid ) ) {
-				$pContentTypeGuid = $gLibertySystem->mDb->getOne( "SELECT `content_type_guid` FROM `".BIT_DB_PREFIX."liberty_content` WHERE `content_id`=?", array( $pContentId ), null, null, 3600 );
+				$pContentTypeGuid = $gLibertySystem->mDb->getOne( "SELECT `content_type_guid` FROM `".BIT_DB_PREFIX."liberty_content` WHERE `content_id`=?", [ $pContentId ], null, null, 3600 );
 			}
 			if( !empty( $pContentTypeGuid ) && isset( $gLibertySystem->mContentTypes[$pContentTypeGuid] ) ) {
 				$typeClass = $gLibertySystem->getContentClassName( $pContentTypeGuid );

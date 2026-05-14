@@ -35,7 +35,6 @@ use Bitweaver\KernelTools;
  * @param string  $comments_return_url The URL the user should be sent to after posting the comment                                       (required)
 **/
 
-
 /**
  * required setup
  */
@@ -335,7 +334,7 @@ if ($gContent->hasUserPermission( 'p_liberty_read_comments' )) {
 				&& (
 					BitBoardTopic::isLockedMsg( BitBase::verifyId( $storeComment->mInfo['parent_id'] )
 						? $storeComment->mInfo['parent_id'] : ( !BitBase::verifyId( $_REQUEST['post_comment_reply_id'] )
-							? $commentsParentId : $_REQUEST['post_comment_reply_id'] ))
+							? $commentsParentId : $_REQUEST['post_comment_reply_id'] ), )
 				   )
 		  ) {
 			unset( $_REQUEST['post_comment_request'] );

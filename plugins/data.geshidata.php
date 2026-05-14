@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 // $Id$
@@ -31,7 +32,7 @@ $pluginParams = [
 	'description' => KernelTools::tra("This plugin is a documentation tool for the bitweaver site. It will display some of information defined in the GeSHi (Generic Syntax Highlighter) package."),
 	'help_function' => '\data_help_GeshiData',
 	'syntax' => "{GESHIDATA doall= lang= info= }",
-	'plugin_type' => DATA_PLUGIN
+	'plugin_type' => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAGESHIDATA, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAGESHIDATA );
@@ -120,7 +121,7 @@ function data_GeshiData($data, $params) {
 					return $ret;
 		}	}	}
 		return \pluginError('GeshiData', KernelTools::tra('The value placed in the parameter').' <strong>$info='.$info.'</strong> '.KernelTools::tra("was not a valid Key-word."));
-	} else {
+	}
 		$ret = '<div class="box">';
 		$ret .=		'<div class="error" style="text-align:center;">'; // The Header
 		$ret .=			'<big><big><strong>'.KernelTools::tra('Language Properties').'</strong></big></big>';
@@ -161,6 +162,6 @@ function data_GeshiData($data, $params) {
 		} // foreach
 		$ret .=		'</div>';
 		$ret .=	'</div>';
-	}
+
 	return $ret;
 }

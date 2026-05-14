@@ -27,5 +27,5 @@ if( isset( $_REQUEST['form_id'] ) ){
 	$gBitSmarty->assign( 'form_id', $_REQUEST['form_id'] );
 }
 
-$gBitSystem->display( 'bitpackage:liberty/edit_storage_list.tpl' , null, array( 'display_mode' => 'edit' ));
+$gBitSystem->display( 'bitpackage:liberty/edit_storage_list.tpl' , null, [ 'display_mode' => 'edit' ]);
 ?>

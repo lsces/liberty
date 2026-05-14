@@ -1,5 +1,6 @@
 <?php
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -27,7 +28,6 @@ use Bitweaver\KernelTools;
  * I'm not sure where the best place for this stuff is - perhaps it would be 
  * best to move all this stuff to a separate package - xing
  */
-
 
 /**
  * definitions ( guid character limit is 16 chars )
@@ -113,9 +113,9 @@ function urlcache_store($url, $data = '') {
 		$query = "insert into `".BIT_DB_PREFIX."liberty_link_cache`(`url`,`data`,`refresh`) values(?,?,?)";
 		$result = $this->mDb->query($query, [ $url,BitDb::db_byte_encode($data),$refresh ] );
 		return !isset( $error );
-	} else {
-		return false;
 	}
+		return false;
+
 }
 
 function urlcache_postparsefilter( $pData, $pFilterHash ) {
@@ -146,7 +146,7 @@ function list_cache($offset, $max_records, $sort_mode, $find) {
 	$findesc = '%' . $find . '%';
 
 	$mid = " where (`url` like ?) ";
-	$bindvars=array($findesc);
+	$bindvars=[$findesc];
 	} else {
 	$mid = "";
 	$bindvars=[];

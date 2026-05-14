@@ -18,7 +18,6 @@ namespace Bitweaver\Liberty;
  * where plugins can insert their own tables<br>
  **/
 
-
 /**
  * setup
  */
@@ -55,9 +54,9 @@ $pluginParams = [
 	// Here you can use a perl regular expression to pick out file extensions you want to handle
 	// e.g.: Some image types: '#^image/(jpe?g|gif|png)#i'
 	// This plugin will be picked if nothing matches.
-	'mimetypes'           => array(
+	'mimetypes'           => [
 		'#application/.*#i',
-	),
+	],
 ];
 $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_APPLICATION, $pluginParams );
 

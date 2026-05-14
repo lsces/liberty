@@ -1,8 +1,8 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
-use Bitweaver\Liberty\LibertyContent;
 
 /**
  * assigned_modules
@@ -29,7 +29,7 @@ $pluginParams = [
 	'description'   => KernelTools::tra( "This plugin allows you to easily create a preformatted text block with a number of optional CSS parameters." ),
 	'help_function' => '\data_pre_help',
 	'syntax'        => "{pre border='3px solid blue'}",
-	'plugin_type'   => DATA_PLUGIN
+	'plugin_type'   => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAPRE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAPRE );

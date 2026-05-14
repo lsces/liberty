@@ -20,6 +20,7 @@
 // +----------------------------------------------------------------------+
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitSingleton;
 use Bitweaver\KernelTools;
 
@@ -74,7 +75,6 @@ define( 'LIBERTY_UPLOAD', 'upload' );
 #[\AllowDynamicProperties]
 class LibertySystem extends BitSingleton {
 
-
 	// Hash of plugin data
 	public $mPlugins = [];
 
@@ -114,9 +114,8 @@ class LibertySystem extends BitSingleton {
 		$this->loadContentTypes();
 	}
 
-
 	public function __sleep() {
-		return array_merge( parent::__sleep(), array( 'mPlugins', 'mDataTags', 'mContentStatus', 'mContentTypes', 'mPluginFileName', 'mSystem', 'mPluginPath' ) );
+		return array_merge( parent::__sleep(), [ 'mPlugins', 'mDataTags', 'mContentStatus', 'mContentTypes', 'mPluginFileName', 'mSystem', 'mPluginPath' ] );
 	}
 
 	// ****************************** Plugin Functions
@@ -294,7 +293,7 @@ class LibertySystem extends BitSingleton {
 		global $gBitSystem;
 		// plugins can set their own file_name. this is not mandatory but makes sure we store the path to the correct file
 		// this is useful for files that are included by other plugins
-			$pluginPath = !empty( $pPluginParams['file_name'] ) 
+			$pluginPath = !empty( $pPluginParams['file_name'] )
 				? dirname( $this->mPluginFilePath ) . "/" . $pPluginParams['file_name']
 				: $this->mPluginFilePath;
 
@@ -311,7 +310,7 @@ class LibertySystem extends BitSingleton {
 				$pPluginParams['load_function']     = '\\Bitweaver\\Liberty\\' . $pPluginParams['load_function'];
 			}
 			if ( !empty( $pPluginParams['branch_function'] ) ) {
- 				$pPluginParams['branch_function']   = '\\Bitweaver\\Liberty\\' . $pPluginParams['branch_function'];
+				$pPluginParams['branch_function']   = '\\Bitweaver\\Liberty\\' . $pPluginParams['branch_function'];
 			}
 			if ( !empty( $pPluginParams['download_function'] ) ) {
 				$pPluginParams['download_function'] = '\\Bitweaver\\Liberty\\' . $pPluginParams['download_function'];
@@ -638,7 +637,7 @@ class LibertySystem extends BitSingleton {
 				( empty( $this->mContentTypes[$pGuid]['content_name_plural'] ) && version_compare( $gBitSystem->getVersion( LIBERTY_PKG_NAME ), '2.1.4', '>=' ) ) // temporary update condition during migration of content_description to content_name remove after april 20 2011
 				) {
 				$this->StartTrans();
-				$result = $this->mDb->associateUpdate( BIT_DB_PREFIX."liberty_content_types", $pTypeParams, array( 'content_type_guid'=>$pGuid ) );
+				$result = $this->mDb->associateUpdate( BIT_DB_PREFIX."liberty_content_types", $pTypeParams, [ 'content_type_guid'=>$pGuid ] );
 				$this->CompleteTrans();
 				// we just ran some SQL - let's flush the loadContentTypes query cache
 				$this->loadContentTypes( 0 );
@@ -672,14 +671,14 @@ class LibertySystem extends BitSingleton {
 	 * Get the display name of the content type
 	 * @param boolean $pPlural true will return the plural form of the content type display name
 	 * @return string the display name of the content type
- 	 */
+	 */
 	function getContentType( $pContentTypeGuid ){
 		$ret = null;
 		if( !isset( $this->mContentTypes ) ) {
 			$this->loadContentTypes();
 		}
 		if( !empty( $this->mContentTypes[$pContentTypeGuid] ) ) {
-		 	$ret = $this->mContentTypes[$pContentTypeGuid];
+			$ret = $this->mContentTypes[$pContentTypeGuid];
 		}
 		return $ret;
 	}
@@ -688,14 +687,14 @@ class LibertySystem extends BitSingleton {
 	 * Get the display name of the content type
 	 * @param boolean $pPlural true will return the plural form of the content type display name
 	 * @return string the display name of the content type
- 	 */
+	 */
 	public function getContentClassName( $pContentTypeGuid ) {
 		$ret = null;
 		if( !isset( $this->mContentTypes ) ) {
 			$this->loadContentTypes();
 		}
 		if( !empty( $this->mContentTypes[$pContentTypeGuid] ) && $this->requireHandlerFile( $this->mContentTypes[$pContentTypeGuid] ) ) {
-		 	$ret = '\\Bitweaver\\'. ucfirst( $this->mContentTypes[$pContentTypeGuid]['handler_package'] ) . '\\' . $this->mContentTypes[$pContentTypeGuid]['handler_class'];
+			$ret = '\\Bitweaver\\'. ucfirst( $this->mContentTypes[$pContentTypeGuid]['handler_package'] ) . '\\' . $this->mContentTypes[$pContentTypeGuid]['handler_class'];
 		}
 		return $ret;
 	}
@@ -705,13 +704,13 @@ class LibertySystem extends BitSingleton {
 	 * @param string $pContentTypeGuid
 	 * @param boolean $pPlural true will return the plural form of the content type display name
 	 * @return string the display name of the content type
- 	 */
+	 */
 	function getContentTypeName( $pContentTypeGuid, $pPlural=false ){
 		$ret = null;
 		if( $pPlural && isset( $this->mContentTypes[$pContentTypeGuid]['content_name_plural'] ) ) {
 			$ret = KernelTools::tra( $this->mContentTypes[$pContentTypeGuid]['content_name_plural'] );
 		} elseif( !empty( $this->mContentTypes[$pContentTypeGuid]['content_name'] ) ) {
-		 	$ret = KernelTools::tra( $this->mContentTypes[$pContentTypeGuid]['content_name'] );
+			$ret = KernelTools::tra( $this->mContentTypes[$pContentTypeGuid]['content_name'] );
 		}
 		return $ret;
 	}
@@ -726,9 +725,6 @@ class LibertySystem extends BitSingleton {
 		KernelTools::deprecated( 'You are calling the deprecated method getContentTypeDescription, use getContentTypeName( $pPlural )' );
 		return $this->getContentTypeName( $pContentType );
 	}
-
-
-
 
 	// ****************************** Service Functions
 	/**
@@ -812,7 +808,7 @@ class LibertySystem extends BitSingleton {
 		$parts = explode( '/',$pMimeType );
 		if( count( $parts ) > 1 ) {
 			global $gBitSmarty, $gLibertySystem;
-	
+
 			$ext = strtolower( $parts[1] );
 			$biticon = [
 				'ipackage' => 'liberty',

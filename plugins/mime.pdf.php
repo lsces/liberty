@@ -1,8 +1,8 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
-use Bitweaver\KernelTools;
 
 /**
  * @version		$Header$
@@ -224,7 +224,7 @@ function mime_pdf_thumbnail( $pFileHash ) {
 			if( liberty_generate_thumbnails( $genHash )) {
 			}
 			$mask = "$dest_branch/thumb*.jpg";
-   			array_map( "unlink", glob( $mask ) );
+			array_map( "unlink", glob( $mask ) );
 		}
 	return empty( $pFileHash['log'] );
 }

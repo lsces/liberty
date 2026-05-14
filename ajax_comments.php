@@ -9,6 +9,7 @@
  * required setup
  */
 namespace Smarty;
+
 use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyBase;
 use Bitweaver\Liberty\LibertyContent;

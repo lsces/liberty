@@ -11,6 +11,7 @@
  * required setup
  */
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
 
@@ -47,7 +48,6 @@ class LibertyComment extends LibertyMime {
 			$this->loadComment();
 		}
 	}
-
 
 	public function __sleep() {
 		return array_merge( parent::__sleep(), [ 'mCommentId', 'mRootObj' ] );
@@ -149,10 +149,10 @@ class LibertyComment extends LibertyMime {
 			$this->mErrors['comment_attachments'] = KernelTools::tra( 'Files can not be uploaded with comments.' );
 		}
 
-        // if we have an error we get them all by checking parent classes for additional errors
-        if( count( $this->mErrors ) > 0 ){
-            parent::verify( $pParamHash );
-        }
+		// if we have an error we get them all by checking parent classes for additional errors
+		if( count( $this->mErrors ) > 0 ){
+			parent::verify( $pParamHash );
+		}
 
 		return count($this->mErrors) == 0;
 	}
@@ -179,7 +179,7 @@ class LibertyComment extends LibertyMime {
 
 				$this->mInfo['thread_forward_sequence'] = $parent_sequence_forward . sprintf("%09d.",$this->mCommentId);
 				$this->mInfo['thread_reverse_sequence'] = strtr($parent_sequence_forward . sprintf("%09d.",$this->mCommentId),
-						'0123456789', '9876543210');
+						'0123456789', '9876543210', );
 
 				$sql = "INSERT INTO `".BIT_DB_PREFIX."liberty_comments` (`comment_id`, `content_id`, `parent_id`, `root_id`, `anon_name`, `thread_forward_sequence`, `thread_reverse_sequence`) VALUES (?,?,?,?,?,?,?)";
 
@@ -211,7 +211,6 @@ class LibertyComment extends LibertyMime {
 		return count($this->mErrors) == 0;
 	}
 
-
 	// This is a highly specialized method only used for emailing list synchronization. If you don't know anything about this, just move along and live in bliss
 	// (Hint: see mailing list integreation in boards)
 	function storeMessageId( $pMessageId ) {
@@ -234,7 +233,6 @@ class LibertyComment extends LibertyMime {
 //				$query = "DELETE FROM `".BIT_DB_PREFIX."boards_topics` WHERE `parent_id` = ?";
 //				$result = $this->mDb->query( $query, [ $this->getField( 'content_id' ) ] );
 			}
-
 
 			$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_comments` WHERE `comment_id` = ?";
 			$rs = $this->mDb->query($sql, [ $this->mCommentId ]);
@@ -335,11 +333,11 @@ class LibertyComment extends LibertyMime {
 		return $this->userCanEdit() || ($pRootContent && ($pRootContent->hasUserPermission( 'p_liberty_edit_comments' ) || $pRootContent->hasUserPermission( 'p_liberty_admin_comments' )));
 	}
 
-    /**
-    * @param string pLinkText name of
-    * @param array pParamHash different possibilities depending on derived class
-    * @return string the link to display the page.
-    */
+	/**
+	* @param string pLinkText name of
+	* @param array pParamHash different possibilities depending on derived class
+	* @return string the link to display the page.
+	*/
 	public static function getDisplayUrlFromHash( &$pParamHash ) {
 		$ret = null;
 		if( BitBase::verifyId( $pParamHash['root_id'] ) && $viewContent = LibertyBase::getLibertyObject( $pParamHash['root_id'] ) ) {
@@ -503,7 +501,6 @@ class LibertyComment extends LibertyMime {
 		return $ret;
 	}
 
-
 	function getNumComments($pContentId = null) {
 		$bindVars = null;
 		if (!$pContentId && $this->mContentId) {
@@ -556,10 +553,9 @@ class LibertyComment extends LibertyMime {
 		return $commentCount;
 	 }
 
-
 	// used for direct access to view a single comment
 	// see usage in: liberty/comments_inc.php
-    // there ought to be a better way to do this...
+	// there ought to be a better way to do this...
 	function getNumComments_upto($pCommentId = null, $pContentId = null) {
 
 		$comment = new LibertyComment($pCommentId, $pContentId);
@@ -655,7 +651,7 @@ class LibertyComment extends LibertyMime {
 						// get attachments for each comment
 						global $gLibertySystem;
 						$query = "SELECT * FROM `".BIT_DB_PREFIX."liberty_attachments` la WHERE la.`content_id`=? ORDER BY la.`pos` ASC, la.`attachment_id` ASC";
-						if( $result2 = $this->mDb->query( $query,array( (int)$row['content_id'] ))) {
+						if( $result2 = $this->mDb->query( $query,[ (int)$row['content_id'] ])) {
 							while( $row2 = $result2->fetchRow() ) {
 								if( $func = $gLibertySystem->getPluginFunction( $row2['attachment_plugin_guid'], 'load_function', 'mime' )) {
 									// we will pass the preferences by reference that the plugin can easily update them
@@ -690,8 +686,8 @@ class LibertyComment extends LibertyMime {
 		return '{quote format_guid="'.$this->mInfo['format_guid'].'" comment_id="'.$this->mCommentId.'" user="'.$this->mInfo['login'].'"}'.trim($data).'{/quote}';
 	}
 
- 	// Basic formatting for quoting comments
- 	function quoteComment($commentData) {
+	// Basic formatting for quoting comments
+	function quoteComment($commentData) {
 		$ret = '> '.$commentData;
 		$ret = mb_eregi_replace("\n", "\n>", $ret);
 		return $ret;

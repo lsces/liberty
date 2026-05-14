@@ -1,9 +1,9 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 use Bitweaver\BitDate;
-use Bitweaver\KernelTools;
 
 /**
  * @version		$Header$
@@ -193,7 +193,7 @@ function mime_video_add_process( $pStoreRow ) {
 			UPDATE `".BIT_DB_PREFIX."liberty_process_queue`
 			SET `process_status`=?
 			WHERE `content_id`=? AND `process_status`=?";
-		$gBitSystem->mDb->query( $query, array( 'defunkt', $pStoreRow['content_id'], 'pending' ));
+		$gBitSystem->mDb->query( $query, [ 'defunkt', $pStoreRow['content_id'], 'pending' ]);
 
 		$storeHash = [
 			'content_id'           => $pStoreRow['content_id'],
@@ -266,7 +266,7 @@ function mime_video_converter( &$pParamHash, $pOnlyGetParameters = false ) {
 				];
 
 				// make sure audio sample rate is valid
-				if( !empty( $info['audio_samplerate'] ) && !in_array( $info['audio_samplerate'], array( 11025, 22050, 44100 ))) {
+				if( !empty( $info['audio_samplerate'] ) && !in_array( $info['audio_samplerate'], [ 11025, 22050, 44100 ])) {
 					unset( $info['audio_samplerate'] );
 				}
 			} else {
@@ -430,7 +430,7 @@ function mime_video_converter( &$pParamHash, $pOnlyGetParameters = false ) {
 
 				if( $pOnlyGetParameters ) {
 					return $parameters;
-				} else {
+				}
 					// we keep the output of this that we can store it to the error file if we need to do so
 					$debug = shell_exec( "$ffmpeg $parameters 2>&1" );
 					if( !empty( $parameters2 )) {
@@ -438,7 +438,6 @@ function mime_video_converter( &$pParamHash, $pOnlyGetParameters = false ) {
 						// change back to whence we came
 						chdir( $cwd );
 					}
-				}
 
 				// make sure the conversion was successfull
 				if( is_file( $dest_file ) && filesize( $dest_file ) > 48 ) {

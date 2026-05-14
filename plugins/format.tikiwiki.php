@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
 use Bitweaver\BitSystem;
@@ -27,7 +28,7 @@ $pluginParams = [
 	'edit_field'       => PLUGIN_GUID_TIKIWIKI,
 	'help_page'        => 'TikiWikiSyntax',
 	'plugin_type'      => FORMAT_PLUGIN,
-	'linebreak'        => "\r\n"
+	'linebreak'        => "\r\n",
 ];
 
 $gLibertySystem->registerPlugin( PLUGIN_GUID_TIKIWIKI, $pluginParams );
@@ -223,7 +224,6 @@ class TikiWikiParser extends BitBase {
 			$gLibertySystem->getContentClassName( 'bitpage' );
 		}
 
-		
 		// only strip out html if needed
 		if( $gBitSystem->isFeatureActive( 'content_allow_html' ) || $gBitSystem->isFeatureActive( 'content_force_allow_html' )) {
 			// we allow html unconditionally with this parser
@@ -339,7 +339,7 @@ class TikiWikiParser extends BitBase {
 			$attributes = strstr( $link, $_SERVER["SERVER_NAME"] ) || !strstr( $link, '//' ) ? '' : 'class="external"';
 
 			// comments and anonymously created pages get nofollow
-			if( is_object( $pCommonObject ) && ( get_class( $pCommonObject ) == 'comments' || ( isset( $pCommonObject->mInfo['user_id'] ) &&  $pCommonObject->mInfo['user_id'] == ANONYMOUS_USER_ID ))) {
+			if( is_object( $pCommonObject ) && ( $pCommonObject::class   == 'comments' || ( isset( $pCommonObject->mInfo['user_id'] ) &&  $pCommonObject->mInfo['user_id'] == ANONYMOUS_USER_ID ))) {
 				$attributes .= ' rel="nofollow" ';
 			}
 
@@ -546,7 +546,7 @@ class TikiWikiParser extends BitBase {
 								$listate = substr($line, $listlevel, 1);
 
 								if (($listate == '+' || $listate == '-') && !($litype == '*' && !strstr(current($listbeg), '</ul>') || $litype == '#' && !strstr(current($listbeg), '</ol>'))) {
-									$thisid = 'id' . intval( microtime(true) * 1000000 );
+									$thisid = 'id' . (int) ( microtime(true) * 1000000 );
 									$data .= '<br /><a id="flipper' . $thisid . '" href="javascript:BitBase.flipWithSign(\'' . $thisid . '\',1)">[' . ($listate == '-' ? '+' : '-') . ']</a>';
 									$listyle = ' id="' . $thisid . '" style="display:' . ($listate == '+' ? 'block' : 'none') . ';"';
 									$addremove = 1;

@@ -9,6 +9,7 @@
  * required setup
  */
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
 
@@ -48,7 +49,7 @@ class LibertyMime extends LibertyContent {
 			}
 
 			$query = "SELECT * FROM `".BIT_DB_PREFIX."liberty_attachments` la WHERE la.`content_id`=? ORDER BY la.`pos` ASC, la.`attachment_id` ASC";
-			if( $result = $this->mDb->query( $query,array( $this->mContentId ))) {
+			if( $result = $this->mDb->query( $query,[ $this->mContentId ])) {
 				$this->mStorage = [];
 				while( $row = $result->fetchRow() ) {
 					if( !empty( $row['is_primary'] ) ) {
@@ -154,7 +155,7 @@ class LibertyMime extends LibertyContent {
 			$this->setPrimaryAttachment(
 				$pParamHash['liberty_attachments']['primary'],
 				$pParamHash['content_id'],
-				empty( $pParamHash['liberty_attachments']['auto_primary'] ) || $pParamHash['liberty_attachments']['auto_primary'] ? true : false
+				empty( $pParamHash['liberty_attachments']['auto_primary'] ) || $pParamHash['liberty_attachments']['auto_primary'] ? true : false,
 			);
 
 			// Roll back if something went wrong
@@ -373,7 +374,7 @@ class LibertyMime extends LibertyContent {
 	}
 
 	function getSourceFile( $pParamHash=[] ) {
-	    $ret = null;
+		$ret = null;
 		if( empty( $pParamHash ) && !empty( $this ) ) {
 			$pParamHash = $this->mInfo;
 		}
@@ -389,7 +390,6 @@ class LibertyMime extends LibertyContent {
 		return $ret;
 	}
 
-
 	/**
 	 * getStoragePath - get path to store files for the feature site_upload_dir. It creates a calculable hierarchy of directories
 	 *
@@ -401,10 +401,9 @@ class LibertyMime extends LibertyContent {
 	 * @return string full path on local filsystem to store files.
 	 */
 	function getStoragePath( $pParamHash, $pRootDir=null ) {
-	    $ret = liberty_mime_get_storage_path( $pParamHash, $pRootDir );
-	    return $ret;
+		$ret = liberty_mime_get_storage_path( $pParamHash, $pRootDir );
+		return $ret;
 	}
-
 
 	function getStorageUrl( $pParamHash ) {
 		return STORAGE_PKG_URL.liberty_mime_get_storage_branch( $pParamHash );
@@ -466,7 +465,6 @@ class LibertyMime extends LibertyContent {
 
 	// }}}
 
-
 	// {{{ =================== Attachment Methods ====================
 	/**
 	 * Get a list of all available attachments
@@ -474,7 +472,7 @@ class LibertyMime extends LibertyContent {
 	 * @param array $pListHash
 	 * @access public
 	 * @return array
-	 */ 
+	 */
 	public function getAttachmentList( &$pListHash ): array {
 		global $gLibertySystem, $gBitUser, $gBitSystem;
 
@@ -553,27 +551,27 @@ class LibertyMime extends LibertyContent {
 		$ret = null;
 		if( @$this->verifyId( $pAttachmentId ) ) {
 			$sql = "SELECT `attachment_plugin_guid`, `user_id` FROM `".BIT_DB_PREFIX."liberty_attachments` WHERE `attachment_id` = ?";
-			if(( $row = $this->mDb->getRow( $sql, array( $pAttachmentId ))) && ( $this->isOwner( $row ) || $gBitUser->isAdmin() )) {
+			if(( $row = $this->mDb->getRow( $sql, [ $pAttachmentId ])) && ( $this->isOwner( $row ) || $gBitUser->isAdmin() )) {
 				// check if we have the means available to remove this attachment
 				if(( $guid = $row['attachment_plugin_guid'] ) && $expungeFunc = $gLibertySystem->getPluginFunction( $guid, 'expunge_function', 'mime' )) {
 					// --- Do the final cleanup of liberty related tables ---
 
 					// there might be situations where we remove user images including portrait, avatar or logo
 					// This needs to happen before the plugin can do it's work due to constraints
-					$types = array( 'portrait', 'avatar', 'logo' );
+					$types = [ 'portrait', 'avatar', 'logo' ];
 					foreach( $types as $type ) {
 						$sql = "UPDATE `".BIT_DB_PREFIX."users_users` SET `{$type}_attachment_id` = null WHERE `{$type}_attachment_id` = ?";
-						$this->mDb->query( $sql, array( $pAttachmentId ));
+						$this->mDb->query( $sql, [ $pAttachmentId ]);
 					}
 
 					if( $expungeFunc( $pAttachmentId )) {
 						// Delete the attachment meta data, prefs and record.
 						$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_attachment_meta_data` WHERE `attachment_id` = ?";
-						$this->mDb->query( $sql, array( $pAttachmentId ));
+						$this->mDb->query( $sql, [ $pAttachmentId ]);
 						$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_attachment_prefs` WHERE `attachment_id` = ?";
-						$this->mDb->query( $sql, array( $pAttachmentId ));
+						$this->mDb->query( $sql, [ $pAttachmentId ]);
 						$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_attachments` WHERE `attachment_id`=?";
-						$this->mDb->query( $sql, array( $pAttachmentId ));
+						$this->mDb->query( $sql, [ $pAttachmentId ]);
 
 						// Remove attachment from memory
 						unset( $this->mStorage[$pAttachmentId] );
@@ -602,11 +600,11 @@ class LibertyMime extends LibertyContent {
 
 		if( BitBase::verifyId( $pAttachmentId )) {
 			$query = "SELECT * FROM `".BIT_DB_PREFIX."liberty_attachments` la WHERE la.`attachment_id`=?";
-			if( $result = $gBitSystem->mDb->query( $query, array( (int)$pAttachmentId ))) {
+			if( $result = $gBitSystem->mDb->query( $query, [ (int)$pAttachmentId ])) {
 				if( $row = $result->fetchRow() ) {
 					if( $func = $gLibertySystem->getPluginFunction( $row['attachment_plugin_guid'], 'load_function', 'mime' )) {
 						$sql = "SELECT `pref_name`, `pref_value` FROM `".BIT_DB_PREFIX."liberty_attachment_prefs` WHERE `attachment_id` = ?";
-						$prefs = $gBitSystem->mDb->getAssoc( $sql, array( $pAttachmentId ));
+						$prefs = $gBitSystem->mDb->getAssoc( $sql, [ $pAttachmentId ]);
 						$ret = $func( $row, $prefs, $pParams );
 					}
 				}
@@ -629,7 +627,7 @@ class LibertyMime extends LibertyContent {
 
 		if( BitBase::verifyId( $pAttachmentId )) {
 			$query = "SELECT * FROM `".BIT_DB_PREFIX."liberty_attachments` la WHERE la.`attachment_id`=?";
-			if( $result = $gBitSystem->mDb->query( $query, array( (int)$pAttachmentId ))) {
+			if( $result = $gBitSystem->mDb->query( $query, [ (int)$pAttachmentId ])) {
 				if( $row = $result->fetchRow() ) {
 					if( $func = $gLibertySystem->getPluginFunction( $row['attachment_plugin_guid'], 'load_function', 'mime' )) {
 						$prefs = static::getAttachmentPreferences( $pAttachmentId );
@@ -682,7 +680,7 @@ class LibertyMime extends LibertyContent {
 			$query = "
 				UPDATE `".BIT_DB_PREFIX."liberty_attachments`
 				SET `is_primary` = ? WHERE `attachment_id` = ?";
-			$this->mDb->query( $query, array( 'y', $pAttachmentId ));
+			$this->mDb->query( $query, [ 'y', $pAttachmentId ]);
 
 			$ret = true;
 		// Otherwise, are we supposed to clear the primary entirely?
@@ -708,14 +706,13 @@ class LibertyMime extends LibertyContent {
 			$query = "
 				UPDATE `".BIT_DB_PREFIX."liberty_attachments`
 				SET `is_primary` = ? WHERE `content_id` = ?";
-			$this->mDb->query( $query, array( null, $pContentId ));
+			$this->mDb->query( $query, [ null, $pContentId ]);
 			$ret = true;
 		}
 
 		return $ret;
 	}
 	// }}}
-
 
 	/**
 	 * === Attachment Preferences ===
@@ -757,7 +754,7 @@ class LibertyMime extends LibertyContent {
 		if( BitBase::verifyId( $pAttachmentId ) ) {
 			// if the object isn't loaded, we need to get the prefs from the database
 			$sql = "SELECT `pref_name`, `pref_value` FROM `".BIT_DB_PREFIX."liberty_attachment_prefs` WHERE `attachment_id` = ?";
-			$ret = $gBitSystem->mDb->getAssoc( $sql, array( (int)$pAttachmentId ));
+			$ret = $gBitSystem->mDb->getAssoc( $sql, [ (int)$pAttachmentId ]);
 		}
 
 		return $ret;
@@ -857,7 +854,7 @@ class LibertyMime extends LibertyContent {
 		$ret = false;
 		if( BitBase::verifyId( $pAttachmentId ) ) {
 			$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_attachment_prefs` WHERE `attachment_id` = ?";
-			$gBitSystem->mDb->query( $sql, array( $pAttachmentId ));
+			$gBitSystem->mDb->query( $sql, [ $pAttachmentId ]);
 			$ret = true;
 		}
 		return $ret;
@@ -913,9 +910,9 @@ class LibertyMime extends LibertyContent {
 						}
 
 						$ret = true;
-					} else {
-						// should we recurse?
 					}
+						// should we recurse?
+
 				}
 			}
 		}
@@ -958,7 +955,7 @@ class LibertyMime extends LibertyContent {
 		global $gBitSystem;
 		$ret = [];
 		if( BitBase::verifyId( $pAttachmentId )) {
-			$bindVars = array( $pAttachmentId );
+			$bindVars = [ $pAttachmentId ];
 			$whereSql = "";
 			if( !empty( $pType ) && !empty( $pTitle )) {
 
@@ -1045,7 +1042,7 @@ class LibertyMime extends LibertyContent {
 		global $gBitSystem;
 		$ret = false;
 		if( !empty( $pDescription ) && ( $pTable == 'type' || $pTable == 'title' )) {
-			$ret = $gBitSystem->mDb->getOne( "SELECT `meta_{$pTable}_id` FROM `".BIT_DB_PREFIX."liberty_meta_{$pTable}s` WHERE `meta_{$pTable}` = ?", array( LibertyMime::normalizeMetaDescription( $pDescription )));
+			$ret = $gBitSystem->mDb->getOne( "SELECT `meta_{$pTable}_id` FROM `".BIT_DB_PREFIX."liberty_meta_{$pTable}s` WHERE `meta_{$pTable}` = ?", [ LibertyMime::normalizeMetaDescription( $pDescription )]);
 		}
 		return $ret;
 	}
@@ -1062,7 +1059,7 @@ class LibertyMime extends LibertyContent {
 		global $gBitSystem;
 		$ret = false;
 		if( BitBase::verifyId( $pId )) {
-			$ret = $gBitSystem->mDb->getOne( "SELECT `meta_{$pTable}` FROM `".BIT_DB_PREFIX."liberty_meta_{$pTable}s` WHERE `meta_{$pTable}_id` = ?", array( $pId ));
+			$ret = $gBitSystem->mDb->getOne( "SELECT `meta_{$pTable}` FROM `".BIT_DB_PREFIX."liberty_meta_{$pTable}s` WHERE `meta_{$pTable}_id` = ?", [ $pId ]);
 		}
 		return $ret;
 	}
@@ -1188,7 +1185,7 @@ if( !function_exists( '\Bitweaver\Liberty\liberty_mime_get_source_url' )) {
 	function liberty_mime_get_source_url( $pParamHash ) {
 		$fileName = BitBase::getParameter( $pParamHash, 'file_name' );
 		if( empty( $pParamHash['package'] ) ) {
-			$pParamHash['package'] = liberty_mime_get_storage_sub_dir_name( array( 'mime_type' => BitBase::getParameter( $pParamHash, 'mime_type' ), 'name' => $fileName ) );
+			$pParamHash['package'] = liberty_mime_get_storage_sub_dir_name( [ 'mime_type' => BitBase::getParameter( $pParamHash, 'mime_type' ), 'name' => $fileName ] );
 		}
 		if( empty( $pParamHash['sub_dir'] ) ) {
 			$pParamHash['sub_dir'] = BitBase::getParameter( $pParamHash, 'attachment_id' );
@@ -1206,7 +1203,7 @@ if( !function_exists( '\Bitweaver\Liberty\liberty_mime_get_source_file' )) {
 	function liberty_mime_get_source_file( $pParamHash ) {
 		$fileName = BitBase::getParameter( $pParamHash, 'file_name' );
 		if( empty( $pParamHash['package'] ) ) {
-			$pParamHash['package'] = liberty_mime_get_storage_sub_dir_name( array( 'mime_type' => BitBase::getParameter( $pParamHash, 'mime_type' ), 'name' => $fileName ) );
+			$pParamHash['package'] = liberty_mime_get_storage_sub_dir_name( [ 'mime_type' => BitBase::getParameter( $pParamHash, 'mime_type' ), 'name' => $fileName ] );
 		}
 		if( empty( $pParamHash['sub_dir'] ) ) {
 			$pParamHash['sub_dir'] = BitBase::getParameter( $pParamHash, 'attachment_id' );

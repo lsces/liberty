@@ -1,8 +1,8 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
-use Bitweaver\Liberty\LibertyBase;
 use Bitweaver\Wiki\BitPage;
 
 /**
@@ -40,7 +40,7 @@ $pluginParams = [
 	'description' => KernelTools::tra("This plugin is used to include the contents of one Wiki page in another Wiki page."),
 	'help_function' => '\data_include_help',
 	'syntax' => "{INCLUDE content_id= }",
-	'plugin_type' => DATA_PLUGIN
+	'plugin_type' => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAINCLUDE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAINCLUDE );

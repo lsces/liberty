@@ -1,9 +1,9 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 use Bitweaver\Boards\BitBoardPost;
-use Bitweaver\Liberty\LibertyComment;
 use Bitweaver\Users\RoleUser;
 
 /**
@@ -43,7 +43,7 @@ $pluginParams = [
 	'help_page'     => 'DataPluginQuote',
 	'description'   => KernelTools::tra( "This plugin allows content to be attributed to other authors and visually indicated." ),
 	'syntax'        => "{quote format_guid= user= comment_id= }.. content ..{/quote}",
-	'plugin_type'   => DATA_PLUGIN
+	'plugin_type'   => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAQUOTE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAQUOTE );
@@ -100,7 +100,7 @@ function data_quote( $pData, $pParams ) {
 	$user = empty( $pParams['user'] ) ? null : $pParams['user'];
 
 	if( !empty( $pParams['comment_id'] )) {
-		
+
 		$c = $gBitSystem->getActivePackage() == 'boards'
 			? new BitBoardPost( preg_replace( '/[^0-9]/', '', $pParams['comment_id'] ) )
 			: new LibertyComment( preg_replace( '/[^0-9]/', '', $pParams['comment_id'] ) );

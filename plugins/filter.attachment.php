@@ -1,5 +1,6 @@
 <?php
 namespace Bitweaver\Liberty;
+
 use Bitweaver\BitBase;
 
 /**
@@ -67,7 +68,7 @@ function attachment_filter_reqirements( $pInstall = false ) {
 						, CONSTRAINT `lib_att_usage_content_ref` FOREIGN KEY (`content_id`) REFERENCES `".BIT_DB_PREFIX."liberty_content`( `content_id` )
 						, CONSTRAINT `lib_att_usage_attachment_ref` FOREIGN KEY (`attachment_id`) REFERENCES `".BIT_DB_PREFIX."liberty_attachments`( `attachment_id` )
 					'
-				"
+				",
 			],
 			'indexes' => [
 				'lib_att_usage_content_idx' => [ 'table' => 'liberty_attachment_usage', 'cols' => 'content_id', 'opts' => null ],

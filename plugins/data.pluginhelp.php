@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -37,7 +38,7 @@ $pluginParams = [
 	'description' => KernelTools::tra("This plugin will display the plugin's Help."),
 	'help_function' => '\data_pluginhelp_help',
 	'syntax' => "{PLUGINHELP plugin= }",
-	'plugin_type' => DATA_PLUGIN
+	'plugin_type' => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAPLUGINHELP, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAPLUGINHELP );

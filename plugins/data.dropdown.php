@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -36,7 +37,7 @@ $pluginParams = [
 	'description' => KernelTools::tra("This plugin creates a expandable box of text. All text should be entered between the ") . "{DD} " . KernelTools::tra("blocks."),
 	'help_function' => '\data_dropdown_help',
 	'syntax' => "{DD title= width= }" . KernelTools::tra("Text in the Drop-Down box.") . "{DD}",
-	'plugin_type' => DATA_PLUGIN
+	'plugin_type' => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATADROPDOWN, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATADROPDOWN );
@@ -73,7 +74,7 @@ function data_dropdown_help() {
 */
 function data_dropdown($data, $params) {
 	extract ($params, EXTR_SKIP);
-	$title = isset($title) ? $title : KernelTools::tra( 'For More Information, click me.' );
+	$title = $title ?? KernelTools::tra( 'For More Information, click me.' );
 	$id = 'dropdown'.(microtime() * 1000000);
 	$ret = 	'<div style="text-align:center;font-weight:bold;">'
 				.'<a title="Click to Expand or Contract" href="javascript:flip(\''.$id.'\')">'.$title.'</a>'

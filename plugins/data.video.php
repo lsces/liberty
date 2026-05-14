@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -26,7 +27,7 @@ $pluginParams = [
 	'description'   => KernelTools::tra( "This plugin allows you to simply and safely insert a video in a page. Currently it only supports Flash Video (.flv) files." ),
 	'help_function' => '\data_video_help',
 	'syntax'        => "{video video= player=}",
-	'plugin_type'   => DATA_PLUGIN
+	'plugin_type'   => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAVIDEO, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAVIDEO );

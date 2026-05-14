@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -15,7 +16,7 @@ use Bitweaver\KernelTools;
 
 global $gLibertySystem;
 define( 'PLUGIN_GUID_DATAYOUTUBE', 'datayoutube' );
-$pluginParams = array (
+$pluginParams =  [
 	'tag'           => 'YOUTUBE',
 	'auto_activate' => false,
 	'requires_pair' => false,
@@ -25,8 +26,8 @@ $pluginParams = array (
 	'description'   => KernelTools::tra( "This plugin allows you to simply and safely insert a YouTube video in a page." ),
 	'help_function' => '\data_youtube_help',
 	'syntax'        => "{youtube id=}",
-	'plugin_type'   => DATA_PLUGIN
-);
+	'plugin_type'   => DATA_PLUGIN,
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAYOUTUBE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAYOUTUBE );
 
@@ -90,7 +91,7 @@ function data_youtube( $pData, $pParams ) {
 
 	if( !empty( $id )) {
 		return '<!--~np~--><object width="'.$width.'" height="'.$height.'"><param name="movie" value="http://www.youtube.com/v/'.$id.$lang.$format.'"></param><param name="wmode" value="transparent"></param><embed src="http://www.youtube.com/v/'.$id.$lang.$format.'" type="application/x-shockwave-flash" wmode="transparent" width="'.$width.'" height="'.$height.'""></embed></object><!--~/np~-->';
-	} else {
-		return KernelTools::tra( 'No ID given' );
 	}
+		return KernelTools::tra( 'No ID given' );
+
 }

@@ -1,16 +1,15 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 use Bitweaver\BitBase;
-use Bitweaver\Liberty\LibertyContent;
 use Bitweaver\Wiki\BitPage;
 
 /**
  * @version  $Header$
  * @package  liberty
  */
-
 
  /**
  * definitions ( guid character limit is 16 chars )
@@ -135,10 +134,6 @@ function bitlinks_expungefilter( &$pData, &$pFilterHash, $pObject ) {
 	}
 	$sBitLinks->expungeLinks( $pObject->mContentId );
 }
-
-
-
-
 
 /**
  * BitLinks class
@@ -312,8 +307,8 @@ class BitLinks extends BitBase {
 			}
 		}
 
-		// Process ((Wiki Page|Wiki Page Description)) type links first. Here 
-		// we don't handle plurals and the like since the user should know what 
+		// Process ((Wiki Page|Wiki Page Description)) type links first. Here
+		// we don't handle plurals and the like since the user should know what
 		// he's linking to when using these links
 		preg_match_all( "@\({2}({$this->mWikiWordRegex})\|(.+?)\){2}@", $pData, $pages );
 		for( $i = 0; $i < count( $pages[1] ); $i++ ) {
@@ -587,7 +582,6 @@ class BitLinks extends BitBase {
 
 				// - replace with new name leaving description in tact
 				$replace[] = "(($pNewName|$1))";
-
 
 				// --- ((Wiki Page)) or WikiPage
 				// (\([2])?           # check for (( - optional - put this in $1

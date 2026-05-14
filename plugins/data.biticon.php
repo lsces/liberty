@@ -1,6 +1,7 @@
 <?php
 
 namespace Bitweaver\Liberty;
+
 use Bitweaver\KernelTools;
 
 /**
@@ -24,7 +25,7 @@ $pluginParams = [
 	'description'   => KernelTools::tra( "Display any bitweaver icon" ),
 	'help_function' => '\data_biticon_help',
 	'syntax'        => '{biticon ipackage= iname= iexplain=}',
-	'plugin_type'   => DATA_PLUGIN
+	'plugin_type'   => DATA_PLUGIN,
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATABITICON, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATABITICON );
