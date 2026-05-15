@@ -6,8 +6,8 @@
 	{assign var=structureName value="Structure"}
 {/if}
 
-<script src="{$smarty.const.UTIL_PKG_URL}javascript/jquery/plugins/acisortable/jquery.aciPlugin.min.js"></script>
-<script src="{$smarty.const.UTIL_PKG_URL}javascript/jquery/plugins/acisortable/jquery.aciSortable.js"></script>
+<script src="{$smarty.const.LIBERTY_PKG_URL}scripts/acisortable/jquery.aciPlugin.min.js"></script>
+<script src="{$smarty.const.LIBERTY_PKG_URL}scripts/acisortable/jquery.aciSortable.js"></script>
 
 {$structureToc}
 
