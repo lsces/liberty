@@ -69,7 +69,6 @@ $gLibertySystem->registerPlugin( PLUGIN_MIME_GUID_AUDIO, $pluginParams );
  */
 function mime_audio_preload() {
 	global $gBitThemes;
-	$gBitThemes->loadJavascript( UTIL_PKG_PATH."javascript/flv_player/swfobject.js", false, 25 );
 }
 
 /**

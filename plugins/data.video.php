@@ -78,7 +78,6 @@ function data_video_help() {
  */
 function data_video_preload() {
 	global $gBitThemes;
-	$gBitThemes->loadJavascript( UTIL_PKG_PATH."javascript/flv_player/swfobject.js", false, 25 );
 }
 
 /**
