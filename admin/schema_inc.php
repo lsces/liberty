@@ -220,15 +220,13 @@ $tables = [
 
 ];
 
-if ( defined( 'ROLE_MODEL' ) ) {
-	$tables['liberty_content_permissions'] =
-	" 	role_id I4 PRIMARY,
-		perm_name C(30) PRIMARY,
-		content_id I4 PRIMARY,
-		is_revoked C(1)
-		CONSTRAINT   ' , CONSTRAINT `liberty_content_id_ref` FOREIGN KEY (`content_id`) REFERENCES `".BIT_DB_PREFIX."liberty_content` (`content_id`) '
-	";
-}
+$tables['liberty_content_permissions'] =
+" 	role_id I4 PRIMARY,
+	perm_name C(30) PRIMARY,
+	content_id I4 PRIMARY,
+	is_revoked C(1)
+	CONSTRAINT   ' , CONSTRAINT `liberty_content_id_ref` FOREIGN KEY (`content_id`) REFERENCES `".BIT_DB_PREFIX."liberty_content` (`content_id`) '
+";
 
 global $gBitInstaller;
 
@@ -238,9 +236,8 @@ foreach( array_keys( $tables ) AS $tableName ) {
 
 // Constraints which must be installed after table creation
 $constraints = [
-	'liberty_content_permissions' => [ 'liberty_content_perm_group_ref' => 'FOREIGN KEY (`group_id`) REFERENCES `' . BIT_DB_PREFIX . 'users_groups` (`group_id`)' ],
+	'liberty_content_permissions' => [ 'liberty_content_perm_role_ref' => 'FOREIGN KEY (`role_id`) REFERENCES `' . BIT_DB_PREFIX . 'users_roles` (`role_id`)' ],
 	'liberty_process_queue'       => [ 'liberty_process_queue_ref' => 'FOREIGN KEY (`content_id`) REFERENCES `' . BIT_DB_PREFIX . 'liberty_content`( `content_id` )' ],
-
 ];
 
 // ### Indexes
@@ -262,7 +259,7 @@ $indices = [
 	'to_content_id_idx'              => [ 'table' => 'liberty_content_links', 'cols' => 'to_content_id', 'opts' => null ],
 	'links_from_content_id_idx'      => [ 'table' => 'liberty_content_links', 'cols' => 'from_content_id', 'opts' => null ],
 	'links_title_content_id_idx'     => [ 'table' => 'liberty_content_links', 'cols' => 'to_title', 'opts' => null ],
-	'liberty_content_perm_group_idx' => [ 'table' => 'liberty_content_permissions', 'cols' => 'group_id', 'opts' => null ],
+	'liberty_content_perm_role_idx'  => [ 'table' => 'liberty_content_permissions', 'cols' => 'role_id', 'opts' => null ],
 	'liberty_content_perm_perm_idx'  => [ 'table' => 'liberty_content_permissions', 'cols' => 'perm_name', 'opts' => null ],
 	'liberty_content_perm_cont_idx'  => [ 'table' => 'liberty_content_permissions', 'cols' => 'content_id', 'opts' => null ],
 	'process_id_idx'                 => [ 'table' => 'liberty_process_queue', 'cols' => 'content_id', 'opts' => null ],
@@ -271,12 +268,6 @@ $indices = [
 	'lib_attachment_meta_title_idx'  => [ 'table' => 'liberty_attachment_meta_data', 'cols' => 'meta_title_id', 'opts' => null ],
 ];
 
-if ( defined( 'ROLE_MODEL' ) ) {
-	$constraints['liberty_content_permissions'] = ['liberty_content_perm_role_ref' => 'FOREIGN KEY (`role_id`) REFERENCES `'.BIT_DB_PREFIX.'users_roles` (`role_id`)'];
-	unset($indices['liberty_content_perm_group_idx']);
-	$indices['liberty_content_perm_role_idx'] =  [ 'table' => 'liberty_content_permissions', 'cols' => 'role_id', 'opts' => null ];
-
-}
 foreach( array_keys($constraints) AS $tableName ) {
 	$gBitInstaller->registerSchemaConstraints( LIBERTY_PKG_NAME, $tableName, $constraints[$tableName]);
 }
