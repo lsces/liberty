@@ -12,6 +12,7 @@ namespace Smarty;
 
 use Bitweaver\BitBase;
 use Bitweaver\HttpStatusCodes;
+use Bitweaver\KernelTools;
 
 require_once '../kernel/includes/setup_inc.php';
 
@@ -26,16 +27,16 @@ if( $gContent == null ) {
 // Process the form
 // send the user to the content page if he wants to
 if( !empty( $_REQUEST['back'] )) {
-	bit_redirect( $gContent->getDisplayUrl() );
+	KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 }
 
 // Update database if needed
 if( !empty( $_REQUEST['action'] ) && BitBase::verifyId( $gContent->mContentId )) {
 	if( $_REQUEST["action"] == 'expunge' ) {
 		if( $gContent->expungeContentPermissions() ) {
-			$feedback['success'] = tra( 'The content permissions were successfully removed.' );
+			$feedback['success'] = KernelTools::tra( 'The content permissions were successfully removed.' );
 		} else {
-			$feedback['error'] = tra( 'The content permissions were not removed.' );
+			$feedback['error'] = KernelTools::tra( 'The content permissions were not removed.' );
 		}
 	}
 
@@ -109,4 +110,4 @@ if( $gBitThemes->isAjaxRequest() ) {
 	die;
 }
 
-$gBitSystem->display( 'bitpackage:liberty/content_role_permissions.tpl', tra( 'Content Permissions' ), [ 'display_mode' => 'display' ]);
+$gBitSystem->display( 'bitpackage:liberty/content_role_permissions.tpl', KernelTools::tra( 'Content Permissions' ), [ 'display_mode' => 'display' ]);

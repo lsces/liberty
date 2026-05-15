@@ -11,6 +11,7 @@
 /**
  * required setup
  */
+use Bitweaver\KernelTools;
 $gLiteweightScan = true;
 require_once '../kernel/includes/setup_inc.php';
 
@@ -57,9 +58,9 @@ if( $gBitThemes->isAjaxRequest() ) {
 
 	if( !empty( $_REQUEST['done'] ) ) {
 		if( !empty( $_SESSION['structure_referer'] ) ) {
-			bit_redirect( $_SESSION['structure_referer'] );
+			KernelTools::bit_redirect( $_SESSION['structure_referer'] );
 		} else {
-			bit_redirect( $gContent->getDisplayUri() );
+			KernelTools::bit_redirect( $gContent->getDisplayUri() );
 		}
 	}
 	$gBitSystem->display( 'bitpackage:liberty/structure_add_content.tpl', "Add Content" , [ 'display_mode' => 'display' ]);

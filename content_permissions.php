@@ -8,7 +8,6 @@
 /**
  * bit setup
  */
-namespace Smarty;
 
 use Bitweaver\BitBase;
 use Bitweaver\HttpStatusCodes;

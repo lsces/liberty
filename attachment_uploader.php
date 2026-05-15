@@ -8,17 +8,18 @@
 /**
  * required setup
  */
+use Bitweaver\KernelTools;
 require_once '../kernel/includes/setup_inc.php';
 global $gBitSmarty, $gContent;
 
 $error = null;
 if ( !isset($_FILES['upload'] ) ) {
-	$error = tra( "No upload submitted." );
+	$error = KernelTools::tra( "No upload submitted." );
 }elseif( !empty( $_REQUEST['liberty_attachments']['content_id'] )) {
 // if we have a content id then we just load up that
 	if( !($gContent = LibertyBase::getLibertyObject( $_REQUEST['liberty_attachments']['content_id'] )) ) {
 		// if there is something wrong with the content id spit back an error
-		$error = tra( "You are attempting to upload a file to a content item that does not exist." );
+		$error = KernelTools::tra( "You are attempting to upload a file to a content item that does not exist." );
 	}
 }elseif( isset ( $_REQUEST['liberty_attachments']['content_type_guid'] ) ){
 /* if we don't have a content id then we assume this is new content and we need to create a draft.
@@ -26,9 +27,9 @@ if ( !isset($_FILES['upload'] ) ) {
  */
 	// if we are creating new content the status must be enforced, so status recognition must be enabled
 	if( !$gBitSystem->isFeatureActive( "liberty_display_status" ) ){
-		$error = tra( "You must save the content to upload an attachment." );
+		$error = KernelTools::tra( "You must save the content to upload an attachment." );
 	}elseif( !isset( $gLibertySystem->mContentTypes[$_REQUEST['liberty_attachments']['content_type_guid']] ) ){
-		$error = tra( "You are attempting to upload a file to an invalid content type" );
+		$error = KernelTools::tra( "You are attempting to upload a file to an invalid content type" );
 	}else{
 		// load up the requested content type handler class
 		$contentType = $_REQUEST['liberty_attachments']['content_type_guid'];
@@ -39,7 +40,7 @@ if ( !isset($_FILES['upload'] ) ) {
 		$pathVar = strtoupper($package).'_PKG_PATH';
 
 		if( !defined( $pathVar ) ) {
-			$error = tra( "Undefined handler package path" );
+			$error = KernelTools::tra( "Undefined handler package path" );
 		}else{
 			require_once( constant( $pathVar ).$classFile );
 			$gContent = new $class();

@@ -8,6 +8,7 @@
 namespace Bitweaver\Liberty;
 
 use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
 global $gLibertySystem, $gBitSystem, $gBitSmarty, $gBitThemes;
 
 /**
@@ -128,7 +129,7 @@ function bit_files_expunge( $pStorageId ) {
 				if( file_exists( $sourceFile )) {
 					// make sure this is a valid storage directory before removing it
 					if( preg_match( '!/users/\d+/\d+/\w+/\d+/.+!', $sourceFile )) {
-						\Bitweaver\unlink_r( dirname( $sourceFile ));
+						\Bitweaver\KernelTools::unlink_r( dirname( $sourceFile ));
 					} else {
 						unlink( $sourceFile );
 					}

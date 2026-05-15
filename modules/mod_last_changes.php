@@ -11,6 +11,7 @@
 /**
  * Initialization
  */
+use Bitweaver\KernelTools;
 global $gQueryUser, $gBitUser, $gLibertySystem, $moduleParams;
 extract( $moduleParams );
 
@@ -21,9 +22,9 @@ if( !empty( $gQueryUser->mUserId ) ) {
 
 if( empty( $module_title ) ) {
 	if( !empty( $module_params['content_type_guid'] ) && !empty( $gLibertySystem->mContentTypes[$module_params['content_type_guid']] ) ) {
-		$title = tra( "Last Changes" ).': '.$gLibertySystem->getContentTypeName( $module_params['content_type_guid'] );
+		$title = KernelTools::tra( "Last Changes" ).': '.$gLibertySystem->getContentTypeName( $module_params['content_type_guid'] );
 	} else {
-		$title = tra( "Last Changes" );
+		$title = KernelTools::tra( "Last Changes" );
 	}
 	$moduleParams['title'] = $title;
 }

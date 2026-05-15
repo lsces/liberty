@@ -6,6 +6,7 @@
  * @package liberty
  * @subpackage modules
  */
+use Bitweaver\KernelTools;
 
 global $gQueryUser, $gBitUser, $gLibertySystem, $moduleParams;
 extract( $moduleParams );
@@ -13,10 +14,10 @@ extract( $moduleParams );
 /* this doesn't work as expected. without it, the user can fill in the title himself
 if( empty( $module_title ) ) {
 	if( !empty( $module_params['content_type_guid'] ) && !empty( $gLibertySystem->mContentTypes[$module_params['content_type_guid']] ) ) {
-		$title = tra( "Top Authors" ).': '.$gLibertySystem->getContentTypeName( $module_params['content_type_guid'] );
+		$title = KernelTools::tra( "Top Authors" ).': '.$gLibertySystem->getContentTypeName( $module_params['content_type_guid'] );
 	} else {
 		$gBitSmarty->assign( 'showContentType', true );
-		$title = tra( "Top Authors" );
+		$title = KernelTools::tra( "Top Authors" );
 	}
 	$gBitSmarty->assign( 'moduleTitle', $title );
 }
