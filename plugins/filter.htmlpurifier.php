@@ -158,15 +158,10 @@ function htmlpure_getDefaultConfig( &$htmlp_version, $pObject=null ){
 	$hasAdmin = false;
 	if( is_a( $pObject, 'LibertyContent' ) ) {
 		// check to see if last editor has ability to admin content, if so, ease up on the purification restraints
-		$query = $gBitSystem->isPackageActive( 'protector' )
-			? "SELECT urp.`role_id` 
+		$query = "SELECT urp.`role_id` 
 					  FROM `".BIT_DB_PREFIX."users_roles_map` urm 
 						INNER JOIN `".BIT_DB_PREFIX."users_role_permissions` urp ON (urp.`role_id`=urm.`role_id`) 
-					  WHERE urm.`user_id`=? AND (urp.`perm_name`=? OR urp.`perm_name`='p_admin')"
-			: "SELECT ugp.`group_id` 
-				  FROM `".BIT_DB_PREFIX."users_groups_map` ugm 
-					INNER JOIN `".BIT_DB_PREFIX."users_group_permissions` ugp ON (ugp.`group_id`=ugm.`group_id`) 
-				  WHERE ugm.`user_id`=? AND (ugp.`perm_name`=? OR ugp.`perm_name`='p_admin')";
+					  WHERE urm.`user_id`=? AND (urp.`perm_name`=? OR urp.`perm_name`='p_admin')";
 		// cache for 15 minutes
 		$hasAdmin = $pObject->mDb->getOne( $query, [ $pObject->getField( 'modifier_user_id' ), $pObject->mAdminContentPerm ], null, null, 900 );
 	}

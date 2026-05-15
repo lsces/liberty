@@ -33,17 +33,10 @@ if( $gBitSystem->isPackageActive( 'quota' )) {
 	];
 }
 
-if( $gBitSystem->isPackageActive( 'protector' )) {
-	$formLibertyFeatures['protector_single_role'] = [
-		'label' => 'Protector System Single role per content item',
-		'note'  => 'Limit the protector system to asign a content item to a single role. The alternative allows content in multiple roles.',
-	];
-} elseif( $gBitSystem->isPackageActive( 'protector_group' )) {
-	$formLibertyFeatures['protector_single_group'] = [
-		'label' => 'Protector System Single group per content item',
-		'note'  => 'Limit the protector system to asign a content item to a single group. The alternative allows content in multiple groups.',
-	];
-}
+$formLibertyFeatures['protector_single_role'] = [
+	'label' => 'Protector System Single role per content item',
+	'note'  => 'Limit the protector system to asign a content item to a single role. The alternative allows content in multiple roles.',
+];
 $gBitSmarty->assign( 'formLibertyFeatures', $formLibertyFeatures );
 
 $formLibertyTextareaFeatures = [

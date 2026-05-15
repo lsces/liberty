@@ -17,7 +17,7 @@
 		{else}
 			{assign var=iconClass value=""}
 		{/if}
-		{smartlink ipackage=liberty ifile="content_role_permissions.php" ititle="Assign Permissions" booticon="icon-key" class=$iconClass ipackage=liberty ifile="content_permissions.php" content_id=$serviceHash.content_id}
+		{smartlink ipackage=liberty ifile="content_role_permissions.php" ititle="Assign Permissions" booticon="icon-key" class=$iconClass content_id=$serviceHash.content_id}
 	{/if}
 {/if}
 {/strip}
