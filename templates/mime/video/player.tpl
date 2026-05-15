@@ -1,7 +1,6 @@
 {strip}
 {if $attachment.media_url}
-<link href="{$smarty.const.UTIL_PKG_URL}javascript/videojs/src/video-js.css" rel="stylesheet" />
-<script src="{$smarty.const.UTIL_PKG_URL}javascript/videojs/src/video.js"></script>
+<script src="{$smarty.const.THEMES_PKG_URL}js/videojs/src/js/video.js"></script>
 
 <video id="my-video" class="video-js" controls preload="auto" width="100%" height="600px">
   <source src="{$attachment.source_url}" type="video/mp4">
