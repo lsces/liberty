@@ -2860,8 +2860,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	protected function parseData() {
-		// get the data into place
-		$this->mInfo['parsed_data'] = self::parseDataHash( $this->mInfo );
+		// Copy mInfo so parseDataHash's placeholder substitution does not corrupt mInfo['data']
+		$copy = $this->mInfo;
+		$this->mInfo['parsed_data'] = self::parseDataHash( $copy );
 	}
 
 	/**
