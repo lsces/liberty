@@ -569,35 +569,18 @@ class BitLinks extends BitBase {
 				INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON( lcl.`from_content_id`=lc.`content_id` )
 			WHERE `to_content_id` = ?";
 
+		// --- ((Wiki Page|Description))
+		$pattern = [ "!\({2}\b$pOldName\b\|([^\)]*)\){2}!" ];
+		$replace = [ "(($pNewName|$1))" ];
+
+		// --- ((Wiki Page)) or WikiPage
+		$pattern[] = "!(\({2})?\b$pOldName\b(\){2})?!";
+		$replace[] = preg_match( "! !", $pNewName )
+			?  "(($pNewName))"
+			: "$1$pNewName$2";
+
 		if( $result = $this->mDb->query( $query, [ $pContentId ] ) ) {
 			while( $row = $result->fetchRow() ) {
-				// check if there are occasions of the old name with alternate display link name
-				// --- ((Wiki Page|Description))
-				// \([2]              # check for ((
-				// \b$pOldName\b      # make sure the old name is on it's own
-				// \|                 # the seperating deliminator
-				// ([^\)]*)           # get as many characters as possible up to the next ) - put this in $1
-				// \)[2]              # closing brackets ))
-				$pattern[] = "!\({2}\b$pOldName\b\|([^\)]*)\){2}!";
-
-				// - replace with new name leaving description in tact
-				$replace[] = "(($pNewName|$1))";
-
-				// --- ((Wiki Page)) or WikiPage
-				// (\({2})?           # check for (( - optional - put this in $1
-				// \b$pOldName\b      # make sure the old name is on it's own
-				// (\){2})?           # closing brackets )) - optional - put this in $2
-				$pattern[] = "!(\({2})?\b$pOldName\b(\){2})?!";
-
-				// - the replacement depends on the new name
-				$replace[] = preg_match( "! !", $pNewName )
-					// since we have a space in the final name, we need to have ((
-					// and )) to make the link work
-					?  "(($pNewName))"
-					// no spaces in the new name either, so we only insert the ((
-					// and )) if the author used them to start off with
-					: "$1$pNewName$2";
-
 				$data = preg_replace( $pattern, $replace, $row['data'] );
 				if( md5( $data ) != md5( $row['data'] ) ) {
 					$query = "UPDATE `".BIT_DB_PREFIX."liberty_content` SET `data`=? WHERE `content_id`=?";
