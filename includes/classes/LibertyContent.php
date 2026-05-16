@@ -2071,7 +2071,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 */
 	public static function getDisplayLinkFromHash( &$pParamHash, $pLinkText=null, $pAnchor=null ) {
 		global $gBitSmarty, $gBitweaverExtension;
-		;
 		$ret = '';
 
 		if( empty( $pLinkText )) {
@@ -2087,9 +2086,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		}
 
 		// we add some more info to the title of the link
-			$linkTitle = !empty( $pParamHash['created'] )
-				? KernelTools::tra( 'Created' ).': ' . $gBitweaverExtension->smarty_modifier_bit_short_date( $pParamHash['created'] )
-				: $pLinkText;
+		$linkTitle = !empty( $pParamHash['created'] )
+			? KernelTools::tra( 'Created' ).': ' . $gBitweaverExtension->smarty_modifier_bit_short_date( $pParamHash['created'] )
+			: $pLinkText;
 
 		// finally we are ready to create the full link
 		if( !empty( $pParamHash['content_id'] )) {
