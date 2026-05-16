@@ -578,16 +578,16 @@ class BitLinks extends BitBase {
 				// \|                 # the seperating deliminator
 				// ([^\)]*)           # get as many characters as possible up to the next ) - put this in $1
 				// \)[2]              # closing brackets ))
-				$pattern[] = "!\([2]\b$pOldName\b\|([^\)]*)\)[2]!";
+				$pattern[] = "!\({2}\b$pOldName\b\|([^\)]*)\){2}!";
 
 				// - replace with new name leaving description in tact
 				$replace[] = "(($pNewName|$1))";
 
 				// --- ((Wiki Page)) or WikiPage
-				// (\([2])?           # check for (( - optional - put this in $1
+				// (\({2})?           # check for (( - optional - put this in $1
 				// \b$pOldName\b      # make sure the old name is on it's own
-				// (\)[2])?           # closing brackets )) - optional - put this in $2
-				$pattern[] = "!(\([2])?\b$pOldName\b(\)[2])?!";
+				// (\){2})?           # closing brackets )) - optional - put this in $2
+				$pattern[] = "!(\({2})?\b$pOldName\b(\){2})?!";
 
 				// - the replacement depends on the new name
 				$replace[] = preg_match( "! !", $pNewName )
