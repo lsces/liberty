@@ -1,6 +1,8 @@
 <?php
 
-namespace Bitweaver;
+namespace Bitweaver\Liberty;
+
+use Bitweaver\KernelTools;
 
 /**
  * @version  $Revision$
@@ -261,7 +263,10 @@ function data_code( $pData, $pParams ) { // Pre-Clyde Changes
 				break;
 		}
 
-		$code = "<pre>$code</pre>";
+		// highlight_string() already wraps in <pre><code> in PHP 8.x
+		if( strpos( $code, '<pre>' ) === false ) {
+			$code = "<pre>$code</pre>";
+		}
 	}
 
 	return ( !empty( $title ) ? '<p class="codetitle">'.$title.'</p>' : "" )."<div class='codelisting'>".$code."</div>";

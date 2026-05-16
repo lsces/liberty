@@ -1,7 +1,8 @@
 <?php
 
-namespace Bitweaver;
+namespace Bitweaver\Liberty;
 
+use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyContent;
 
 /**

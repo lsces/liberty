@@ -1,6 +1,8 @@
 <?php
 
-namespace Bitweaver;
+namespace Bitweaver\Liberty;
+
+use Bitweaver\KernelTools;
 
 /**
  * @version  $Revision$

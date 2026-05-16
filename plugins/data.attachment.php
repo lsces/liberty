@@ -1,7 +1,9 @@
 <?php
 
-namespace Bitweaver;
+namespace Bitweaver\Liberty;
 
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyBase;
 use Bitweaver\Liberty\LibertyContent;
 use Bitweaver\Wiki\BitPage;
