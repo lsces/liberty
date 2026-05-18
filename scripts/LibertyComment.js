@@ -1,160 +1,125 @@
 LibertyComment = {
-	// constants
-	'FORM_DIV_ID':'edit_comments',
-	'FORM_ID':'editcomment-form',
-	'REPLY_ID':null,
-	
-	// functions
-	'attachForm': function(elm, reply_id, root_id){
+	FORM_DIV_ID: 'edit_comments',
+	FORM_ID: 'editcomment-form',
+	REPLY_ID: null,
+
+	attachForm: function(elm, reply_id, root_id) {
 		LibertyComment.REPLY_ID = reply_id;
 		LibertyComment.cancelComment();
-		var form_div = MochiKit.DOM.removeElement( LibertyComment.FORM_DIV_ID );
-		MochiKit.DOM.insertSiblingNodesAfter( $(elm), form_div );
+		var $formDiv = $('#' + LibertyComment.FORM_DIV_ID).detach();
+		$(elm).after($formDiv);
 
-		var form = $(LibertyComment.FORM_ID);
-		if (form.parent_id === undefined){
-			var idInput = MochiKit.DOM.INPUT({'type':'hidden', 'name':'parent_id', 'value':root_id});
-			form.appendChild( idInput );
+		var form = document.getElementById(LibertyComment.FORM_ID);
+		if (!form.parent_id) {
+			$('<input>').attr({ type: 'hidden', name: 'parent_id', value: root_id }).appendTo(form);
 		}
 		form.parent_id.value = LibertyComment.ROOT_ID = root_id;
 		form.post_comment_reply_id.value = reply_id;
-		form.post_comment_id.value = "";
-		
-		form_div.style.display = "block";
-		if ( LibertyComment.BROWSER != "ie" ){
-			MochiKit.Visual.ScrollTo( form_div );
-		}else{
-			self.scrollTo( form_div.offsetLeft, form_div.offsetTop );
-		}
+		form.post_comment_id.value = '';
+
+		$formDiv.show();
+		$('html,body').animate({ scrollTop: $formDiv.offset().top });
 	},
-	'resetForm': function(){
-		$(LibertyComment.FORM_ID).reset();
+
+	resetForm: function() {
+		document.getElementById(LibertyComment.FORM_ID).reset();
 	},
-	'detachForm': function(){
-		var form_div = $(LibertyComment.FORM_DIV_ID);
-		form_div.style.display = "none";
-		document.body.appendChild( form_div );
+
+	detachForm: function() {
+		$('#' + LibertyComment.FORM_DIV_ID).hide().appendTo(document.body);
 	},
-	"sendRequest": function(formdata, callback){
-		var url = bitRootUrl+"liberty/ajax_comments.php";
-		var params = queryString(formdata);		
-		var req = getXMLHttpRequest();
-		req.open('POST', url, true);
-		req.setRequestHeader('Content-type','application/x-www-form-urlencoded');
-		req.setRequestHeader('Content-Length',params.length);
-		var post = sendXMLHttpRequest(req,params);
-		post.addCallback(callback);
+
+	sendRequest: function(formdata, callback) {
+		$.ajax({
+			url: bitRootUrl + 'liberty/ajax_comments.php',
+			type: 'POST',
+			data: formdata,
+			dataType: 'xml',
+			success: callback
+		});
 	},
-	'previewComment': function(){
+
+	previewComment: function() {
 		var LC = LibertyComment;
-		for( i in LC.prepRequestSrvc ){
-			LC.prepRequestSrvc[i]( LC.FORM_ID );
-		} 
-		var f = MochiKit.DOM.formContents( $(LC.FORM_ID) );
-		for (n in f[0]){
-			if (f[0][n] == 'post_comment_submit' || f[0][n] == 'post_comment_cancel'){ f[1][n] = null; }
-		}
-		LC.sendRequest(f,LC.displayPreview);
+		$.each(LC.prepRequestSrvc, function(i, fn) { fn(LC.FORM_ID); });
+		LC.sendRequest($('#' + LC.FORM_ID).serialize(), LC.displayPreview);
 	},
-	'postComment': function(){
+
+	postComment: function() {
 		var LC = LibertyComment;
-		for( i in LC.prepRequestSrvc ){
-			LC.prepRequestSrvc[i]( LC.FORM_ID );
-		} 
-		var f = MochiKit.DOM.formContents( $(LC.FORM_ID) );
-		for (n in f[0]){
-			if (f[0][n] == 'post_comment_preview' || f[0][n] == 'post_comment_cancel'){ f[1][n] = null; }
-		}
-		LC.sendRequest(f,LC.checkRslt);
+		$.each(LC.prepRequestSrvc, function(i, fn) { fn(LC.FORM_ID); });
+		LC.sendRequest($('#' + LC.FORM_ID).serialize() + '&post_comment_submit=1', LC.checkRslt);
 	},
-	'cancelComment': function(ani){
+
+	cancelComment: function(ani) {
 		LibertyComment.cancelPreview(true);
-		if (ani == true){
-			MochiKit.Visual.blindUp( LibertyComment.FORM_DIV_ID, {afterFinish: function(){
+		if (ani === true) {
+			$('#' + LibertyComment.FORM_DIV_ID).slideUp(function() {
 				LibertyComment.detachForm();
 				LibertyComment.resetForm();
-				
-				var reply_div = $('comment_'+LibertyComment.REPLY_ID);
-				if ( LibertyComment.BROWSER != "ie" ){
-					MochiKit.Visual.ScrollTo( reply_div );
-				}else{
-					self.scrollTo( reply_div.offsetLeft, reply_div.offsetTop );
+				var $replyDiv = $('#comment_' + LibertyComment.REPLY_ID);
+				if ($replyDiv.length) {
+					$('html,body').animate({ scrollTop: $replyDiv.offset().top });
 				}
-			}});
-		}else{
+			});
+		} else {
 			LibertyComment.detachForm();
 			LibertyComment.resetForm();
 		}
 	},
-	'cancelPreview': function(ani){
-		if ( $('comment_preview') != null){
-			if (ani == true){
-				MochiKit.Visual.blindUp( $('comment_preview'), {afterFinish: function(){
-					MochiKit.DOM.removeElement( $('comment_preview') );
-				}});
-			}else{
-				return	MochiKit.DOM.removeElement( $('comment_preview') );
+
+	cancelPreview: function(ani) {
+		var $preview = $('#comment_preview');
+		if ($preview.length) {
+			if (ani === true) {
+				$preview.slideUp(function() { $preview.remove(); });
+			} else {
+				$preview.remove();
 			}
 		}
 	},
-	'displayPreview': function(rslt){
-		if ( $('comment_preview') == null){
-			var preview = DIV({'id':'comment_preview'}, null);		
-		}else{
-			var preview = LibertyComment.cancelPreview();
-		}
-		preview.style.display = 'none';
-		var xml = rslt.responseXML;
-		preview.innerHTML = xml.documentElement.getElementsByTagName('content')[0].firstChild.nodeValue;
-		preview.style.marginLeft = (LibertyComment.REPLY_ID != LibertyComment.ROOT_ID)?"20px":'0';				
-		MochiKit.DOM.insertSiblingNodesBefore( $(LibertyComment.FORM_DIV_ID), preview);
-		MochiKit.Visual.blindDown( preview, {afterFinish: function(){		
-			if ( LibertyComment.BROWSER != "ie" ){
-				MochiKit.Visual.ScrollTo( preview );
-			}else{
-				//self.scrollTo( preview.offsetLeft, preview.offsetTop );
-			}
-		}});
+
+	displayPreview: function(xml) {
+		LibertyComment.cancelPreview();
+		var $preview = $('<div>').attr('id', 'comment_preview')
+			.css('marginLeft', (LibertyComment.REPLY_ID != LibertyComment.ROOT_ID) ? '20px' : '0')
+			.html($(xml).find('content').text())
+			.hide();
+		$('#' + LibertyComment.FORM_DIV_ID).before($preview);
+		$preview.slideDown(function() {
+			$('html,body').animate({ scrollTop: $preview.offset().top });
+		});
 	},
-	'checkRslt': function(rslt){
-		var xml = rslt.responseXML;
-		var status = xml.documentElement.getElementsByTagName('code')[0].firstChild.nodeValue;
-		if (status == '200'){
-			LibertyComment.displayComment(rslt);
-		}else{
-			//if status is 400, 401, or 405 still call preview - allowing someone to save their typed text.
-			LibertyComment.displayPreview(rslt);
+
+	checkRslt: function(xml) {
+		if ($(xml).find('code').text() === '200') {
+			LibertyComment.displayComment(xml);
+		} else {
+			LibertyComment.displayPreview(xml);
 		}
 	},
-	'displayComment': function(rslt){
-		var xml = rslt.responseXML;
-		var comment =  DIV(null, null);
-		comment.innerHTML = xml.documentElement.getElementsByTagName('content')[0].firstChild.nodeValue;
-		comment.style.marginLeft = (LibertyComment.REPLY_ID != LibertyComment.ROOT_ID)?"20px":'0';
-		comment.style.display = 'none';
-		if (LibertyComment.SORT_MODE == "commentDate_asc"){
-			MochiKit.DOM.insertSiblingNodesBefore( $('comment_'+LibertyComment.REPLY_ID+'_footer'), comment );
-		}else{
-			MochiKit.DOM.insertSiblingNodesAfter( $('comment_'+LibertyComment.REPLY_ID), comment );
+
+	displayComment: function(xml) {
+		var $comment = $('<div>')
+			.css('marginLeft', (LibertyComment.REPLY_ID != LibertyComment.ROOT_ID) ? '20px' : '0')
+			.html($(xml).find('content').text())
+			.hide();
+
+		if (LibertyComment.SORT_MODE === 'commentDate_asc') {
+			$('#comment_' + LibertyComment.REPLY_ID + '_footer').before($comment);
+		} else {
+			$('#comment_' + LibertyComment.REPLY_ID).after($comment);
 		}
 
-		LibertyComment.cancelPreview( true );
-		MochiKit.Visual.blindUp( LibertyComment.FORM_DIV_ID, {afterFinish: function(){
+		LibertyComment.cancelPreview(true);
+		$('#' + LibertyComment.FORM_DIV_ID).slideUp(function() {
 			LibertyComment.detachForm();
 			LibertyComment.resetForm();
-			MochiKit.Visual.blindDown( comment, {afterFinish: function(){
-				if ( LibertyComment.BROWSER != "ie" ){
-					MochiKit.Visual.ScrollTo( comment );				
-				}else{
-					//self.scrollTo( comment.offsetLeft, comment.offsetTop );
-				}
-			}});
-		}});
+			$comment.slideDown(function() {
+				$('html,body').animate({ scrollTop: $comment.offset().top });
+			});
+		});
 	},
-	/* an array of functions that will be called before form is posted
-	 * comment formid is passed to each function
-	 * example: 
-	 * func = function(formid){do something};
-	 * LibertyComment.prepRequestSrvc.push(func);*/
-	"prepRequestSrvc": new Array()
-}
+
+	prepRequestSrvc: []
+};
