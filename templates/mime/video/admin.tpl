@@ -1,14 +1,11 @@
 {strip}
 <div class="admin liberty">
 	<div class="header">
-		<h1>{tr}Flashvideo Plugin Settings{/tr}</h1>
+		<h1>{tr}Video Plugin Settings{/tr}</h1>
 	</div>
 
 	<div class="body">
-		{form legend="Flashvideo specific settings"}
-			<p class="formhelp">
-				You can find some information relating to this plugin on the <a class="external" href="https://www.bitweaver.org/wiki/LibertyMime+Flv+Plugin">LibertyMime Flv Plugin page</a> at bitweaver.org.
-			</p>
+		{form legend="Video plugin settings"}
 
 			{if $ffmpeg_extension}
 				<p class="success">
@@ -42,11 +39,11 @@
 						name=mime_video_video_codec
 						id=mime_video_video_codec
 						selected=$gBitSystem->getConfig('mime_video_video_codec')|default:flv}
-						{formhelp note="You can choose between codecs you wan to use to encode the uploaded video with. We recommend flashvideo if you don't require high quality videos.
+						{formhelp note="Choose the codec for encoding uploaded videos.
 						<dl>
-							<dt>Flashvideo</dt><dd>Medium filesize, medium quality, fast encoding.</dd>
+							<dt>FLV</dt><dd>Medium filesize, medium quality, fast encoding.</dd>
 							<dt>MP4/AVC</dt><dd>Small filesize, high quality, slow encoding.</dd>
-							<dt>MP4/AVC - 2 passes</dt><dd>Small filesize, very high quality, very slow encoding (this is likey to take at least as long as the video length).</dd>
+							<dt>MP4/AVC - 2 passes</dt><dd>Small filesize, very high quality, very slow encoding (this is likely to take at least as long as the video length).</dd>
 						</dl>"}
 				{/forminput}
 			</div>
@@ -129,22 +126,6 @@
 						id=mime_video_default_size
 						selected=$gBitSystem->getConfig('mime_video_default_size')}
 					{formhelp note="If you are encoding small versions of the videos you can display larger versions. This will reduce video quality but make the encoded video smaller."}
-				{/forminput}
-			</div>
-
-			<div class="form-group">
-				{formlabel label="Foreground Colour" for="mime_video_frontcolor"}
-				{forminput}
-					<input type='text' name="mime_video_frontcolor" id="mime_video_frontcolor" size="10" value="{$gBitSystem->getConfig('mime_video_frontcolor')|default:"FFFFFF"}" />
-					{formhelp note="Foreground colour of the progress bar."}
-				{/forminput}
-			</div>
-
-			<div class="form-group">
-				{formlabel label="Background Colour" for="mime_video_backcolor"}
-				{forminput}
-					<input type='text' name="mime_video_backcolor" id="mime_video_backcolor" size="10" value="{$gBitSystem->getConfig('mime_video_backcolor')|default:"000000"}" />
-					{formhelp note="Background colour of the progress bar."}
 				{/forminput}
 			</div>
 

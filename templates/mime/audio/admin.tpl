@@ -1,14 +1,11 @@
 {strip}
 <div class="admin liberty">
 	<div class="header">
-		<h1>{tr}Flashvideo Plugin Settings{/tr}</h1>
+		<h1>{tr}Audio Plugin Settings{/tr}</h1>
 	</div>
 
 	<div class="body">
-		{form legend="Flashvideo specific settings"}
-			<p class="formhelp">
-				You can find some information relating to this plugin on the <a class="external" href="https://www.bitweaver.org/wiki/LibertyMime+Flv+Plugin">LibertyMime Flv Plugin page</a> at bitweaver.org.
-			</p>
+		{form legend="Audio plugin settings"}
 
 			{if !$gLibertySystem->isPluginActive( 'mimeaudio' )}
 				{formfeedback error="This plugins has not been enabled. All settings you change here will have no effect on uploaded videos unless you enable the plugin in the liberty plugins administration screen"}
@@ -93,22 +90,6 @@
 				{forminput}
 					<input type='checkbox' name="mime_audio_force_encode" id="mime_audio_force_encode" value="y" {if $gBitSystem->isFeatureActive('mime_audio_force_encode')}checked="checked"{/if} />
 					{formhelp note="When mp3 files are uploaded they can be used directly for streaming. If you enable this, the uploaded mp3 will be re-encoded usually reducing filesize for streaming. The originally uploaded file will still be available for download."}
-				{/forminput}
-			</div>
-
-			<div class="form-group">
-				{formlabel label="Foreground Colour" for="mime_audio_frontcolor"}
-				{forminput}
-					<input type='text' name="mime_audio_frontcolor" id="mime_audio_frontcolor" size="10" value="{$gBitSystem->getConfig('mime_audio_frontcolor')|default:"FFFFFF"}" />
-					{formhelp note="Foreground colour of the progress bar."}
-				{/forminput}
-			</div>
-
-			<div class="form-group">
-				{formlabel label="Background Colour" for="mime_audio_backcolor"}
-				{forminput}
-					<input type='text' name="mime_audio_backcolor" id="mime_audio_backcolor" size="10" value="{$gBitSystem->getConfig('mime_audio_backcolor')|default:"000000"}" />
-					{formhelp note="Background colour of the progress bar."}
 				{/forminput}
 			</div>
 
