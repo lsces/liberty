@@ -619,16 +619,26 @@ class LibertySystem extends BitSingleton {
 		if( !isset( $this->mContentTypes ) ) {
 			$this->loadContentTypes();
 		}
+		// loadContentTypes() is a no-op during install (BIT_INSTALL guard); ensure mContentTypes is an array
+		if( !is_array( $this->mContentTypes ) ) {
+			$this->mContentTypes = [];
+		}
 		$pTypeParams['content_type_guid'] = $pGuid;
 		// automagically populate plural name value if none is set using most comment english of appending 's'
 		if( empty( $pTypeParams['content_name_plural'] ) ){
 			$pTypeParams['content_name_plural'] = $pTypeParams['content_name'].'s';
 		}
 		if( empty( $this->mContentTypes[$pGuid] ) && !empty( $pTypeParams ) ) {
-			$this->StartTrans();
-			$result = $this->mDb->associateInsert( BIT_DB_PREFIX."liberty_content_types", $pTypeParams );
-			$this->CompleteTrans();
-			// we just ran some SQL - let's flush the loadContentTypes query cache
+			// During install mContentTypes may be empty even for pre-existing types; check DB before inserting
+			$existsInDb = $this->mDb->getOne( "SELECT `content_type_guid` FROM `".BIT_DB_PREFIX."liberty_content_types` WHERE `content_type_guid`=?", [$pGuid] );
+			if( !$existsInDb ) {
+				$this->StartTrans();
+				$result = $this->mDb->associateInsert( BIT_DB_PREFIX."liberty_content_types", $pTypeParams );
+				$this->CompleteTrans();
+			}
+			// cache in-memory to prevent duplicate INSERT attempts in same request
+			$this->mContentTypes[$pGuid] = $pTypeParams;
+			// flush the loadContentTypes query cache (no-op during install, fine to call)
 			$this->loadContentTypes( 0 );
 		} else {
 			if( $pTypeParams['handler_package'] != $this->mContentTypes[$pGuid]['handler_package'] ||
