@@ -189,43 +189,44 @@ function mime_pdf_text_extract( &$pFileHash ) {
  */
 function mime_pdf_thumbnail( $pFileHash ) {
 	global $gBitSystem;
-		$stock_command = shell_exec( 'which magick' ) ?? "/bin/magick";
-		$mwconvert  = trim( $gBitSystem->getConfig( 'mwconvert_path', $stock_command ));
+	if( !extension_loaded( 'imagick' ) || $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) != 'y' ) {
+		return empty( $pFileHash['log'] );
+	}
 
-		if( is_executable( $mwconvert ) && $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' ) {
-			if ( !empty($pFileHash['upload']) ) {
-				$source = STORAGE_PKG_PATH.$pFileHash['upload']['dest_branch'];
-				if ( $gBitSystem->isFeatureActive( 'liberty_jpeg_originals' ) ) {
-					$source .= 'original.jpg';
-				} else {
-					$source .= $pFileHash['upload']['name'];
-				}
-			} else {
-				$source = $pFileHash['source_file'];
-			}
-			$dest_branch = dirname( $source );
+	if( !empty( $pFileHash['upload'] ) ) {
+		$source = STORAGE_PKG_PATH.$pFileHash['upload']['dest_branch'];
+		$source .= $gBitSystem->isFeatureActive( 'liberty_jpeg_originals' ) ? 'original.jpg' : $pFileHash['upload']['name'];
+	} else {
+		$source = $pFileHash['source_file'];
+	}
+	$dest_branch = dirname( $source );
+	$thumb_file  = "$dest_branch/thumb.jpg";
 
-			$thumb_file  = "$dest_branch/thumb.jpg";
-			$mwccommand = "$mwconvert '$source'\[0\] -thumbnail 1024x1024 -background white -flatten '$thumb_file' 2>&1";
+	try {
+		$im = new \Imagick();
+		$im->setResolution( 150, 150 );
+		$im->readImage( $source . '[0]' );
+		$im->setImageFormat( 'jpeg' );
+		$im->setImageCompressionQuality( 85 );
+		$im->setImageBackgroundColor( 'white' );
+		$im->flattenImages();
+		$im->thumbnailImage( 1024, 1024, true );
+		$im->writeImage( $thumb_file );
+		$im->destroy();
+	} catch ( \Exception $e ) {
+		return empty( $pFileHash['log'] );
+	}
 
-			shell_exec( $mwccommand );
-			if( is_file( $thumb_file ) && filesize( $thumb_file ) > 0 ) {
-			}
-			else if( is_file( "$dest_branch/thumb-0.jpg" ) ) {
-				$thumb_file = "$dest_branch/thumb-0.jpg";
-			}
-			$genHash = [
-				'attachment_id'	=> $pFileHash['attachment_id'],
-				'dest_branch'		=> $pFileHash['upload']['dest_branch'] ?? dirname( $source ),
-				'source_file'		=> $thumb_file,
-				'type'				=> 'image/jpeg',
-				'thumbnail_sizes'	=> [ 'extra-large', 'large', 'medium', 'small', 'avatar', 'icon' ],
-			];
-			if( liberty_generate_thumbnails( $genHash )) {
-			}
-			$mask = "$dest_branch/thumb*.jpg";
-			array_map( "unlink", glob( $mask ) );
-		}
+	if( is_file( $thumb_file ) && filesize( $thumb_file ) > 0 ) {
+		$genHash = [
+			'attachment_id' => $pFileHash['attachment_id'],
+			'dest_branch'   => $pFileHash['upload']['dest_branch'] ?? $dest_branch,
+			'source_file'   => $thumb_file,
+			'type'          => 'image/jpeg',
+		];
+		liberty_generate_thumbnails( $genHash );
+		array_map( 'unlink', glob( "$dest_branch/thumb*.jpg" ) );
+	}
 	return empty( $pFileHash['log'] );
 }
 
