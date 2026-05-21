@@ -1,14 +1,8 @@
 {strip}
 {if $attachment.media_url}
-<script src="{$smarty.const.THEMES_PKG_URL}js/videojs/src/js/video.js"></script>
-
-<video id="my-video" class="video-js" controls preload="auto" width="100%" height="600px">
-  <source src="{$attachment.source_url}" type="video/mp4">
-  <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video</p>
+<video controls preload="metadata" style="width:100%;max-height:600px;">
+  <source src="{$attachment.source_url}" type="{$attachment.mime_type|default:'video/mp4'}">
+  <p>{tr}Your browser does not support HTML5 video.{/tr} <a href="{$attachment.download_url}">{tr}Download{/tr}</a></p>
 </video>
-
-<script>
-  var player = videojs('my-video');
-</script>
 {/if}
 {/strip}
