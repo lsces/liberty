@@ -1824,17 +1824,15 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gBitUser,$gBitSystem;
 		if( empty( $_REQUEST['post_comment_submit'] ) && empty( $_REQUEST['post_comment_request'] ) ) {
 			if( BitBase::verifyId( $this->mContentId ) && (( $gBitUser->isRegistered() && !$this->isOwner() ) || ( $gBitUser->getField( 'user_id' ) == ANONYMOUS_USER_ID )) && ( $gBitSystem->isFeatureActive( 'users_count_admin_pageviews' ) || !$gBitUser->isAdmin() ) ) {
-				if( $this->mDb->getOne( "SELECT `content_id` FROM `".BIT_DB_PREFIX."liberty_content_hits` WHERE `content_id`=?", [ $this->mContentId ])) {
-					$query = "UPDATE `".BIT_DB_PREFIX."liberty_content_hits` SET `hits`=`hits`+1, `last_hit`= ? WHERE `content_id` = ?";
-				} else {
-					$query = "INSERT INTO `".BIT_DB_PREFIX."liberty_content_hits` ( `hits`, `last_hit`, `content_id` ) VALUES ( ?,?,? )";
-					$bindVars[] = 1;
+				$now = $gBitSystem->getUTCTime();
+				try {
+					$this->mDb->query( "UPDATE `".BIT_DB_PREFIX."liberty_content_hits` SET `hits`=`hits`+1, `last_hit`=? WHERE `content_id`=?", [ $now, $this->mContentId ] );
+					if( $this->mDb->Affected_Rows() == 0 ) {
+						$this->mDb->query( "INSERT INTO `".BIT_DB_PREFIX."liberty_content_hits` (`hits`,`last_hit`,`content_id`) VALUES (1,?,?)", [ $now, $this->mContentId ] );
+					}
+				} catch( \Exception $e ) {
+					// Race: concurrent request inserted between our UPDATE (0 rows) and INSERT — harmless
 				}
-				$bindVars[] = $gBitSystem->getUTCTime();
-				$bindVars[] = $this->mContentId;
-				$this->StartTrans();
-				$result = $this->mDb->query( $query, $bindVars );
-				$this->CompleteTrans();
 			}
 		}
 		return true;
