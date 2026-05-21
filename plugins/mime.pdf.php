@@ -172,6 +172,7 @@ function mime_pdf_text_extract( &$pFileHash ) {
 			$pdftotextcommand = $pdftotext. " \"$source\" \"$source.txt\" ";
 			shell_exec( $pdftotextcommand );
 			$pFileHash['data'] = file_get_contents($source.'.txt');
+			@unlink( $source.'.txt' );
 		} else {
 			$pFileHash['log']['pdftotext'] = "PDF to Text function not installed.";
 		}
