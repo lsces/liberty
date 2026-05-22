@@ -75,6 +75,11 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	public $mContentTypeGuid;
 
 	/**
+	 * mInfo key used by loadXrefTypeList(); subclasses may override (e.g. 'contact_types')
+	 */
+	protected $mXrefTypeKey = 'xref_types';
+
+	/**
 	 * Content type hash for this LibertyContent object
 	 * @public
 	 */
@@ -3722,6 +3727,218 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		$gContent = $oldGContent;
 
 		return $ret;
+	}
+
+	// =========================================================================
+	// Xref methods — generic for any LibertyContent subclass.
+	// Queries scope to $this->mContentTypeGuid so each package sees only its
+	// own liberty_xref_type / liberty_xref_source / liberty_xref rows.
+	// =========================================================================
+
+	/**
+	 * Returns xref type groups (sort_order > 0) for this content type.
+	 * Each row includes xref_type aliased as 'source' for template use.
+	 */
+	public function getXrefGroupList(): array {
+		global $gBitUser;
+		$roles    = array_keys( $gBitUser->mRoles );
+		$bindVars = array_merge( $roles, [ $gBitUser->mUserId ] );
+		$query = "SELECT g.*, g.`xref_type` AS source FROM `".BIT_DB_PREFIX."liberty_xref_type` g
+				  LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=g.`role_id` )
+				  WHERE g.`content_type_guid` = '".$this->mContentTypeGuid."' AND g.`sort_order` > 0 AND (g.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
+				  ORDER BY g.`sort_order`";
+		$result = $this->mDb->query( $query, $bindVars );
+		$ret = [];
+		while ( $res = $result->fetchRow() ) {
+			$ret[] = $res;
+		}
+		return $ret;
+	}
+
+	/**
+	 * Returns xref sources at sort_order=0 (the top-level type/category markers).
+	 */
+	public function getXrefSourceList(): array {
+		global $gBitUser;
+		$roles    = array_keys( $gBitUser->mRoles );
+		$bindVars = array_merge( $roles, [ $gBitUser->mUserId ] );
+		$query = "SELECT g.`cross_ref_title` AS `type_name`, g.`source` FROM `".BIT_DB_PREFIX."liberty_xref_source` g
+				  JOIN `".BIT_DB_PREFIX."liberty_xref_type` t ON t.`xref_type` = g.`xref_type` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
+				  LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=g.`role_id` )
+				  WHERE g.`content_type_guid` = '".$this->mContentTypeGuid."' AND t.`sort_order` = 0 AND (g.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
+				  ORDER BY g.`source`";
+		$result = $this->mDb->query( $query, $bindVars );
+		$ret = [];
+		$cnt = 0;
+		while ( $res = $result->fetchRow() ) {
+			$ret[$cnt]['source'] = $res['source'];
+			$ret[$cnt++]['name'] = trim( $res['type_name'] );
+		}
+		return $ret;
+	}
+
+	/**
+	 * Returns available xref source types, optionally filtered by group (sort_order
+	 * integer) or template name. Used to populate the add-xref type selector.
+	 */
+	public function getXrefTypeList( $xrefGroup = 0, $xrefTemplate = NULL ): array {
+		if ( $xrefTemplate ) {
+			$query = "SELECT s.`cross_ref_title` AS `type_name`, s.`source`, s.`template` FROM `".BIT_DB_PREFIX."liberty_xref_source` s
+					  WHERE s.`content_type_guid` = '".$this->mContentTypeGuid."' AND s.`template` = '$xrefTemplate'
+					  ORDER BY s.`cross_ref_title`";
+			$result = $this->mDb->query( $query, [] );
+		} elseif ( $xrefGroup > -1 ) {
+			$query = "SELECT s.`cross_ref_title` AS `type_name`, s.`source`, s.`template` FROM `".BIT_DB_PREFIX."liberty_xref_source` s
+					  JOIN `".BIT_DB_PREFIX."liberty_xref_type` t ON t.`xref_type` = s.`xref_type` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
+					  LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x ON x.`source` = s.`source` AND x.`content_id` = ? AND ( x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP )
+					  WHERE s.`content_type_guid` = '".$this->mContentTypeGuid."' AND t.`sort_order` = ? AND ( x.`xref_id` IS NULL OR x.`xorder` > 0 )
+					  ORDER BY s.`cross_ref_title`";
+			$result = $this->mDb->query( $query, [ $this->mContentId, $xrefGroup ] );
+		} else {
+			$query = "SELECT s.`cross_ref_title` AS `type_name`, s.`source`, s.`template` FROM `".BIT_DB_PREFIX."liberty_xref_source` s
+					  JOIN `".BIT_DB_PREFIX."liberty_xref_type` t ON t.`xref_type` = s.`xref_type` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
+					  LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x ON x.`source` = s.`source` AND x.`content_id` = ? AND ( x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP )
+					  WHERE s.`content_type_guid` = '".$this->mContentTypeGuid."' AND t.`sort_order` > 0 AND ( x.`xref_id` IS NULL OR x.`xorder` > 0 )
+					  ORDER BY s.`cross_ref_title`";
+			$result = $this->mDb->query( $query, [ $this->mContentId ] );
+		}
+		$ret = [];
+		while ( $res = $result->fetchRow() ) {
+			$ret['list'][$res['source']] = trim( $res['type_name'] );
+			$ret['type'][$res['source']] = trim( $res['template'] ) !== '' ? trim( $res['template'] ) : 'generic';
+		}
+		return $ret;
+	}
+
+	/**
+	 * Returns distinct xref template format names for this content type.
+	 */
+	public function getXrefFormatList(): array {
+		global $gBitUser;
+		$roles    = array_keys( $gBitUser->mRoles );
+		$bindVars = array_merge( $roles, [ $gBitUser->mUserId ] );
+		$query = "SELECT DISTINCT g.`template` FROM `".BIT_DB_PREFIX."liberty_xref_source` g
+				  LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=g.`role_id` )
+				  WHERE g.`content_type_guid` = '".$this->mContentTypeGuid."' AND (g.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
+				  ORDER BY g.`template`";
+		$result = $this->mDb->query( $query, $bindVars );
+		$ret = [];
+		while ( $res = $result->fetchRow() ) {
+			$ret[] = trim( $res['template'] ) !== '' ? trim( $res['template'] ) : 'generic';
+		}
+		return $ret;
+	}
+
+	/**
+	 * Loads xref type markers (sort_order=0 sources, showing which categories apply
+	 * to this content item) into mInfo[$this->mXrefTypeKey].
+	 * Subclasses set $mXrefTypeKey to control the mInfo key (default: 'xref_types').
+	 */
+	public function loadXrefTypeList(): void {
+		if ( $this->isValid() && empty( $this->mInfo[$this->mXrefTypeKey] ) ) {
+			global $gBitUser;
+			$roles    = array_keys( $gBitUser->mRoles );
+			$bindVars = array_merge( [ $this->mContentId ], $roles, [ $gBitUser->mUserId ] );
+			$sql = "SELECT r.`source`, r.`cross_ref_title`, d.`content_id`
+					FROM `".BIT_DB_PREFIX."liberty_xref_source` r
+					JOIN `".BIT_DB_PREFIX."liberty_xref_type` t ON t.`xref_type` = r.`xref_type` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
+					LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` d ON d.`content_id` = ? AND d.`source` = r.`source`
+					LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=r.`role_id` )
+					WHERE r.`content_type_guid` = '".$this->mContentTypeGuid."' AND t.`sort_order` = 0 AND (r.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
+					ORDER BY r.`source`";
+			$result = $this->mDb->query( $sql, $bindVars );
+			while ( $res = $result->fetchRow() ) {
+				$this->mInfo[$this->mXrefTypeKey][] = $res;
+			}
+		}
+	}
+
+	/**
+	 * Loads all xref records for this content item into mInfo keyed by type_source
+	 * (the liberty_xref_type.xref_type text key, or 'history' for expired records).
+	 */
+	public function loadXrefList(): void {
+		if ( $this->isValid() && empty( $this->mInfo['xref'] ) ) {
+			global $gBitUser;
+			$roles    = array_keys( $gBitUser->mRoles );
+			$bindVars = array_merge( [ $this->mDb->NOW(), $this->mContentId ], $roles, [ $gBitUser->mUserId ] );
+			$sql = "SELECT s.`xref_type`, x.`xref_id`, x.`last_update_date`, x.`source`, t.`title` AS type_title,
+					CASE
+					WHEN x.`end_date` < ? THEN 'history'
+					ELSE t.`xref_type` END AS type_source,
+					CASE
+					WHEN x.`xorder` = 0 THEN s.`cross_ref_title`
+					ELSE s.`cross_ref_title` || '-' || x.`xorder` END
+					AS source_title,
+					x.`xref`, x.`xkey`, x.`xkey_ext`, x.`data`,
+					x.`start_date`, x.`end_date`, s.`template`,
+					pc.`add1` || ',' || pc.`add2` || ',' || pc.`add4` || ',' || pc.`town` AS address
+					FROM `".BIT_DB_PREFIX."liberty_xref` x
+					JOIN `".BIT_DB_PREFIX."liberty_xref_source` s ON s.`source` = x.`source` AND s.`content_type_guid` = '".$this->mContentTypeGuid."'
+					LEFT JOIN `".BIT_DB_PREFIX."address_postcode` pc ON pc.`postcode` = x.`xkey`
+					JOIN `".BIT_DB_PREFIX."liberty_xref_type` t ON t.`xref_type` = s.`xref_type` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
+					LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=s.`role_id` )
+					WHERE x.`content_id` = ? AND (s.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
+					ORDER BY x.`source`, x.`xorder`";
+			$result = $this->mDb->query( $sql, $bindVars );
+			if ( $result ) {
+				while ( $res = $result->fetchRow() ) {
+					$this->mInfo[$res['type_source']][] = $res;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Loads a single xref record by xref_id and then loads the parent content item.
+	 */
+	public function loadXref( $pXrefId = NULL ): void {
+		if ( BitBase::verifyId( $pXrefId ) ) {
+			$xref = new LibertyXref();
+			$xref->mContentTypeGuid = $this->mContentTypeGuid;
+			$xref->load( $pXrefId );
+			if ( $xref->mContentId ) {
+				$this->load( $xref->mContentId );
+				$this->mInfo['xref_title'] = $xref->mContentId;
+				$this->mInfo['xref_store'] = $xref->mInfo;
+				$this->mInfo['format_guid'] = 'text';
+			}
+		}
+	}
+
+	/**
+	 * Stores or updates an xref record for this content item.
+	 */
+	public function storeXref( &$pParamHash ): bool {
+		$xref = new LibertyXref();
+		$xref->mContentTypeGuid = $this->mContentTypeGuid;
+		if ( BitBase::verifyId( $pParamHash['xref_id'] ?? null ) ) {
+			$xref->load( $pParamHash['xref_id'] );
+		}
+		if ( $xref->store( $pParamHash ) ) {
+			$this->mInfo['xref_title'] = $xref->mContentId;
+			$this->mInfo['xref_store'] = $xref->mInfo;
+			$pParamHash['xref_id']     = $xref->mXrefId;
+			$this->load();
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Steps (creates a new dated version of) an xref record for this content item.
+	 */
+	public function stepXref( &$pParamHash ): bool {
+		$xref = new LibertyXref();
+		$xref->mContentTypeGuid = $this->mContentTypeGuid;
+		$xref->load( $pParamHash['xref_id'] );
+		if ( $xref->stepXref( $pParamHash ) ) {
+			$this->mInfo['xref_title'] = $xref->mContentId;
+			$this->mInfo['xref_store'] = $xref->mInfo;
+			$this->load();
+			return true;
+		}
+		return false;
 	}
 
 }
