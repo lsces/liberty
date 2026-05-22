@@ -5,6 +5,8 @@
 	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/plugins.php">{tr}Plugins{/tr}</a></li>
 	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/action_logs.php">{tr}Action Logs{/tr}</a></li>
 	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/comments.php">{tr}Comments{/tr}</a></li>
+	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_groups.php">{tr}Xref Groups{/tr}</a></li>
+	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_sources.php">{tr}Xref Sources{/tr}</a></li>
 		{if $gBitSystem->isPackageActive( 'pdf' ) }
 			<li><a class="item" href="{$smarty.const.KERNEL_PKG_URL}admin/index.php?page=pdf">{tr}PDF{/tr}</a></li>
 		{/if}
