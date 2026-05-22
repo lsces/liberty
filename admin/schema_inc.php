@@ -218,6 +218,42 @@ $tables = [
 				, CONSTRAINT `lib_attachment_meta_title_ref` FOREIGN KEY (`meta_title_id`) REFERENCES `" . BIT_DB_PREFIX . "liberty_meta_titles` (`meta_title_id`) '
 ",
 
+	'liberty_xref_type'   => "
+	xref_type C(32) PRIMARY,
+	package C(20) NOTNULL,
+	title C(64),
+	sort_order I2,
+	role_id I4,
+	type_href C(256)
+",
+
+	'liberty_xref_source' => "
+	source C(20) PRIMARY,
+	package C(20) NOTNULL,
+	xref_type C(32),
+	cross_ref_title C(64),
+	multi I2,
+	role_id I4,
+	cross_ref_href C(256),
+	template C(32),
+	data X
+",
+
+	'liberty_xref'        => "
+	xref_id I8 PRIMARY,
+	content_id I8 NOTNULL,
+	source C(20),
+	xorder I2,
+	xref I8,
+	xkey C(32),
+	xkey_ext C(250),
+	data X,
+	start_date T,
+	last_update_date T,
+	entry_date T,
+	end_date T
+",
+
 ];
 
 global $gBitInstaller;
@@ -258,6 +294,9 @@ $indices = [
 	'lib_attachment_meta_idx'        => [ 'table' => 'liberty_attachment_meta_data', 'cols' => 'attachment_id', 'opts' => null ],
 	'lib_attachment_meta_type_idx'   => [ 'table' => 'liberty_attachment_meta_data', 'cols' => 'meta_type_id', 'opts' => null ],
 	'lib_attachment_meta_title_idx'  => [ 'table' => 'liberty_attachment_meta_data', 'cols' => 'meta_title_id', 'opts' => null ],
+	'liberty_xref_content_idx'       => [ 'table' => 'liberty_xref', 'cols' => 'content_id', 'opts' => null ],
+	'liberty_xref_source_pkg_idx'    => [ 'table' => 'liberty_xref_source', 'cols' => 'package', 'opts' => null ],
+	'liberty_xref_type_pkg_idx'      => [ 'table' => 'liberty_xref_type', 'cols' => 'package', 'opts' => null ],
 ];
 
 foreach( array_keys($constraints) AS $tableName ) {
@@ -280,6 +319,7 @@ $sequences = [
 	'liberty_structures_id_seq'  => [ 'start' => 4 ],
 	'liberty_meta_types_id_seq'  => [ 'start' => 1 ],
 	'liberty_meta_titles_id_seq' => [ 'start' => 1 ],
+	'liberty_xref_seq'           => [ 'start' => 1 ],
 ];
 $gBitInstaller->registerSchemaSequences( LIBERTY_PKG_NAME, $sequences );
 

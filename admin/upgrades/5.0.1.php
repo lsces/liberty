@@ -1,0 +1,63 @@
+<?php
+/**
+ * @package liberty
+ */
+
+global $gBitInstaller;
+
+$gBitInstaller->registerPackageUpgrade(
+	[
+		'package'     => 'liberty',
+		'version'     => '5.0.1',
+		'description' => 'Add liberty_xref tables: a package-agnostic cross-reference mechanism for attaching typed, multi-valued, date-tracked attributes to any liberty content.',
+	],
+	[
+		[ 'DATADICT' => [
+			[ 'CREATE' => [
+				'liberty_xref_type'   => "
+					xref_type C(32) PRIMARY,
+					package C(20) NOTNULL,
+					title C(64),
+					sort_order I2,
+					role_id I4,
+					type_href C(256)
+				",
+				'liberty_xref_source' => "
+					source C(20) PRIMARY,
+					package C(20) NOTNULL,
+					xref_type C(32),
+					cross_ref_title C(64),
+					multi I2,
+					role_id I4,
+					cross_ref_href C(256),
+					template C(32),
+					data X
+				",
+				'liberty_xref'        => "
+					xref_id I8 PRIMARY,
+					content_id I8 NOTNULL,
+					source C(20),
+					xorder I2,
+					xref I8,
+					xkey C(32),
+					xkey_ext C(250),
+					data X,
+					start_date T,
+					last_update_date T,
+					entry_date T,
+					end_date T
+				",
+			]],
+			[ 'CREATESEQUENCE' => [
+				[ 'liberty_xref_seq' ],
+			]],
+			[ 'CREATEINDEX' => [
+				[
+					'liberty_xref_content_idx'    => [ 'liberty_xref',        'content_id', null ],
+					'liberty_xref_source_pkg_idx' => [ 'liberty_xref_source', 'package',    null ],
+					'liberty_xref_type_pkg_idx'   => [ 'liberty_xref_type',   'package',    null ],
+				],
+			]],
+		]],
+	]
+);
