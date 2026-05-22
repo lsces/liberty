@@ -15,6 +15,7 @@ class LibertyXref extends LibertyBase {
 	public $mXrefId;
 	public $mContentId;
 	public $mDate;
+	protected $mContentTypeGuid = '';
 
 	public function __construct( $iXrefId = NULL ) {
 		$this->mXrefId = NULL;
@@ -34,6 +35,8 @@ class LibertyXref extends LibertyBase {
 
 	public function load( $pXrefId = NULL ) {
 		if( BitBase::verifyId( $pXrefId ) ) {
+			$guidFilter  = !empty( $this->mContentTypeGuid ) ? "AND s.`content_type_guid` = ?" : '';
+			$bindVars    = !empty( $this->mContentTypeGuid ) ? [ $this->mContentTypeGuid, $pXrefId ] : [ $pXrefId ];
 			$sql = "SELECT x.*, CASE
 					WHEN x.`xorder` = 0 THEN s.`cross_ref_title`
 					ELSE s.`cross_ref_title` || '-' || x.`xorder` END
@@ -42,10 +45,10 @@ class LibertyXref extends LibertyBase {
 					CASE WHEN x.`end_date` IS NULL THEN 'y' ELSE 'n' END AS `ignore_end_date`,
 					s.`cross_ref_title` AS `template_title`, s.`template`
 					FROM `".BIT_DB_PREFIX."liberty_xref` x
-					JOIN `".BIT_DB_PREFIX."liberty_xref_source` s ON s.`source` = x.`source`
+					JOIN `".BIT_DB_PREFIX."liberty_xref_source` s ON s.`source` = x.`source` $guidFilter
 					WHERE x.`xref_id` = ?
 					ORDER BY x.`xorder`";
-			$result = $this->mDb->getRow( $sql, [ $pXrefId ] );
+			$result = $this->mDb->getRow( $sql, $bindVars );
 			if( $result['content_id'] ) {
 				$this->mXrefId    = $pXrefId;
 				$this->mContentId = $result['content_id'];
@@ -74,8 +77,10 @@ class LibertyXref extends LibertyBase {
 		if( isset( $pParamHash['fAddXref'] ) ) {
 			$pParamHash['xref_store']['source']     = isset( $pParamHash['Array_xref_type_list'] ) ? $pParamHash['Array_xref_type_list']['Array.source'] : $pParamHash['source'];
 			$pParamHash['xref_store']['content_id'] = $pParamHash['content_id'];
-			$sql  = "SELECT x.`multi` FROM `".BIT_DB_PREFIX."liberty_xref_source` x WHERE x.`source` = ?";
-			$next = $this->mDb->getOne( $sql, [ $pParamHash['xref_store']['source'] ] );
+			$guidWhere = !empty( $this->mContentTypeGuid ) ? "AND x.`content_type_guid` = ?" : '';
+			$guidBind  = !empty( $this->mContentTypeGuid ) ? [ $pParamHash['xref_store']['source'], $this->mContentTypeGuid ] : [ $pParamHash['xref_store']['source'] ];
+			$sql  = "SELECT x.`multi` FROM `".BIT_DB_PREFIX."liberty_xref_source` x WHERE x.`source` = ? $guidWhere";
+			$next = $this->mDb->getOne( $sql, $guidBind );
 			if( $next > 0 ) {
 				$sql  = "SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x WHERE x.`content_id` = ? AND x.`source` = ?";
 				$next = $this->mDb->getOne( $sql, [ $pParamHash['xref_store']['content_id'], $pParamHash['xref_store']['source'] ] );

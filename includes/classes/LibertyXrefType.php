@@ -20,9 +20,9 @@ class LibertyXrefType extends LibertyBase {
 		$where     = '';
 		$bindVars  = [];
 
-		if( !empty( $pOptionHash['package'] ) ) {
-			$where     = " WHERE cxs.`package` = ? ";
-			$bindVars[] = $pOptionHash['package'];
+		if( !empty( $pOptionHash['content_type_guid'] ) ) {
+			$where     = " WHERE cxs.`content_type_guid` = ? ";
+			$bindVars[] = $pOptionHash['content_type_guid'];
 		}
 		if( !empty( $pOptionHash['active_role'] ) ) {
 			$where     = " WHERE cxs.`role_id` = ? ";
