@@ -105,7 +105,7 @@ function mime_video_store( &$pStoreRow ) {
  * @return bool true on success, false on failure - mErrors will contain reason for failure
  */
 function mime_video_update( &$pStoreRow, $pParams = null ) {
-	$ret = false;
+	$ret = true;
 	if( BitBase::verifyId( $pStoreRow['attachment_id'] )) {
 		$pStoreRow['log'] = [];
 
