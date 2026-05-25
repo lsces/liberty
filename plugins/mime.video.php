@@ -504,7 +504,7 @@ function mime_video_converter( &$pParamHash, $pOnlyGetParameters = false ) {
  * @access public
  * @return bool true on success, false on failure
  */
-function mime_video_create_thumbnail( $pFile, $pOffset = 60 ) {
+function mime_video_create_thumbnail( $pFile, $pOffset = 5 ) {
 	global $gBitSystem;
 	$ret = false;
 	if( !empty( $pFile ) && is_file( $pFile )) {
@@ -519,8 +519,7 @@ function mime_video_create_thumbnail( $pFile, $pOffset = 60 ) {
 			$ffmpeg = trim( $gBitSystem->getConfig( 'ffmpeg_path', '/usr/bin/ffmpeg') );
 
 		if( !empty( $thumbnailer ) && is_executable( $thumbnailer )) {
-//			shell_exec( "$ffmpeg -i '$pFile'  -ss 00:00:05 -vframes 1 -vf \"scale=1024:-1\" '$destPath/thumb.jpg' ");
-			shell_exec( "$thumbnailer -i '$pFile' -o '$destPath/thumb.jpg' -s 1024" );
+			shell_exec( "timeout 60 $thumbnailer -i '$pFile' -o '$destPath/thumb.jpg' -s 1024" );
 		}
 
 		if( is_file( "$destPath/thumb.jpg" ) && filesize( "$destPath/thumb.jpg" ) > 1 ) {
@@ -533,10 +532,10 @@ function mime_video_create_thumbnail( $pFile, $pOffset = 60 ) {
 			// remove temp file
 			@unlink( "$destPath/thumb.jpg" );
 		} else {
-			// fall back to using ffmepg
-			$ffmpeg_prog = shell_exec( 'which ffmpeg' );
+			// fall back to using ffmpeg
+			$ffmpeg_prog = shell_exec( 'which ffmpeg' ) ?? '';
 			$ffmpeg = trim( $gBitSystem->getConfig( 'ffmpeg_path', $ffmpeg_prog) );
-			shell_exec( "$ffmpeg -i '$pFile' -an -ss $pOffset -t 00:00:01 -r 1 -y '$destPath/preview%d.jpg'" );
+			shell_exec( "timeout 60 $ffmpeg -i '$pFile' -an -ss $pOffset -t 00:00:01 -r 1 -y '$destPath/preview%d.jpg'" );
 			if( is_file( "$destPath/preview1.jpg" )) {
 				$fileHash['type']            = 'image/jpg';
 				$fileHash['source_file']     = "$destPath/preview1.jpg";
