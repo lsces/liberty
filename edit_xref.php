@@ -24,21 +24,28 @@ if( !empty( $_REQUEST['xref_id'] ) ) {
 	$gContent->loadXref( $_REQUEST['xref_id'] );
 }
 
-$gContent->verifyUpdatePermission();
-
 if( !empty( $_REQUEST['fCancel'] ) ) {
 	header( 'Location: '.$gContent->getDisplayUrl() );
 	die;
 }
 
 if( !empty( $_REQUEST['fSaveXref'] ) ) {
+	$gContent->verifyUpdatePermission();
 	if( $gContent->storeXref( $_REQUEST ) ) {
 		header( 'Location: '.$gContent->getDisplayUrl() );
 		die;
 	}
 	$xrefInfo = $_REQUEST;
 	$xrefInfo['data'] = $_REQUEST['edit'] ?? '';
+} elseif( isset( $_REQUEST['expunge'] ) ) {
+	$gContent->verifyExpungePermission();
+	if( $gContent->stepXref( $_REQUEST ) ) {
+		header( 'Location: '.$gContent->getDisplayUrl() );
+		die;
+	}
+	$xrefInfo = $gContent->mInfo['xref_store']['data'] ?? [];
 } else {
+	$gContent->verifyUpdatePermission();
 	$xrefInfo = $gContent->mInfo['xref_store']['data'] ?? [];
 }
 
