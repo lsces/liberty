@@ -87,7 +87,7 @@ function mime_video_store( &$pStoreRow ) {
 	// if storing works, we process the video
 	if( $ret = mime_default_store( $pStoreRow )) {
 			$source = STORAGE_PKG_PATH.$pStoreRow['upload']['dest_branch'].$pStoreRow['upload']['name'];
-			mime_video_create_thumbnail( $source, 60 );
+			mime_video_create_thumbnail( $source );
 
 //		if( !mime_video_converter( $pStoreRow )) {
 //			$pStoreRow['errors'] = $pStoreRow['log'];
@@ -117,7 +117,7 @@ function mime_video_update( &$pStoreRow, $pParams = null ) {
 		// if storing works, we process the video
 		if( !empty( $pStoreRow['upload'] ) && $ret = mime_default_update( $pStoreRow )) {
 			$source = STORAGE_PKG_PATH.$pStoreRow['upload']['dest_branch'].$pStoreRow['upload']['name'];
-			mime_video_create_thumbnail( $source, 60 );
+			mime_video_create_thumbnail( $source );
 //			if( !mime_video_converter( $pStoreRow )) {
 //				// if it all goes tits up, we'll know why
 //				$pStoreRow['errors'] = $pStoreRow['log'];
