@@ -14,20 +14,22 @@ $gBitInstaller->registerPackageUpgrade(
 	[
 		[ 'DATADICT' => [
 			[ 'CREATE' => [
-				'liberty_xref_type'   => "
-					xref_type C(32) PRIMARY,
-					package C(20) NOTNULL,
+				'liberty_xref_group'  => "
+					x_group C(32) PRIMARY,
+					content_type_guid C(32) PRIMARY,
 					title C(64),
 					sort_order I2,
 					role_id I4,
-					type_href C(256)
+					type_href C(256),
+					multiple I2,
+					template C(32)
 				",
-				'liberty_xref_source' => "
-					source C(20) PRIMARY,
-					package C(20) NOTNULL,
-					xref_type C(32),
+				'liberty_xref_item'   => "
+					item C(20) PRIMARY,
+					content_type_guid C(32) PRIMARY,
+					x_group C(32),
 					cross_ref_title C(64),
-					multi I2,
+					multiple I2,
 					role_id I4,
 					cross_ref_href C(256),
 					template C(32),
@@ -36,7 +38,7 @@ $gBitInstaller->registerPackageUpgrade(
 				'liberty_xref'        => "
 					xref_id I8 PRIMARY,
 					content_id I8 NOTNULL,
-					source C(20),
+					item C(20),
 					xorder I2,
 					xref I8,
 					xkey C(32),
@@ -48,15 +50,11 @@ $gBitInstaller->registerPackageUpgrade(
 					end_date T
 				",
 			]],
-			[ 'CREATESEQUENCE' => [
-				[ 'liberty_xref_seq' ],
-			]],
+			[ 'CREATESEQUENCE' => [ 'liberty_xref_seq' ] ],
 			[ 'CREATEINDEX' => [
-				[
-					'liberty_xref_content_idx'    => [ 'liberty_xref',        'content_id', null ],
-					'liberty_xref_source_pkg_idx' => [ 'liberty_xref_source', 'package',    null ],
-					'liberty_xref_type_pkg_idx'   => [ 'liberty_xref_type',   'package',    null ],
-				],
+				'liberty_xref_content_idx'   => [ 'liberty_xref',       'content_id',        null ],
+				'liberty_xref_item_pkg_idx'  => [ 'liberty_xref_item',  'content_type_guid', null ],
+				'liberty_xref_group_pkg_idx' => [ 'liberty_xref_group', 'content_type_guid', null ],
 			]],
 		]],
 	]

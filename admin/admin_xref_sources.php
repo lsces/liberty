@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin page for managing liberty_xref_source entries across all packages.
+ * Admin page for managing liberty_xref_item entries across all packages.
  * @package liberty
  */
 
@@ -21,16 +21,16 @@ $activeGuid = $_SESSION['liberty_xref_admin_guid'] ?? '';
 if ( !empty( $_REQUEST['fAddSource'] ) ) {
 	$source   = trim( $_REQUEST['source'] ?? '' );
 	$guid     = trim( $_REQUEST['new_content_type_guid'] ?? $activeGuid );
-	$xrefType = trim( $_REQUEST['xref_type'] ?? '' );
+	$xrefType = trim( $_REQUEST["x_group"] ?? '' );
 	$title    = trim( $_REQUEST['cross_ref_title'] ?? '' );
 	$template = trim( $_REQUEST['template'] ?? '' );
 	$href     = trim( $_REQUEST['cross_ref_href'] ?? '' );
-	$multi    = (int)( $_REQUEST['multi'] ?? 0 );
+	$multiple    = (int)( $_REQUEST["multiple"] ?? 0 );
 	$roleId   = (int)( $_REQUEST['role_id'] ?? 3 );
 	if ( $source && $guid && $xrefType && $title ) {
 		$gBitDb->query(
-			"INSERT INTO `".BIT_DB_PREFIX."liberty_xref_source` (`source`,`content_type_guid`,`xref_type`,`cross_ref_title`,`multi`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES (?,?,?,?,?,?,?,?,NULL)",
-			[ $source, $guid, $xrefType, $title, $multi, $roleId, $href, $template ]
+			"INSERT INTO `".BIT_DB_PREFIX."liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES (?,?,?,?,?,?,?,?,NULL)",
+			[ $source, $guid, $xrefType, $title, $multiple, $roleId, $href, $template ]
 		);
 	}
 }
@@ -41,12 +41,12 @@ if ( !empty( $_REQUEST['fDeleteSource'] ) ) {
 	$guid   = $_REQUEST['del_content_type_guid'] ?? '';
 	if ( $source && $guid ) {
 		$count = $gBitDb->getOne(
-			"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `source` = ?",
+			"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `item` = ?",
 			[ $source ]
 		);
 		if ( $count == 0 ) {
 			$gBitDb->query(
-				"DELETE FROM `".BIT_DB_PREFIX."liberty_xref_source` WHERE `source` = ? AND `content_type_guid` = ?",
+				"DELETE FROM `".BIT_DB_PREFIX."liberty_xref_item` WHERE `item` = ? AND `content_type_guid` = ?",
 				[ $source, $guid ]
 			);
 		} else {

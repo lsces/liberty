@@ -33,7 +33,7 @@
 	</div>
 	{if $allow_add && $gContent->isValid() && $gContent->hasUpdatePermission() && $source ne 'history'}
 		<div>
-			{smartlink ititle="Add record" ipackage="liberty" ifile="add_xref.php" booticon="icon-note-add" content_id=$gContent->mInfo.content_id xref_type=$xref_type}
+			{smartlink ititle="Add record" ipackage="liberty" ifile="add_xref.php" booticon="icon-note-add" content_id=$gContent->mInfo.content_id group=$group}
 		</div>
 	{/if}
 	{/legend}

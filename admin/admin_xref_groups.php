@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin page for managing liberty_xref_type groups across all packages.
+ * Admin page for managing liberty_xref_group groups across all packages.
  * @package liberty
  */
 
@@ -19,14 +19,14 @@ $activeGuid = $_SESSION['liberty_xref_admin_guid'] ?? '';
 
 // Add a new group
 if ( !empty( $_REQUEST['fAddGroup'] ) ) {
-	$xrefType = trim( $_REQUEST['xref_type'] ?? '' );
+	$xrefType = trim( $_REQUEST["x_group"] ?? '' );
 	$guid     = trim( $_REQUEST['new_content_type_guid'] ?? $activeGuid );
 	$title    = trim( $_REQUEST['title'] ?? '' );
 	$sortOrder = (int)( $_REQUEST['sort_order'] ?? 0 );
 	$roleId    = (int)( $_REQUEST['role_id'] ?? 3 );
 	if ( $xrefType && $guid && $title ) {
 		$gBitDb->query(
-			"INSERT INTO `".BIT_DB_PREFIX."liberty_xref_type` (`xref_type`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`) VALUES (?,?,?,?,?,'')",
+			"INSERT INTO `".BIT_DB_PREFIX."liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`) VALUES (?,?,?,?,?,'')",
 			[ $xrefType, $guid, $title, $sortOrder, $roleId ]
 		);
 	}
@@ -34,16 +34,16 @@ if ( !empty( $_REQUEST['fAddGroup'] ) ) {
 
 // Delete a group (only if no sources are attached)
 if ( !empty( $_REQUEST['fDeleteGroup'] ) ) {
-	$xrefType = $_REQUEST['xref_type'] ?? '';
+	$xrefType = $_REQUEST["x_group"] ?? '';
 	$guid     = $_REQUEST['del_content_type_guid'] ?? '';
 	if ( $xrefType && $guid ) {
 		$count = $gBitDb->getOne(
-			"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref_source` WHERE `xref_type` = ? AND `content_type_guid` = ?",
+			"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref_item` WHERE `x_group` = ? AND `content_type_guid` = ?",
 			[ $xrefType, $guid ]
 		);
 		if ( $count == 0 ) {
 			$gBitDb->query(
-				"DELETE FROM `".BIT_DB_PREFIX."liberty_xref_type` WHERE `xref_type` = ? AND `content_type_guid` = ?",
+				"DELETE FROM `".BIT_DB_PREFIX."liberty_xref_group` WHERE `x_group` = ? AND `content_type_guid` = ?",
 				[ $xrefType, $guid ]
 			);
 		} else {

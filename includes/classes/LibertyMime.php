@@ -48,6 +48,11 @@ class LibertyMime extends LibertyContent {
 				$this->loadAttachmentPreferences();
 			}
 
+			// mime plugins aren't loaded during BIT_INSTALL (active plugin list can't be read from DB), skip attachment rendering
+			if( defined( 'BIT_INSTALL' ) ) {
+				return true;
+			}
+
 			$query = "SELECT * FROM `".BIT_DB_PREFIX."liberty_attachments` la WHERE la.`content_id`=? ORDER BY la.`pos` ASC, la.`attachment_id` ASC";
 			if( $result = $this->mDb->query( $query,[ $this->mContentId ])) {
 				$this->mStorage = [];

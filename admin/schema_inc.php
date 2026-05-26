@@ -218,21 +218,23 @@ $tables = [
 				, CONSTRAINT `lib_attachment_meta_title_ref` FOREIGN KEY (`meta_title_id`) REFERENCES `" . BIT_DB_PREFIX . "liberty_meta_titles` (`meta_title_id`) '
 ",
 
-	'liberty_xref_type'   => "
-	xref_type C(32) PRIMARY,
-	package C(20) NOTNULL,
+	'liberty_xref_group'  => "
+	x_group C(32) PRIMARY,
+	content_type_guid C(32) PRIMARY,
 	title C(64),
 	sort_order I2,
 	role_id I4,
-	type_href C(256)
+	type_href C(256),
+	multiple I2,
+	template C(32)
 ",
 
-	'liberty_xref_source' => "
-	source C(20) PRIMARY,
-	package C(20) NOTNULL,
-	xref_type C(32),
+	'liberty_xref_item'   => "
+	item C(20) PRIMARY,
+	content_type_guid C(32) PRIMARY,
+	x_group C(32),
 	cross_ref_title C(64),
-	multi I2,
+	multiple I2,
 	role_id I4,
 	cross_ref_href C(256),
 	template C(32),
@@ -242,7 +244,7 @@ $tables = [
 	'liberty_xref'        => "
 	xref_id I8 PRIMARY,
 	content_id I8 NOTNULL,
-	source C(20),
+	item C(20),
 	xorder I2,
 	xref I8,
 	xkey C(32),
@@ -294,9 +296,9 @@ $indices = [
 	'lib_attachment_meta_idx'        => [ 'table' => 'liberty_attachment_meta_data', 'cols' => 'attachment_id', 'opts' => null ],
 	'lib_attachment_meta_type_idx'   => [ 'table' => 'liberty_attachment_meta_data', 'cols' => 'meta_type_id', 'opts' => null ],
 	'lib_attachment_meta_title_idx'  => [ 'table' => 'liberty_attachment_meta_data', 'cols' => 'meta_title_id', 'opts' => null ],
-	'liberty_xref_content_idx'       => [ 'table' => 'liberty_xref', 'cols' => 'content_id', 'opts' => null ],
-	'liberty_xref_source_pkg_idx'    => [ 'table' => 'liberty_xref_source', 'cols' => 'package', 'opts' => null ],
-	'liberty_xref_type_pkg_idx'      => [ 'table' => 'liberty_xref_type', 'cols' => 'package', 'opts' => null ],
+	'liberty_xref_content_idx'       => [ 'table' => 'liberty_xref',       'cols' => 'content_id',        'opts' => null ],
+	'liberty_xref_item_pkg_idx'      => [ 'table' => 'liberty_xref_item',  'cols' => 'content_type_guid', 'opts' => null ],
+	'liberty_xref_group_pkg_idx'     => [ 'table' => 'liberty_xref_group', 'cols' => 'content_type_guid', 'opts' => null ],
 ];
 
 foreach( array_keys($constraints) AS $tableName ) {

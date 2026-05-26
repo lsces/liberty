@@ -9,12 +9,12 @@
 
 		{form id="addXrefForm"}
 			<input type="hidden" name="content_id" value="{$gContent->mContentId}" />
-			<input type="hidden" name="xref_type"  value="{$xref_type}" />
+			<input type="hidden" name="group"  value="{$group}" />
 
 			<div class="form-group">
-				{formlabel label="Type" for="source"}
+				{formlabel label="Type" for="item"}
 				{forminput}
-					{html_options name="source" id="source" options=$xrefTypeList.list}
+					{html_options name="item" id="item" options=$xrefTypeList.list}
 				{/forminput}
 			</div>
 

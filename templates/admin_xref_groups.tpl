@@ -36,8 +36,8 @@
 			<input type="hidden" name="new_content_type_guid" value="{$activeGuid|escape}" />
 			<input type="hidden" name="content_type_guid" value="{$activeGuid|escape}" />
 			<div class="form-group">
-				{formlabel label="Key (xref_type)" for="xref_type"}
-				{forminput}<input type="text" id="xref_type" name="xref_type" class="form-control" />{/forminput}
+				{formlabel label="Key (group)" for="x_group"}
+				{forminput}<input type="text" id="x_group" name="x_group" class="form-control" />{/forminput}
 			</div>
 			<div class="form-group">
 				{formlabel label="Title" for="title"}
@@ -75,7 +75,7 @@
 			{foreach from=$xref_groups item=grp}
 				<tr>
 					<td>{$grp.content_type_guid|escape}</td>
-					<td><code>{$grp.xref_type|escape}</code></td>
+					<td><code>{$grp.x_group|escape}</code></td>
 					<td>{$grp.title|escape}</td>
 					<td>{$grp.sort_order}</td>
 					<td>{$grp.role_id}</td>
@@ -84,8 +84,9 @@
 					</td>
 					<td>
 						{if $grp.num_sources eq 0}
-							<a href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_groups.php?fDeleteGroup=1&amp;xref_type={$grp.xref_type|escape}&amp;del_content_type_guid={$grp.content_type_guid|escape}&amp;content_type_guid={$activeGuid|escape}"
+							<a href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_groups.php?fDeleteGroup=1&amp;x_group={$grp.x_group|escape}&amp;del_content_type_guid={$grp.content_type_guid|escape}&amp;content_type_guid={$activeGuid|escape}"
 							   onclick="return confirm('{tr}Delete this group?{/tr}')">{booticon iname="icon-trash" ipackage="icons" iforce=icon_text iexplain="Delete"}</a>
+
 						{/if}
 					</td>
 				</tr>

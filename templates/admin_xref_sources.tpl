@@ -40,11 +40,11 @@
 				{forminput}<input type="text" id="source" name="source" class="form-control" />{/forminput}
 			</div>
 			<div class="form-group">
-				{formlabel label="Group" for="xref_type"}
+				{formlabel label="Group" for="x_group"}
 				{forminput}
-					<select name="xref_type" id="xref_type" class="form-control">
+					<select name="x_group" id="x_group" class="form-control">
 						{foreach from=$xref_groups item=grp}
-							<option value="{$grp.xref_type|escape}">{$grp.title|escape} ({$grp.xref_type|escape})</option>
+							<option value="{$grp.x_group|escape}">{$grp.title|escape} ({$grp.x_group|escape})</option>
 						{/foreach}
 					</select>
 				{/forminput}
@@ -62,8 +62,8 @@
 				{forminput}<input type="text" id="cross_ref_href" name="cross_ref_href" class="form-control" />{/forminput}
 			</div>
 			<div class="form-group">
-				{formlabel label="Multi" for="multi"}
-				{forminput}<input type="number" id="multi" name="multi" value="0" class="form-control" style="width:5em" />{/forminput}
+				{formlabel label="Multiple" for="multiple"}
+				{forminput}<input type="number" id="multiple" name="multiple" value="0" class="form-control" style="width:5em" />{/forminput}
 			</div>
 			<div class="form-group">
 				{formlabel label="Role ID" for="role_id"}
@@ -85,7 +85,7 @@
 					<th>{tr}Group{/tr}</th>
 					<th>{tr}Title{/tr}</th>
 					<th>{tr}Template{/tr}</th>
-					<th>{tr}Multi{/tr}</th>
+					<th>{tr}Multiple{/tr}</th>
 					<th>{tr}Role{/tr}</th>
 					<th>{tr}Entries{/tr}</th>
 					<th>{tr}Actions{/tr}</th>
@@ -95,16 +95,16 @@
 			{foreach from=$xref_sources item=src}
 				<tr>
 					<td>{$src.content_type_guid|escape}</td>
-					<td><code>{$src.source|escape}</code></td>
-					<td><code>{$src.xref_type|escape}</code></td>
+					<td><code>{$src.item|escape}</code></td>
+					<td><code>{$src.x_group|escape}</code></td>
 					<td>{$src.cross_ref_title|escape}</td>
 					<td>{$src.template|escape}</td>
-					<td>{$src.multi}</td>
+					<td>{$src.multiple}</td>
 					<td>{$src.role_id}</td>
 					<td>{$src.num_entries}</td>
 					<td>
 						{if $src.num_entries eq 0}
-							<a href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_sources.php?fDeleteSource=1&amp;source={$src.source|escape}&amp;del_content_type_guid={$src.content_type_guid|escape}&amp;content_type_guid={$activeGuid|escape}"
+							<a href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_sources.php?fDeleteSource=1&amp;source={$src.item|escape}&amp;del_content_type_guid={$src.content_type_guid|escape}&amp;content_type_guid={$activeGuid|escape}"
 							   onclick="return confirm('{tr}Delete this source?{/tr}')">{booticon iname="icon-trash" ipackage="icons" iforce=icon_text iexplain="Delete"}</a>
 						{/if}
 					</td>

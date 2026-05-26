@@ -10,7 +10,7 @@
 		{form id="editXrefForm"}
 			<input type="hidden" name="content_id" value="{$xrefInfo.content_id}" />
 			<input type="hidden" name="xref_id"    value="{$xrefInfo.xref_id}" />
-			<input type="hidden" name="source"     value="{$xrefInfo.source|escape}" />
+			<input type="hidden" name="item"     value="{$xrefInfo.item|escape}" />
 
 			<div class="form-group">
 				{formlabel label="Type"}

@@ -28,14 +28,14 @@ class LibertyXrefType extends LibertyBase {
 			$where     = " WHERE cxs.`role_id` = ? ";
 			$bindVars[] = $pOptionHash['active_role'];
 		}
-		if( !empty( $pOptionHash['source'] ) ) {
-			$where     = " WHERE cxs.`source` = ? ";
-			$bindVars[] = $pOptionHash['source'];
+		if( !empty( $pOptionHash['item'] ) ) {
+			$where     = " WHERE cxs.`item` = ? ";
+			$bindVars[] = $pOptionHash['item'];
 		}
 
 		$query = "SELECT cxs.*
-				  FROM `".BIT_DB_PREFIX."liberty_xref_source` cxs
-				  $where ORDER BY cxs.`xref_type`, cxs.`source`";
+				  FROM `".BIT_DB_PREFIX."liberty_xref_item` cxs
+				  $where ORDER BY cxs.`x_group`, cxs.`item`";
 
 		$result = $gBitSystem->mDb->query( $query, $bindVars );
 
@@ -52,12 +52,12 @@ class LibertyXrefType extends LibertyBase {
 	}
 
 	/**
-	 * Returns the distinct content_type_guid values present in liberty_xref_type.
+	 * Returns the distinct content_type_guid values present in liberty_xref_group.
 	 */
 	public static function getContentTypeGuids(): array {
 		global $gBitSystem;
 		$result = $gBitSystem->mDb->query(
-			"SELECT DISTINCT `content_type_guid` FROM `".BIT_DB_PREFIX."liberty_xref_type` ORDER BY `content_type_guid`",
+			"SELECT DISTINCT `content_type_guid` FROM `".BIT_DB_PREFIX."liberty_xref_group` ORDER BY `content_type_guid`",
 			[]
 		);
 		$ret = [];
@@ -68,7 +68,7 @@ class LibertyXrefType extends LibertyBase {
 	}
 
 	/**
-	 * Returns liberty_xref_type rows, optionally filtered by content_type_guid.
+	 * Returns liberty_xref_group rows, optionally filtered by content_type_guid.
 	 * Each row includes num_sources: count of sources defined for that group.
 	 */
 	public static function getGroupList( $pOptionHash = NULL ): array {
@@ -79,14 +79,14 @@ class LibertyXrefType extends LibertyBase {
 			$where     = " WHERE cxt.`content_type_guid` = ?";
 			$bindVars[] = $pOptionHash['content_type_guid'];
 		}
-		$query = "SELECT cxt.* FROM `".BIT_DB_PREFIX."liberty_xref_type` cxt
+		$query = "SELECT cxt.* FROM `".BIT_DB_PREFIX."liberty_xref_group` cxt
 				  $where ORDER BY cxt.`content_type_guid`, cxt.`sort_order`";
 		$result = $gBitSystem->mDb->query( $query, $bindVars );
 		$ret = [];
 		while ( $res = $result->fetchRow() ) {
 			$res['num_sources'] = $gBitSystem->mDb->getOne(
-				"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref_source` WHERE `xref_type` = ? AND `content_type_guid` = ?",
-				[ $res['xref_type'], $res['content_type_guid'] ]
+				"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref_item` WHERE `x_group` = ? AND `content_type_guid` = ?",
+				[ $res["x_group"], $res['content_type_guid'] ]
 			);
 			$ret[] = $res;
 		}

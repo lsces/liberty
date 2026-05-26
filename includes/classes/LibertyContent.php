@@ -3732,7 +3732,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	// =========================================================================
 	// Xref methods — generic for any LibertyContent subclass.
 	// Queries scope to $this->mContentTypeGuid so each package sees only its
-	// own liberty_xref_type / liberty_xref_source / liberty_xref rows.
+	// own liberty_xref_group / liberty_xref_item / liberty_xref rows.
 	// =========================================================================
 
 	/**
@@ -3743,7 +3743,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gBitUser;
 		$roles    = array_keys( $gBitUser->mRoles );
 		$bindVars = array_merge( $roles, [ $gBitUser->mUserId ] );
-		$query = "SELECT g.*, g.`xref_type` AS source FROM `".BIT_DB_PREFIX."liberty_xref_type` g
+		$query = "SELECT g.*, g.`x_group` AS source FROM `".BIT_DB_PREFIX."liberty_xref_group` g
 				  LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=g.`role_id` )
 				  WHERE g.`content_type_guid` = '".$this->mContentTypeGuid."' AND g.`sort_order` > 0 AND (g.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
 				  ORDER BY g.`sort_order`";
@@ -3762,16 +3762,16 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gBitUser;
 		$roles    = array_keys( $gBitUser->mRoles );
 		$bindVars = array_merge( $roles, [ $gBitUser->mUserId ] );
-		$query = "SELECT g.`cross_ref_title` AS `type_name`, g.`source` FROM `".BIT_DB_PREFIX."liberty_xref_source` g
-				  JOIN `".BIT_DB_PREFIX."liberty_xref_type` t ON t.`xref_type` = g.`xref_type` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
+		$query = "SELECT g.`cross_ref_title` AS `type_name`, g.`item` FROM `".BIT_DB_PREFIX."liberty_xref_item` g
+				  JOIN `".BIT_DB_PREFIX."liberty_xref_group` t ON t.`x_group` = g.`x_group` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
 				  LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=g.`role_id` )
 				  WHERE g.`content_type_guid` = '".$this->mContentTypeGuid."' AND t.`sort_order` = 0 AND (g.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
-				  ORDER BY g.`source`";
+				  ORDER BY g.`item`";
 		$result = $this->mDb->query( $query, $bindVars );
 		$ret = [];
 		$cnt = 0;
 		while ( $res = $result->fetchRow() ) {
-			$ret[$cnt]['source'] = $res['source'];
+			$ret[$cnt]['item'] = $res['item'];
 			$ret[$cnt++]['name'] = trim( $res['type_name'] );
 		}
 		return $ret;
@@ -3783,29 +3783,29 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 */
 	public function getXrefTypeList( $xrefGroup = 0, $xrefTemplate = NULL ): array {
 		if ( $xrefTemplate ) {
-			$query = "SELECT s.`cross_ref_title` AS `type_name`, s.`source`, s.`template` FROM `".BIT_DB_PREFIX."liberty_xref_source` s
+			$query = "SELECT s.`cross_ref_title` AS `type_name`, s.`item`, s.`template` FROM `".BIT_DB_PREFIX."liberty_xref_item` s
 					  WHERE s.`content_type_guid` = '".$this->mContentTypeGuid."' AND s.`template` = '$xrefTemplate'
 					  ORDER BY s.`cross_ref_title`";
 			$result = $this->mDb->query( $query, [] );
 		} elseif ( $xrefGroup > -1 ) {
-			$query = "SELECT s.`cross_ref_title` AS `type_name`, s.`source`, s.`template` FROM `".BIT_DB_PREFIX."liberty_xref_source` s
-					  JOIN `".BIT_DB_PREFIX."liberty_xref_type` t ON t.`xref_type` = s.`xref_type` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
-					  LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x ON x.`source` = s.`source` AND x.`content_id` = ? AND ( x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP )
+			$query = "SELECT s.`cross_ref_title` AS `type_name`, s.`item`, s.`template` FROM `".BIT_DB_PREFIX."liberty_xref_item` s
+					  JOIN `".BIT_DB_PREFIX."liberty_xref_group` t ON t.`x_group` = s.`x_group` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
+					  LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x ON x.`item` = s.`item` AND x.`content_id` = ? AND ( x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP )
 					  WHERE s.`content_type_guid` = '".$this->mContentTypeGuid."' AND t.`sort_order` = ? AND ( x.`xref_id` IS NULL OR x.`xorder` > 0 )
 					  ORDER BY s.`cross_ref_title`";
 			$result = $this->mDb->query( $query, [ $this->mContentId, $xrefGroup ] );
 		} else {
-			$query = "SELECT s.`cross_ref_title` AS `type_name`, s.`source`, s.`template` FROM `".BIT_DB_PREFIX."liberty_xref_source` s
-					  JOIN `".BIT_DB_PREFIX."liberty_xref_type` t ON t.`xref_type` = s.`xref_type` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
-					  LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x ON x.`source` = s.`source` AND x.`content_id` = ? AND ( x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP )
+			$query = "SELECT s.`cross_ref_title` AS `type_name`, s.`item`, s.`template` FROM `".BIT_DB_PREFIX."liberty_xref_item` s
+					  JOIN `".BIT_DB_PREFIX."liberty_xref_group` t ON t.`x_group` = s.`x_group` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
+					  LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x ON x.`item` = s.`item` AND x.`content_id` = ? AND ( x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP )
 					  WHERE s.`content_type_guid` = '".$this->mContentTypeGuid."' AND t.`sort_order` > 0 AND ( x.`xref_id` IS NULL OR x.`xorder` > 0 )
 					  ORDER BY s.`cross_ref_title`";
 			$result = $this->mDb->query( $query, [ $this->mContentId ] );
 		}
 		$ret = [];
 		while ( $res = $result->fetchRow() ) {
-			$ret['list'][$res['source']] = trim( $res['type_name'] );
-			$ret['type'][$res['source']] = trim( $res['template'] ) !== '' ? trim( $res['template'] ) : 'generic';
+			$ret['list'][$res['item']] = trim( $res['type_name'] );
+			$ret['type'][$res['item']] = trim( $res['template'] ) !== '' ? trim( $res['template'] ) : 'generic';
 		}
 		return $ret;
 	}
@@ -3817,7 +3817,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gBitUser;
 		$roles    = array_keys( $gBitUser->mRoles );
 		$bindVars = array_merge( $roles, [ $gBitUser->mUserId ] );
-		$query = "SELECT DISTINCT g.`template` FROM `".BIT_DB_PREFIX."liberty_xref_source` g
+		$query = "SELECT DISTINCT g.`template` FROM `".BIT_DB_PREFIX."liberty_xref_item` g
 				  LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=g.`role_id` )
 				  WHERE g.`content_type_guid` = '".$this->mContentTypeGuid."' AND (g.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
 				  ORDER BY g.`template`";
@@ -3839,13 +3839,13 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			global $gBitUser;
 			$roles    = array_keys( $gBitUser->mRoles );
 			$bindVars = array_merge( [ $this->mContentId ], $roles, [ $gBitUser->mUserId ] );
-			$sql = "SELECT r.`source`, r.`cross_ref_title`, d.`content_id`
-					FROM `".BIT_DB_PREFIX."liberty_xref_source` r
-					JOIN `".BIT_DB_PREFIX."liberty_xref_type` t ON t.`xref_type` = r.`xref_type` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
-					LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` d ON d.`content_id` = ? AND d.`source` = r.`source`
+			$sql = "SELECT r.`item`, r.`cross_ref_title`, d.`content_id`
+					FROM `".BIT_DB_PREFIX."liberty_xref_item` r
+					JOIN `".BIT_DB_PREFIX."liberty_xref_group` t ON t.`x_group` = r.`x_group` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
+					LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` d ON d.`content_id` = ? AND d.`item` = r.`item`
 					LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=r.`role_id` )
 					WHERE r.`content_type_guid` = '".$this->mContentTypeGuid."' AND t.`sort_order` = 0 AND (r.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
-					ORDER BY r.`source`";
+					ORDER BY r.`item`";
 			$result = $this->mDb->query( $sql, $bindVars );
 			while ( $res = $result->fetchRow() ) {
 				$this->mInfo[$this->mXrefTypeKey][] = $res;
@@ -3855,17 +3855,17 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 
 	/**
 	 * Loads all xref records for this content item into mInfo keyed by type_source
-	 * (the liberty_xref_type.xref_type text key, or 'history' for expired records).
+	 * (the liberty_xref_group.xref_type text key, or 'history' for expired records).
 	 */
 	public function loadXrefList(): void {
 		if ( $this->isValid() && empty( $this->mInfo['xref'] ) ) {
 			global $gBitUser;
 			$roles    = array_keys( $gBitUser->mRoles );
 			$bindVars = array_merge( [ $this->mDb->NOW(), $this->mContentId ], $roles, [ $gBitUser->mUserId ] );
-			$sql = "SELECT s.`xref_type`, x.`xref_id`, x.`last_update_date`, x.`source`, t.`title` AS type_title,
+			$sql = "SELECT s.`x_group`, x.`xref_id`, x.`last_update_date`, x.`item`, t.`title` AS type_title,
 					CASE
 					WHEN x.`end_date` < ? THEN 'history'
-					ELSE t.`xref_type` END AS type_source,
+					ELSE t.`x_group` END AS type_source,
 					CASE
 					WHEN x.`xorder` = 0 THEN s.`cross_ref_title`
 					ELSE s.`cross_ref_title` || '-' || x.`xorder` END
@@ -3874,12 +3874,12 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 					x.`start_date`, x.`end_date`, s.`template`,
 					pc.`add1` || ',' || pc.`add2` || ',' || pc.`add4` || ',' || pc.`town` AS address
 					FROM `".BIT_DB_PREFIX."liberty_xref` x
-					JOIN `".BIT_DB_PREFIX."liberty_xref_source` s ON s.`source` = x.`source` AND s.`content_type_guid` = '".$this->mContentTypeGuid."'
+					JOIN `".BIT_DB_PREFIX."liberty_xref_item` s ON s.`item` = x.`item` AND s.`content_type_guid` = '".$this->mContentTypeGuid."'
 					LEFT JOIN `".BIT_DB_PREFIX."address_postcode` pc ON pc.`postcode` = x.`xkey`
-					JOIN `".BIT_DB_PREFIX."liberty_xref_type` t ON t.`xref_type` = s.`xref_type` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
+					JOIN `".BIT_DB_PREFIX."liberty_xref_group` t ON t.`x_group` = s.`x_group` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
 					LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=s.`role_id` )
 					WHERE x.`content_id` = ? AND (s.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
-					ORDER BY x.`source`, x.`xorder`";
+					ORDER BY x.`item`, x.`xorder`";
 			$result = $this->mDb->query( $sql, $bindVars );
 			if ( $result ) {
 				while ( $res = $result->fetchRow() ) {

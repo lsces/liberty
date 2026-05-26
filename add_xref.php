@@ -34,11 +34,11 @@ if( !empty( $_REQUEST['fAddXref'] ) ) {
 	}
 }
 
-$xref_type = (int)( $_REQUEST['xref_type'] ?? 1 );
-$xrefTypeList = $gContent->getXrefTypeList( $xref_type );
+$group = (int)( $_REQUEST['group'] ?? 1 );
+$xrefTypeList = $gContent->getXrefTypeList( $group );
 
 $gBitSmarty->assign( 'gContent', $gContent );
-$gBitSmarty->assign( 'xref_type', $xref_type );
+$gBitSmarty->assign( 'group', $group );
 $gBitSmarty->assign( 'xrefTypeList', $xrefTypeList );
 $gBitSmarty->assign( 'errors', $gContent->mErrors );
 

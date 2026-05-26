@@ -11,7 +11,7 @@ use Bitweaver\BitDate;
 
 class LibertyXref extends LibertyBase {
 	public $mType;
-	public $mSource;
+	public $mItem;
 	public $mXrefId;
 	public $mContentId;
 	public $mDate;
@@ -19,7 +19,7 @@ class LibertyXref extends LibertyBase {
 
 	public function __construct( $iXrefId = NULL ) {
 		$this->mXrefId = NULL;
-		$this->mSource = NULL;
+		$this->mItem = NULL;
 		parent::__construct();
 		if( $iXrefId ) {
 			$this->load( $iXrefId );
@@ -40,20 +40,20 @@ class LibertyXref extends LibertyBase {
 			$sql = "SELECT x.*, CASE
 					WHEN x.`xorder` = 0 THEN s.`cross_ref_title`
 					ELSE s.`cross_ref_title` || '-' || x.`xorder` END
-					AS source_title, s.`source`, s.`xref_type`,
+					AS source_title, s.`item`, s.`x_group`,
 					CASE WHEN x.`start_date` IS NULL THEN 'y' ELSE 'n' END AS `ignore_start_date`,
 					CASE WHEN x.`end_date` IS NULL THEN 'y' ELSE 'n' END AS `ignore_end_date`,
 					s.`cross_ref_title` AS `template_title`, s.`template`
 					FROM `".BIT_DB_PREFIX."liberty_xref` x
-					JOIN `".BIT_DB_PREFIX."liberty_xref_source` s ON s.`source` = x.`source` $guidFilter
+					JOIN `".BIT_DB_PREFIX."liberty_xref_item` s ON s.`item` = x.`item` $guidFilter
 					WHERE x.`xref_id` = ?
 					ORDER BY x.`xorder`";
 			$result = $this->mDb->getRow( $sql, $bindVars );
 			if( $result['content_id'] ) {
 				$this->mXrefId    = $pXrefId;
 				$this->mContentId = $result['content_id'];
-				$this->mType      = $result['xref_type'];
-				$this->mSource    = $result['source'];
+				$this->mType      = $result["x_group"];
+				$this->mItem    = $result['item'];
 				$this->mInfo['title']       = $result['source_title'];
 				$this->mInfo['format_guid'] = 'text';
 				unset( $result['source_title'] );
@@ -68,28 +68,28 @@ class LibertyXref extends LibertyBase {
 		if( isset( $pParamHash['content_id'] ) ) {
 			$pParamHash['xref_store']['content_id'] = $pParamHash['content_id'];
 		}
-		if( isset( $pParamHash['source'] ) ) {
-			$pParamHash['xref_store']['source'] = $pParamHash['source'];
+		if( isset( $pParamHash['item'] ) ) {
+			$pParamHash['xref_store']['item'] = $pParamHash['item'];
 		}
 
 		$pParamHash['xref_store']['xorder'] = 0;
 
 		if( isset( $pParamHash['fAddXref'] ) ) {
-			$pParamHash['xref_store']['source']     = isset( $pParamHash['Array_xref_type_list'] ) ? $pParamHash['Array_xref_type_list']['Array.source'] : $pParamHash['source'];
+			$pParamHash['xref_store']['item']       = isset( $pParamHash['Array_xref_type_list'] ) ? $pParamHash['Array_xref_type_list']['Array.item'] : $pParamHash['item'];
 			$pParamHash['xref_store']['content_id'] = $pParamHash['content_id'];
 			$guidWhere = !empty( $this->mContentTypeGuid ) ? "AND x.`content_type_guid` = ?" : '';
-			$guidBind  = !empty( $this->mContentTypeGuid ) ? [ $pParamHash['xref_store']['source'], $this->mContentTypeGuid ] : [ $pParamHash['xref_store']['source'] ];
-			$sql  = "SELECT x.`multi` FROM `".BIT_DB_PREFIX."liberty_xref_source` x WHERE x.`source` = ? $guidWhere";
+			$guidBind  = !empty( $this->mContentTypeGuid ) ? [ $pParamHash['xref_store']['item'], $this->mContentTypeGuid ] : [ $pParamHash['xref_store']['item'] ];
+			$sql  = "SELECT x.`multiple` FROM `".BIT_DB_PREFIX."liberty_xref_item` x WHERE x.`item` = ? $guidWhere";
 			$next = $this->mDb->getOne( $sql, $guidBind );
 			if( $next > 0 ) {
-				$sql  = "SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x WHERE x.`content_id` = ? AND x.`source` = ?";
-				$next = $this->mDb->getOne( $sql, [ $pParamHash['xref_store']['content_id'], $pParamHash['xref_store']['source'] ] );
+				$sql  = "SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x WHERE x.`content_id` = ? AND x.`item` = ?";
+				$next = $this->mDb->getOne( $sql, [ $pParamHash['xref_store']['content_id'], $pParamHash['xref_store']['item'] ] );
 			}
 			$pParamHash['xref_store']['xorder'] = $next;
 		}
 
 		if( isset( $pParamHash['fStepXref'] ) ) {
-			$pParamHash['xref_store']['source']     = $this->mSource;
+			$pParamHash['xref_store']['item']       = $this->mItem;
 			$pParamHash['xref_store']['xorder']     = $this->mInfo['data']['xorder'] + 1;
 			$pParamHash['xref_store']['content_id'] = $this->mContentId;
 			$pParamHash['start_date']               = $this->mDb->NOW();
