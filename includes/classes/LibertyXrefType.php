@@ -42,8 +42,8 @@ class LibertyXrefType extends LibertyBase {
 		$ret = [];
 		while( $res = $result->fetchRow() ) {
 			$res["num_entries"] = $gBitSystem->mDb->getOne(
-				"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `source` = ?",
-				[ $res["source"] ]
+				"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `item` = ?",
+				[ $res["item"] ]
 			);
 			$ret[] = $res;
 		}
