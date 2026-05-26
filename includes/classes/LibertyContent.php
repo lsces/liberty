@@ -496,6 +496,10 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			$query = "DELETE FROM `".BIT_DB_PREFIX."liberty_content_links` WHERE `to_content_id` = ? or `from_content_id` = ?";
 			$result = $this->mDb->query( $query, [ $this->mContentId, $this->mContentId ] );
 
+			// Remove xref records owned by this content
+			$query = "DELETE FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ?";
+			$result = $this->mDb->query( $query, [ $this->mContentId ] );
+
 			// Remove content
 			$query = "DELETE FROM `".BIT_DB_PREFIX."liberty_content` WHERE `content_id` = ?";
 			$result = $this->mDb->query( $query, [ $this->mContentId ] );
