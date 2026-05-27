@@ -15,7 +15,7 @@ class LibertyXref extends LibertyBase {
 	public $mXrefId;
 	public $mContentId;
 	public $mDate;
-	protected $mContentTypeGuid = '';
+	public $mContentTypeGuid = '';
 
 	public function __construct( $iXrefId = NULL ) {
 		$this->mXrefId = NULL;
@@ -119,8 +119,8 @@ class LibertyXref extends LibertyBase {
 			$timestamp = $this->mDate->getUTCFromDisplayDate( $dateString );
 			if( $timestamp !== -1 ) { $pParamHash['start_date'] = $timestamp; }
 		}
-		if( !empty( $pParamHash['start_date'] ) )                                                    { $pParamHash['xref_store']['start_date'] = $pParamHash['start_date']; }
-		if( isset( $pParamHash['ignore_start_date'] ) && $pParamHash['ignore_start_date'] == 'on' ) { $pParamHash['xref_store']['start_date']  = ''; }
+		if( !empty( $pParamHash['start_date'] ) )                                                    { $pParamHash['xref_store']['start_date'] = $this->mDate->date("Y-m-d H:i:s", $pParamHash['start_date'], true); }
+		if( isset( $pParamHash['ignore_start_date'] ) && $pParamHash['ignore_start_date'] == 'on' ) { $pParamHash['xref_store']['start_date']  = null; }
 
 		if( !empty( $pParamHash['end_Month'] ) ) {
 			$dateString = $this->mDate->gmmktime(
@@ -134,8 +134,8 @@ class LibertyXref extends LibertyBase {
 			$timestamp = $this->mDate->getUTCFromDisplayDate( $dateString );
 			if( $timestamp !== -1 ) { $pParamHash['end_date'] = $timestamp; }
 		}
-		if( !empty( $pParamHash['end_date'] ) )                                                    { $pParamHash['xref_store']['end_date'] = $pParamHash['end_date']; }
-		if( isset( $pParamHash['ignore_end_date'] ) && $pParamHash['ignore_end_date'] == 'on' ) { $pParamHash['xref_store']['end_date']  = ''; }
+		if( !empty( $pParamHash['end_date'] ) )                                                    { $pParamHash['xref_store']['end_date'] = $this->mDate->date("Y-m-d H:i:s", $pParamHash['end_date'], true); }
+		if( isset( $pParamHash['ignore_end_date'] ) && $pParamHash['ignore_end_date'] == 'on' ) { $pParamHash['xref_store']['end_date']  = null; }
 
 		return count( $this->mErrors ) == 0;
 	}
