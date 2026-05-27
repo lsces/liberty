@@ -1,4 +1,5 @@
 	{assign var=xrefcnt value=$gContent->mInfo.$source|default:[]|@count}
+	{assign var=xrefAllowEdit value=$allow_edit|default:true}
 	{jstab title="$source_title ($xrefcnt)"}
 	{legend legend=$source_title}
 	<div class="form-group table-responsive">
@@ -15,7 +16,7 @@
 						<th>{tr}Ended{/tr}</th>
 					{/if}
 					<th>{tr}Updated{/tr}</th>
-					<th>{tr}Edit{/tr}</th>
+					{if $xrefAllowEdit}<th>{tr}Edit{/tr}</th>{/if}
 				</tr>
 			</thead>
 			<tbody>
