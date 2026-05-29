@@ -24,6 +24,13 @@
 				{/forminput}
 			</div>
 
+			<div class="form-group">
+				{formlabel label="Notes" for="xkey_ext"}
+				{forminput}
+					<input type="text" class="form-control input-small" name="xkey_ext" id="xkey_ext" value="{$xrefInfo.xkey_ext|escape}" />
+				{/forminput}
+			</div>
+
 			<div class="form-group submit">
 				<input type="submit" class="btn btn-default" name="fCancel"   value="{tr}Cancel{/tr}" />
 				<input type="submit" class="btn btn-primary" name="fSaveXref" value="{tr}Save{/tr}" />

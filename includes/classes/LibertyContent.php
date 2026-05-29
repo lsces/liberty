@@ -2155,6 +2155,8 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * @param number $pContentId a valid content id
 	 * @param array $pMixed a hash of params to add to the url
 	 */
+	public function enrichXrefDisplay( array &$pXrefInfo ): void {}
+
 	public function getXrefListTemplate( ?string $pTemplate = null ): string {
 		if( $pTemplate ) {
 			$package  = $this->mType['handler_package'] ?? 'liberty';

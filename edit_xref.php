@@ -49,6 +49,8 @@ if( !empty( $_REQUEST['fSaveXref'] ) ) {
 	$xrefInfo = $gContent->mInfo['xref_store']['data'] ?? [];
 }
 
+$gContent->enrichXrefDisplay( $xrefInfo );
+
 $gBitSmarty->assign( 'gContent', $gContent );
 $gBitSmarty->assign( 'xrefInfo', $xrefInfo );
 $gBitSmarty->assign( 'errors', $gContent->mErrors );
