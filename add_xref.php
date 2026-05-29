@@ -6,6 +6,7 @@
 
 namespace Bitweaver\Liberty;
 
+
 require_once '../kernel/includes/setup_inc.php';
 
 global $gBitSystem, $gBitSmarty, $gBitUser, $gContent;
@@ -23,13 +24,13 @@ if( !$gContent || !$gContent->isValid() ) {
 $gContent->verifyUpdatePermission();
 
 if( !empty( $_REQUEST['fCancel'] ) ) {
-	header( 'Location: '.$gContent->getDisplayUrl() );
+	header( 'Location: '.$gContent->getEditUrl() );
 	die;
 }
 
 if( !empty( $_REQUEST['fAddXref'] ) ) {
 	if( $gContent->storeXref( $_REQUEST ) ) {
-		header( 'Location: '.$gContent->getDisplayUrl() );
+		header( 'Location: '.$gContent->getEditUrl() );
 		die;
 	}
 }

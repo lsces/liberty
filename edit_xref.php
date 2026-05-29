@@ -25,14 +25,14 @@ if( !empty( $_REQUEST['xref_id'] ) ) {
 }
 
 if( !empty( $_REQUEST['fCancel'] ) ) {
-	header( 'Location: '.$gContent->getDisplayUrl() );
+	header( 'Location: '.$gContent->getEditUrl() );
 	die;
 }
 
 if( !empty( $_REQUEST['fSaveXref'] ) ) {
 	$gContent->verifyUpdatePermission();
 	if( $gContent->storeXref( $_REQUEST ) ) {
-		header( 'Location: '.$gContent->getDisplayUrl() );
+		header( 'Location: '.$gContent->getEditUrl() );
 		die;
 	}
 	$xrefInfo = $_REQUEST;
@@ -40,7 +40,7 @@ if( !empty( $_REQUEST['fSaveXref'] ) ) {
 } elseif( isset( $_REQUEST['expunge'] ) ) {
 	$gContent->verifyExpungePermission();
 	if( $gContent->stepXref( $_REQUEST ) ) {
-		header( 'Location: '.$gContent->getDisplayUrl() );
+		header( 'Location: '.$gContent->getEditUrl() );
 		die;
 	}
 	$xrefInfo = $gContent->mInfo['xref_store']['data'] ?? [];
@@ -53,4 +53,5 @@ $gBitSmarty->assign( 'gContent', $gContent );
 $gBitSmarty->assign( 'xrefInfo', $xrefInfo );
 $gBitSmarty->assign( 'errors', $gContent->mErrors );
 
-$gBitSystem->display( 'bitpackage:liberty/edit_xref.tpl', 'Edit Detail', [ 'display_mode' => 'edit' ] );
+$xrefTemplate = $gContent->mInfo['xref_store']['data']['template'] ?? 'text';
+$gBitSystem->display( $gContent->getXrefEditTemplate( $xrefTemplate ), 'Edit Detail', [ 'display_mode' => 'edit' ] );

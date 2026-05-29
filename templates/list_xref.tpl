@@ -22,7 +22,7 @@
 			<tbody>
 				{section name=xref loop=$gContent->mInfo.$source}
 					<tr class="{cycle values="even,odd"}">
-						{include file="bitpackage:liberty/view_xref_`$gContent->mInfo.$source[xref].template`_record.tpl"}
+						{include file=$gContent->getXrefRecordTemplate($gContent->mInfo.$source[xref].template)}
 					</tr>
 				{sectionelse}
 					<tr class="norecords">

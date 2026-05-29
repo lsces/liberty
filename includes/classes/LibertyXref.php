@@ -92,7 +92,7 @@ class LibertyXref extends LibertyBase {
 			$pParamHash['xref_store']['item']       = $this->mItem;
 			$pParamHash['xref_store']['xorder']     = $this->mInfo['data']['xorder'] + 1;
 			$pParamHash['xref_store']['content_id'] = $this->mContentId;
-			$pParamHash['start_date']               = $this->mDb->NOW();
+			$pParamHash['start_date']               = time();
 			$pParamHash['ignore_end_date']          = 'on';
 			$pParamHash['xref_store']['xref']       = 0;
 			$pParamHash['xref_store']['xkey']       = '';
@@ -100,6 +100,7 @@ class LibertyXref extends LibertyBase {
 			$pParamHash['xref_store']['data']       = '';
 		}
 
+		if( isset( $pParamHash['xorder'] ) )   { $pParamHash['xref_store']['xorder']   = (int)$pParamHash['xorder']; }
 		if( isset( $pParamHash['xref'] ) )     { $pParamHash['xref_store']['xref']     = $pParamHash['xref']; }
 		if( isset( $pParamHash['xkey'] ) )     { $pParamHash['xref_store']['xkey']     = $pParamHash['xkey']; }
 		if( isset( $pParamHash['xkey_ext'] ) ) { $pParamHash['xref_store']['xkey_ext'] = $pParamHash['xkey_ext']; }
@@ -163,13 +164,13 @@ class LibertyXref extends LibertyBase {
 		if( isset( $pParamHash["expunge"] ) ) {
 			switch( $pParamHash["expunge"] ) {
 				case 2:
-					$pParamHash['end_date'] = $this->mDb->NOW();
+					$pParamHash['end_date'] = time();
 					$this->store( $pParamHash );
 					unset( $pParamHash['xref_id'] );
 					$pParamHash['fStepXref'] = 1;
 					break;
 				case 1:
-					$pParamHash['end_date'] = $this->mDb->NOW();
+					$pParamHash['end_date'] = time();
 					break;
 				default:
 					$pParamHash['ignore_end_date'] = 'on';
