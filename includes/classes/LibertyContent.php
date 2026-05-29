@@ -2157,10 +2157,17 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 */
 	public function getXrefListTemplate( ?string $pTemplate = null ): string {
 		if( $pTemplate ) {
-			$package = $this->mType['handler_package'] ?? 'liberty';
+			$package  = $this->mType['handler_package'] ?? 'liberty';
 			$pkgConst = strtoupper( $package ).'_PKG_PATH';
-			if( defined( $pkgConst ) && file_exists( constant( $pkgConst ).'templates/list_xref_'.$pTemplate.'.tpl' ) ) {
-				return 'bitpackage:'.$package.'/list_xref_'.$pTemplate.'.tpl';
+			if( defined( $pkgConst ) ) {
+				$base = constant( $pkgConst ).'templates/';
+				$file = 'view_xref_'.$pTemplate.'_group.tpl';
+				if( $this->mContentTypeGuid && file_exists( $base.$this->mContentTypeGuid.'/'.$file ) ) {
+					return 'bitpackage:'.$package.'/'.$this->mContentTypeGuid.'/'.$file;
+				}
+				if( file_exists( $base.$file ) ) {
+					return 'bitpackage:'.$package.'/'.$file;
+				}
 			}
 		}
 		return 'bitpackage:liberty/list_xref.tpl';
@@ -2168,26 +2175,40 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 
 	public function getXrefRecordTemplate( ?string $pTemplate = null ): string {
 		$pTemplate = $pTemplate ?: 'text';
-		$package = $this->mType['handler_package'] ?? 'liberty';
+		$package  = $this->mType['handler_package'] ?? 'liberty';
 		$pkgConst = strtoupper( $package ).'_PKG_PATH';
 		if( defined( $pkgConst ) ) {
-			$pkgTpl = constant( $pkgConst ).'templates/view_xref_'.$pTemplate.'_record.tpl';
-			if( file_exists( $pkgTpl ) ) {
-				return 'bitpackage:'.$package.'/view_xref_'.$pTemplate.'_record.tpl';
+			$base = constant( $pkgConst ).'templates/';
+			$file = 'view_xref_'.$pTemplate.'_item.tpl';
+			if( $this->mContentTypeGuid && file_exists( $base.$this->mContentTypeGuid.'/'.$file ) ) {
+				return 'bitpackage:'.$package.'/'.$this->mContentTypeGuid.'/'.$file;
+			}
+			if( file_exists( $base.$file ) ) {
+				return 'bitpackage:'.$package.'/'.$file;
 			}
 		}
-		return 'bitpackage:liberty/view_xref_'.$pTemplate.'_record.tpl';
+		$libertyTpl = LIBERTY_PKG_PATH.'templates/view_xref_'.$pTemplate.'_item.tpl';
+		return file_exists( $libertyTpl )
+			? 'bitpackage:liberty/view_xref_'.$pTemplate.'_item.tpl'
+			: 'bitpackage:liberty/view_xref_text_item.tpl';
 	}
 
 	public function getXrefEditTemplate( ?string $pTemplate = null ): string {
 		$pTemplate = $pTemplate ?: 'text';
-		$package = $this->mType['handler_package'] ?? 'liberty';
+		$package  = $this->mType['handler_package'] ?? 'liberty';
 		$pkgConst = strtoupper( $package ).'_PKG_PATH';
 		if( defined( $pkgConst ) ) {
-			$pkgTpl = constant( $pkgConst ).'templates/edit_xref_'.$pTemplate.'.tpl';
-			if( file_exists( $pkgTpl ) ) {
-				return 'bitpackage:'.$package.'/edit_xref_'.$pTemplate.'.tpl';
+			$base = constant( $pkgConst ).'templates/';
+			$file = 'edit_xref_'.$pTemplate.'_item.tpl';
+			if( $this->mContentTypeGuid && file_exists( $base.$this->mContentTypeGuid.'/'.$file ) ) {
+				return 'bitpackage:'.$package.'/'.$this->mContentTypeGuid.'/'.$file;
 			}
+			if( file_exists( $base.$file ) ) {
+				return 'bitpackage:'.$package.'/'.$file;
+			}
+		}
+		if( file_exists( LIBERTY_PKG_PATH.'templates/edit_xref_'.$pTemplate.'_item.tpl' ) ) {
+			return 'bitpackage:liberty/edit_xref_'.$pTemplate.'_item.tpl';
 		}
 		return 'bitpackage:liberty/edit_xref.tpl';
 	}

@@ -21,8 +21,9 @@
 			</thead>
 			<tbody>
 				{section name=xref loop=$gContent->mInfo.$source}
+					{assign var=_rowTpl value=$gContent->mInfo.$source[xref].template}
 					<tr class="{cycle values="even,odd"}">
-						{include file=$gContent->getXrefRecordTemplate($gContent->mInfo.$source[xref].template)}
+						{include file=$gContent->getXrefRecordTemplate($_rowTpl)}
 					</tr>
 				{sectionelse}
 					<tr class="norecords">
