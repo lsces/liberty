@@ -10,13 +10,15 @@
 					<th>{tr}Link{/tr}</th>
 					<th>{tr}Key{/tr}</th>
 					<th>{tr}Value{/tr}</th>
-					{if $source ne 'history'}
-						<th>{tr}Started{/tr}</th>
-					{else}
-						<th>{tr}Ended{/tr}</th>
+					{if $xrefAllowEdit}
+						{if $source ne 'history'}
+							<th>{tr}Started{/tr}</th>
+						{else}
+							<th>{tr}Ended{/tr}</th>
+						{/if}
+						<th>{tr}Updated{/tr}</th>
+						<th>{tr}Edit{/tr}</th>
 					{/if}
-					<th>{tr}Updated{/tr}</th>
-					{if $xrefAllowEdit}<th>{tr}Edit{/tr}</th>{/if}
 				</tr>
 			</thead>
 			<tbody>
