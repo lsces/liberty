@@ -703,7 +703,7 @@ function liberty_generate_thumbnails( $pFileHash ) {
 				: [ 'extra-large','large', 'medium', 'small', 'avatar', 'icon' ];
 		}
 
-		if( ( !preg_match( '#image/(gif|jpe?g|png)#i', $pFileHash['type'] ) && $gBitSystem->isFeatureActive( 'liberty_jpeg_originals' )) || in_array( 'original', $pFileHash['thumbnail_sizes'] ) ) {
+		if( ( !preg_match( '#image/(gif|jpe?g|png)#i', $pFileHash['type'] ?? '' ) && $gBitSystem->isFeatureActive( 'liberty_jpeg_originals' )) || in_array( 'original', $pFileHash['thumbnail_sizes'] ) ) {
 			// jpeg version of original
 			if( preg_match( '/pdf/i', $pFileHash['type'] ) ) {
 				// has a customer pdf rasterization function been defined?
@@ -747,10 +747,10 @@ function liberty_generate_thumbnails( $pFileHash ) {
 		if( $gBitSystem->isFeatureActive( 'liberty_thumbnail_format' )) {
 			$mimeExt = $gBitSystem->getConfig( 'liberty_thumbnail_format' );
 		} else {
-			list( $type, $mimeExt ) = preg_split( '#/#', strtolower( $pFileHash['type'] ));
+			list( $type, $mimeExt ) = preg_split( '#/#', strtolower( $pFileHash['type'] ?? '' ));
 		}
 
-		$destExt = preg_match( "!(png|gif)!", $mimeExt ) ? '.'.$mimeExt : '.jpg';
+		$destExt = preg_match( "!(png|gif)!", $mimeExt ?? '' ) ? '.'.$mimeExt : '.jpg';
 
 		$initialDestPath = $pFileHash['dest_branch'];
 		foreach( $pFileHash['thumbnail_sizes'] as $thumbSize ) {
