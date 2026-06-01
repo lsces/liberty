@@ -81,7 +81,7 @@ function mime_pdf_store( &$pStoreRow ) {
 		$ret = false;
 	}
 
-	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' && !empty( $pStoreRow['source_file'] ) ) {
+	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' && (!empty( $pStoreRow['source_file'] ) || !empty( $pStoreRow['upload'] )) ) {
 		if( !mime_pdf_thumbnail( $pStoreRow )) {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
@@ -117,7 +117,7 @@ function mime_pdf_update( &$pStoreRow, $pParams = null ) {
 		}
 	}
 
-	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' && !empty( $pStoreRow['source_file'] ) ) {
+	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' && (!empty( $pStoreRow['source_file'] ) || !empty( $pStoreRow['upload'] )) ) {
 		if( !mime_pdf_thumbnail( $pStoreRow )) {
 			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
