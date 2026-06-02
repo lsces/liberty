@@ -33,7 +33,7 @@
 			{/foreach}
 
 			<div class="form-group submit">
-				<input type="submit" name="settings_store" value="{tr}Change preferences{/tr}" />
+				<input type="submit" name="plugin_settings" value="{tr}Change preferences{/tr}" />
 			</div>
 		{/form}
 	</div><!-- end .body -->
