@@ -120,7 +120,7 @@ function liberty_imagick_resize_image( &$pFileHash ) {
 			}
 
 			// destroy object
-			$im->destroy();
+			$im->clear();
 
 			$ret = $destFile;
 		} catch( ImagickException $e ) {
@@ -145,9 +145,10 @@ function liberty_imagick_rotate_image( &$pFileHash ) {
 			} elseif( empty( $pFileHash['degrees'] ) || !is_numeric( $pFileHash['degrees'] )) {
 				$pFileHash['error'] = KernelTools::tra( 'Invalid rotation amount' );
 			} else {
-				$im->rotateImage( new ImagickPixel(), $pFileHash['degrees'] );
+				$im->rotateImage( new ImagickPixel('none'), $pFileHash['degrees'] );
 				$im->writeImage( $pFileHash['source_file'] );
 			}
+			$im->clear();
 		} catch( ImagickException $e ) {
 			\Bitweaver\bit_error_log( $e->getMessage().' '.$pFileHash['source_file'] );
 			$pFileHash['error'] = $e->getMessage();

@@ -221,7 +221,7 @@ function mime_pdf_thumbnail( $pFileHash ) {
 	if( is_file( $thumb_file ) && filesize( $thumb_file ) > 0 ) {
 		$genHash = [
 			'attachment_id' => $pFileHash['attachment_id'],
-			'dest_branch'   => $pFileHash['upload']['dest_branch'] ?? $dest_branch,
+			'dest_branch'   => $pFileHash['upload']['dest_branch'] ?? rtrim( str_replace( STORAGE_PKG_PATH, '', $dest_branch ), '/' ).'/',
 			'source_file'   => $thumb_file,
 			'type'          => 'image/jpeg',
 		];
