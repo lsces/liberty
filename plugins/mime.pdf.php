@@ -210,10 +210,10 @@ function mime_pdf_thumbnail( $pFileHash ) {
 		$im->setImageFormat( 'jpeg' );
 		$im->setImageCompressionQuality( 85 );
 		$im->setImageBackgroundColor( 'white' );
-		$im->flattenImages();
+		$im = $im->mergeImageLayers( \Imagick::LAYERMETHOD_FLATTEN );
 		$im->thumbnailImage( 1024, 1024, true );
 		$im->writeImage( $thumb_file );
-		$im->destroy();
+		$im->clear();
 	} catch ( \Exception $e ) {
 		return empty( $pFileHash['log'] );
 	}
