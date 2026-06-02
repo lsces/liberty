@@ -19,18 +19,17 @@
 			</div>
 
 			<div class="form-group">
-				{formlabel label="Value" for="edit"}
+				{formlabel label="Value" for="xkey"}
 				{forminput}
-					<input type="text" class="form-control" name="edit" id="edit" value="" />
+					<input type="text" class="form-control" name="xkey" id="xkey" value="" />
 					{formhelp note="Enter the value for this detail record."}
 				{/forminput}
 			</div>
 
 			<div class="form-group">
-				{formlabel label="Linked Content ID" for="xref"}
+				{formlabel label="Note" for="edit"}
 				{forminput}
-					<input type="text" class="form-control input-small" name="xref" id="xref" value="" />
-					{formhelp note="For supplier links: enter the contact content_id. Leave blank for all other types."}
+					<input type="text" class="form-control" name="edit" id="edit" value="" />
 				{/forminput}
 			</div>
 
