@@ -27,6 +27,13 @@
 			</div>
 
 			<div class="form-group">
+				{formlabel label="Extended Value" for="xkey_ext"}
+				{forminput}
+					<input type="text" class="form-control" name="xkey_ext" id="xkey_ext" value="" />
+				{/forminput}
+			</div>
+
+			<div class="form-group">
 				{formlabel label="Note" for="edit"}
 				{forminput}
 					<input type="text" class="form-control" name="edit" id="edit" value="" />
