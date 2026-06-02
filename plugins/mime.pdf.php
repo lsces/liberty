@@ -106,14 +106,22 @@ function mime_pdf_update( &$pStoreRow, $pParams = null ) {
 	// this will set the correct pluign guid, even if we let default handle the store process
 	$pStoreRow['attachment_plugin_guid'] = PLUGIN_MIME_GUID_PDF;
 
-	// We process the pdf to extract the text layer to include with the save.
 	if( !empty( $pStoreRow['upload'] ) ) {
+		// New file uploaded — extract text and replace stored file
 		if( mime_pdf_text_extract( $pStoreRow ) ) {
 			$ret = mime_default_update( $pStoreRow );
 		} else {
-			// if it all goes tits up, we'll know why
 			$pStoreRow['errors'] = $pStoreRow['log'];
 			$ret = false;
+		}
+	} elseif( !empty( $pStoreRow['reload_pdf'] ) && !empty( $pStoreRow['source_file'] ) ) {
+		// Re-extract text from existing file on disk without re-uploading
+		$pStoreRow['upload'] = ['source_file' => $pStoreRow['source_file']];
+		mime_pdf_text_extract( $pStoreRow );
+		unset( $pStoreRow['upload'] );
+		if( !empty( $pStoreRow['data'] ) ) {
+			$sql = "UPDATE `".BIT_DB_PREFIX."liberty_content` SET `data` = ? WHERE `content_id` = ?";
+			$gBitSystem->mDb->query( $sql, [$pStoreRow['data'], $pStoreRow['content_id']] );
 		}
 	}
 
