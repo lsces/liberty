@@ -8,16 +8,16 @@
 		<div class="floaticon">
 			{if $gBitUser->hasPermission( 'p_liberty_post_comments' )}
 				{if $gBitSystem->isFeatureActive('comments_ajax') }
-					<a href="javascript:void(0);" onclick="LibertyComment.attachForm('comment_{$comment.content_id}', '{$comment.content_id}', '{$comment.root_id}')">{booticon iname="fa-comment" iexplain="Reply to this comment"}</a>
+					<a href="javascript:void(0);" onclick="LibertyComment.attachForm('comment_{$comment.content_id}', '{$comment.content_id}', '{$comment.root_id}')">{biticon ipackage="icons" iname="internet-group-chat" iexplain="Reply to this comment"}</a>
 				{else}
-					<a href="#">{booticon iname="fa-comment" class="icon" onclick="window.location='`$comments_return_url`&amp;post_comment_reply_id=`$comment.content_id`&amp;post_comment_request=1#editcomments';" iexplain="Reply to this comment" }</a>
+					<a href="#">{biticon ipackage="icons" iname="internet-group-chat" class="icon" onclick="window.location='`$comments_return_url`&amp;post_comment_reply_id=`$comment.content_id`&amp;post_comment_request=1#editcomments';" iexplain="Reply to this comment" }</a>
 				{/if}
 			{/if}
 			{if $comment.is_editable}
-				<a href="{$comments_return_url}&amp;post_comment_id={$comment.comment_id}&amp;post_comment_request=1#editcomments" rel="nofollow">{booticon iname="fa-pen-to-square" ipackage="icons" iexplain="Edit"}</a>
+				<a href="{$comments_return_url}&amp;post_comment_id={$comment.comment_id}&amp;post_comment_request=1#editcomments" rel="nofollow">{biticon ipackage="icons" iname="document-properties" ipackage="icons" iexplain="Edit"}</a>
 			{/if}
 			{if $gBitUser->hasPermission('p_liberty_admin_comments')}
-				<a href="{$comments_return_url}&amp;delete_comment_id={$comment.comment_id}" rel="nofollow">{booticon iname="fa-trash" iexplain="Remove"}</a>
+				<a href="{$comments_return_url}&amp;delete_comment_id={$comment.comment_id}" rel="nofollow">{biticon ipackage="icons" iname="edit-delete" iexplain="Remove"}</a>
 			{/if}
 		</div>
 

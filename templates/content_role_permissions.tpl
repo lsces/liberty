@@ -66,9 +66,9 @@
 		<h2>{tr}Legend{/tr}</h2>
 		
 		<dl>
-			<dt>{booticon iname="fa-circle-plus"} Custom Permission: Always Allow</dt>
-			<dt>{booticon iname="fa-circle-minus"} Custom Permission: Always Deny</dt>
-			<dt>{booticon iname="fa-check"} Global Permission: Allow</dt>
+			<dt>{biticon ipackage="icons" iname="list-add"} Custom Permission: Always Allow</dt>
+			<dt>{biticon ipackage="icons" iname="list-remove"} Custom Permission: Always Deny</dt>
+			<dt>{biticon ipackage="icons" iname="dialog-ok"} Global Permission: Allow</dt>
 			<dt>{biticon iname="media-playback-stop" iexplain=""} Global Permission: Deny</dt>
 		</dl>
 	</div><!-- end .body -->

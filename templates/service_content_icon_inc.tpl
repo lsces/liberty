@@ -8,7 +8,7 @@
 			{assign var="amp" value="?"}
 		{/if}
 		<a title="{tr}Refresh cache{/tr}" href="{$url}{$amp}refresh_liberty_cache={$serviceHash.content_id}">
-			{booticon iname="fa-recycle" iexplain="Refresh cache"}
+			{biticon ipackage="icons" iname="edit-clear" iexplain="Refresh cache"}
 		</a>
 	{/if}
 	{if $gBitUser->hasPermission( 'p_liberty_assign_content_perms' ) && $serviceHash.content_id}
@@ -17,7 +17,7 @@
 		{else}
 			{assign var=iconClass value=""}
 		{/if}
-		{smartlink ipackage=liberty ifile="content_role_permissions.php" ititle="Assign Permissions" booticon="icon-key" class=$iconClass content_id=$serviceHash.content_id}
+		{smartlink ipackage=liberty ifile="content_role_permissions.php" ititle="Assign Permissions" biticon="lock" class=$iconClass content_id=$serviceHash.content_id}
 	{/if}
 {/if}
 {/strip}

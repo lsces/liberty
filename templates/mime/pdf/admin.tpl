@@ -8,7 +8,7 @@
 	<div class="body">
 		{form legend="PDF Plugin settings"}
 			<p class="warning">
-				{booticon iname="fa-triangle-exclamation" iexplain="Warning"} {tr}To make use of this plugin, you need to install phptotext.
+				{biticon ipackage="icons" iname="dialog-warning" iexplain="Warning"} {tr}To make use of this plugin, you need to install phptotext.
 				This will provide the tool to extract the text layer from the pdf and use it to populate the search results.{/tr}
 			</p>
 
