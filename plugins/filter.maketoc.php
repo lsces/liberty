@@ -32,7 +32,7 @@ $pluginParams = [
 	'help_page'          => 'Maketoc Filter',
 	'help_function'      => 'maketoc_help',
 	'syntax'             => '{maketoc}',
-	'booticon'            => '{biticon ipackage="icons" iname="text-x-generic" iexplain="Page Table of Contents"}',
+	'booticon'            => '{biticon ipackage="icons" iname="view-list-text" iexplain="Page Table of Contents"}',
 	'taginsert'          => '{maketoc}',
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_FILTERMAKETOC, $pluginParams );

@@ -30,7 +30,7 @@
 											{jspopup href="https://www.bitweaver.org/wiki/`$plugin.help_page`" ibiticon="icons/dialog-information" title=$plugin.help_page class="external"}
 										{/if}
 										{if !empty( $plugin.plugin_settings_url )}
-											<a href="{$plugin.plugin_settings_url}">{biticon ipackage="icons" iname="document-properties" iexplain="Plugin Settings"}</a>
+											<a href="{$plugin.plugin_settings_url}">{biticon ipackage="icons" iname="edit" iexplain="Plugin Settings"}</a>
 										{/if}
 									</div>
 									<div class="checkbox" for="{$guid}"><label><strong>

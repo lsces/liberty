@@ -14,11 +14,11 @@
 <td>
 	<span class="actionicon">
 		{if $xrefAllowEdit|default:true && $gContent->hasUpdatePermission() && $source ne 'history'}
-			{smartlink ititle="Edit" ipackage="liberty" ifile="edit_xref.php" biticon="document-properties" content_id=$gContent->mInfo.content_id xref_id=$gContent->mInfo.$source[xref].xref_id}
+			{smartlink ititle="Edit" ipackage="liberty" ifile="edit_xref.php" biticon="edit" content_id=$gContent->mInfo.content_id xref_id=$gContent->mInfo.$source[xref].xref_id}
 		{/if}
 		{if $xrefAllowEdit|default:true && $gContent->hasExpungePermission()}
 			{if $source eq 'history'}
-				{smartlink ititle="Restore" ipackage="liberty" ifile="edit_xref.php" biticon="document-properties" content_id=$gContent->mInfo.content_id xref_id=$gContent->mInfo.$source[xref].xref_id expunge=-1}
+				{smartlink ititle="Restore" ipackage="liberty" ifile="edit_xref.php" biticon="edit" content_id=$gContent->mInfo.content_id xref_id=$gContent->mInfo.$source[xref].xref_id expunge=-1}
 			{else}
 				{smartlink ititle="Delete" ipackage="liberty" ifile="edit_xref.php" biticon="user-trash" content_id=$gContent->mInfo.content_id xref_id=$gContent->mInfo.$source[xref].xref_id expunge=1}
 			{/if}
