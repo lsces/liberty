@@ -85,7 +85,7 @@
 					<td>
 						{if $grp.num_sources eq 0}
 							<a href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_groups.php?fDeleteGroup=1&amp;x_group={$grp.x_group|escape}&amp;del_content_type_guid={$grp.content_type_guid|escape}&amp;content_type_guid={$activeGuid|escape}"
-							   onclick="return confirm('{tr}Delete this group?{/tr}')">{biticon ipackage="icons" iname="edit-delete" ipackage="icons" iforce=icon_text iexplain="Delete"}</a>
+							   onclick="return confirm('{tr}Delete this group?{/tr}')">{biticon ipackage="icons" iname="user-trash" ipackage="icons" iforce=icon_text iexplain="Delete"}</a>
 
 						{/if}
 					</td>

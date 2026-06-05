@@ -17,7 +17,7 @@
 				<a href="{$comments_return_url}&amp;post_comment_id={$comment.comment_id}&amp;post_comment_request=1#editcomments" rel="nofollow">{biticon ipackage="icons" iname="document-properties" ipackage="icons" iexplain="Edit"}</a>
 			{/if}
 			{if $gBitUser->hasPermission('p_liberty_admin_comments')}
-				<a href="{$comments_return_url}&amp;delete_comment_id={$comment.comment_id}" rel="nofollow">{biticon ipackage="icons" iname="edit-delete" iexplain="Remove"}</a>
+				<a href="{$comments_return_url}&amp;delete_comment_id={$comment.comment_id}" rel="nofollow">{biticon ipackage="icons" iname="user-trash" iexplain="Remove"}</a>
 			{/if}
 		</div>
 

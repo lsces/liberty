@@ -2,7 +2,7 @@
 <li {if $editingStructure}id="structure-node-{$structure_tree.structure_id}" content_id="{$structure_tree.content_id}" structure_id="{$structure_tree.structure_id}"{/if} {if $structure_tree.structure_id==$smarty.request.structure_id}class="highlight"{/if}>
 		{if $editingStructure}
 		<div class="inline-block">
-			<div class="btn btn-default btn-xs" onclick="deleteStructureNode('{$structure_tree.structure_id}','{$structure_tree.title|escape:javascript}')">{biticon ipackage="icons" iname="edit-delete" class="icon"}</div>
+			<div class="btn btn-default btn-xs" onclick="deleteStructureNode('{$structure_tree.structure_id}','{$structure_tree.title|escape:javascript}')">{biticon ipackage="icons" iname="user-trash" class="icon"}</div>
 			<span class="inline-block" style="padding:5px;">{biticon ipackage="icons" iname="go-next" class="structure-sort-handle"}</span>
 		</div>
 		{/if}

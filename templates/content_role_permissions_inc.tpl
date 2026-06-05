@@ -83,7 +83,7 @@
 					<td>{$perm.role_name}</td>
 					<td>{$perm.perm_desc} <em>({$perm.perm_name})</em></td>
 					<td class="alignright">
-						{smartlink ititle="Remove Permission" biticon="edit-delete" action=remove content_id=$gContent->mContentId perm=$perm.perm_name role_id=$perm.role_id}
+						{smartlink ititle="Remove Permission" biticon="user-trash" action=remove content_id=$gContent->mContentId perm=$perm.perm_name role_id=$perm.role_id}
 					</td>
 				</tr>
 			{foreachelse}
