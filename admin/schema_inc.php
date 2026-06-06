@@ -245,7 +245,7 @@ $tables = [
 	xref_id I8 PRIMARY,
 	content_id I8 NOTNULL,
 	item C(20),
-	xorder I2,
+	xorder I2 DEFAULT 0 NOTNULL,
 	xref I8,
 	xkey C(32),
 	xkey_ext C(250),
