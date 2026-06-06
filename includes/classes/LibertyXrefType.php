@@ -132,7 +132,7 @@ class LibertyXrefType extends LibertyBase {
 		$result = $gBitSystem->mDb->query(
 			"SELECT g.* FROM `".BIT_DB_PREFIX."liberty_xref_group` g
 			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
-			     ON purm.`user_id` = ".$gBitUser->mUserId." AND purm.`role_id` = g.`role_id`
+			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = g.`role_id`
 			 WHERE g.`content_type_guid` = '$contentTypeGuid' AND g.`sort_order` > 0
 			   AND (g.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
 			 ORDER BY g.`sort_order`",
@@ -166,7 +166,7 @@ class LibertyXrefType extends LibertyBase {
 			 JOIN `".BIT_DB_PREFIX."liberty_xref_group` t
 			     ON t.`x_group` = g.`x_group` AND t.`content_type_guid` = '$contentTypeGuid'
 			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
-			     ON purm.`user_id` = ".$gBitUser->mUserId." AND purm.`role_id` = g.`role_id`
+			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = g.`role_id`
 			 WHERE g.`content_type_guid` = '$contentTypeGuid' AND t.`sort_order` = 0
 			   AND (g.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
 			 ORDER BY g.`item`",
@@ -264,7 +264,7 @@ class LibertyXrefType extends LibertyBase {
 			"SELECT DISTINCT g.`template`
 			 FROM `".BIT_DB_PREFIX."liberty_xref_item` g
 			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
-			     ON purm.`user_id` = ".$gBitUser->mUserId." AND purm.`role_id` = g.`role_id`
+			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = g.`role_id`
 			 WHERE g.`content_type_guid` = '$contentTypeGuid'
 			   AND (g.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
 			 ORDER BY g.`template`",
@@ -299,7 +299,7 @@ class LibertyXrefType extends LibertyBase {
 			     ON t.`x_group` = r.`x_group` AND t.`content_type_guid` = '$contentTypeGuid'
 			 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` d ON d.`content_id` = ? AND d.`item` = r.`item`
 			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
-			     ON purm.`user_id` = ".$gBitUser->mUserId." AND purm.`role_id` = r.`role_id`
+			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = r.`role_id`
 			 WHERE r.`content_type_guid` = '$contentTypeGuid' AND t.`sort_order` = 0
 			   AND (r.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
 			 ORDER BY r.`item`",
