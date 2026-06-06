@@ -9,9 +9,9 @@
 		<table class="table">
 			<thead>
 				<tr>
-					<th style="width:30%">{tr}Type{/tr}</th>
-					<th style="width:30%">{tr}Value{/tr}</th>
-					<th style="width:40%">{tr}Notes{/tr}</th>
+					<th>{tr}Type{/tr}</th>
+					<th>{tr}Value{/tr}</th>
+					<th>{tr}Notes{/tr}</th>
 					{if $xrefAllowEdit}
 						{if $isHistory}<th>{tr}Ended{/tr}</th>{else}<th>{tr}Started{/tr}</th>{/if}
 						<th>{tr}Updated{/tr}</th>
@@ -50,9 +50,9 @@
 		<table class="table">
 			<thead>
 				<tr>
-					<th style="width:30%">{tr}Type{/tr}</th>
-					<th style="width:30%">{tr}Value{/tr}</th>
-					<th style="width:40%">{tr}Notes{/tr}</th>
+					<th>{tr}Type{/tr}</th>
+					<th>{tr}Value{/tr}</th>
+					<th>{tr}Notes{/tr}</th>
 					{if $xrefAllowEdit}
 						{if $source ne 'history'}<th>{tr}Started{/tr}</th>{else}<th>{tr}Ended{/tr}</th>{/if}
 						<th>{tr}Updated{/tr}</th>
