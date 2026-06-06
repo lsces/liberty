@@ -7,21 +7,46 @@
 namespace Bitweaver\Liberty;
 
 /**
- * One xref group (content_type_guid + x_group) with its raw xref data rows for a content item.
- * Defined by liberty_xref_item rows sharing this x_group; data loaded from liberty_xref.
- * Active items land in mXrefs; expired items (type_source='history') are returned by load()
- * for LibertyXrefInfo to collect into the synthetic history group.
+ * One xref group for a specific content item.
+ *
+ * A group is identified by (content_type_guid, x_group).  Its metadata (title,
+ * sort order, Smarty template, role gate) comes from liberty_xref_group; its live
+ * data rows come from liberty_xref filtered to that group's items.
+ *
+ * loadXrefs() separates rows into two buckets:
+ *   - active rows  → stored in mXrefs, rendered by the group's template
+ *   - expired rows → returned to LibertyXrefInfo, which collects them into
+ *                    a synthetic 'history' group (sort_order 999)
+ *
+ * Instances are created by LibertyXrefInfo::load(); do not instantiate directly
+ * except in tests or package-level loadXrefInfo() overrides.
+ *
+ * Template access: group templates receive the whole object as $xrefGroup and
+ * iterate $xrefGroup->mXrefs.  The first two lines of every group template must be:
+ *
+ *   {assign var=xrefAllowEdit value=$allow_edit|default:false}
+ *   {assign var=isHistory value=($xrefGroup->mXGroup eq 'history')}
  */
 class LibertyXrefGroup extends LibertyBase {
+	/** x_group key (e.g. 'address', 'reference', 'quantity', 'history') */
 	public string  $mXGroup;
+	/** content_type_guid this group belongs to (e.g. 'contact', 'stockmovement') */
 	public string  $mContentTypeGuid;
+	/** display title from liberty_xref_group.title */
 	public string  $mTitle;
+	/** render order; liberty_xref_group.sort_order; history group is always 999 */
 	public int     $mSortOrder;
+	/** Smarty template name from liberty_xref_group.template; null falls back to liberty/list_xref.tpl */
 	public ?string $mTemplate;
+	/** role_id gate from liberty_xref_group.role_id; 0 = visible to all */
 	public int     $mRoleId;
-	/** @var array[] active xref data rows for the current content item */
+	/** @var array[] active liberty_xref data rows for the current content item */
 	public array   $mXrefs = [];
 
+	/**
+	 * @param array  $groupRow        row from liberty_xref_group (x_group, title, sort_order, template, role_id)
+	 * @param string $contentTypeGuid content type this group belongs to
+	 */
 	public function __construct( array $groupRow, string $contentTypeGuid ) {
 		parent::__construct();
 		$this->mXGroup          = $groupRow['x_group'];
@@ -33,11 +58,22 @@ class LibertyXrefGroup extends LibertyBase {
 	}
 
 	/**
-	 * Load xref rows for this group. Active rows go into mXrefs.
-	 * Expired rows (type_source='history') are returned for LibertyXrefInfo to collect.
-	 * Requires mContentTypeGuid — fails loudly if not set.
+	 * Load liberty_xref rows for this group under a given content item.
 	 *
-	 * @return array expired rows to be added to the history group
+	 * Queries liberty_xref joined to liberty_xref_item (scoped to this group and
+	 * content type) and address_postcode (for address groups).  Role filtering is
+	 * applied against the current user's roles; anonymous gets role_id -1.
+	 *
+	 * Rows whose end_date is in the past are classified as 'history' and returned
+	 * separately so LibertyXrefInfo can accumulate them into the synthetic history
+	 * group.  Active rows are stored directly in $this->mXrefs.
+	 *
+	 * Packages that need to enrich rows (e.g. resolving contact titles from xref
+	 * content_ids) should do so by overriding loadXrefInfo() in their own class
+	 * after calling parent::loadXrefInfo(), not by modifying this method.
+	 *
+	 * @param int $contentId  liberty_content.content_id to fetch rows for
+	 * @return array[]        expired rows (type_source='history') for the caller to collect
 	 */
 	public function loadXrefs( int $contentId ): array {
 		global $gBitUser;

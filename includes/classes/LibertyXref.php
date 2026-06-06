@@ -9,12 +9,42 @@ namespace Bitweaver\Liberty;
 use Bitweaver\BitBase;
 use Bitweaver\BitDate;
 
+/**
+ * Represents a single row in liberty_xref.
+ *
+ * liberty_xref is the live data table of the xref system.  Each row attaches a
+ * typed key-value record to a content item:
+ *
+ *   content_id   — the liberty_content row this xref belongs to
+ *   item         — the slot key (matches liberty_xref_item.item), e.g. '#P', 'REQN', 'SGL'
+ *   xorder       — sequence within multiple-cardinality items; 0 for single items
+ *   xref         — optional FK to another content_id (e.g. linked contact or component)
+ *   xkey         — short key value (max 32 chars), e.g. SCREF code, postcode, quantity
+ *   xkey_ext     — longer extension of xkey (max 250 chars), e.g. pipe-separated name parts
+ *   data         — free-text blob, e.g. notes or a "from" label
+ *   start_date   — when this xref became active (NULL = open / not date-bounded)
+ *   end_date     — when this xref expired (NULL = still active)
+ *   last_update_date — last write timestamp
+ *
+ * This class handles load/verify/store for a single row.  For bulk loading of all
+ * xref rows belonging to a content item, use LibertyXrefGroup / LibertyXrefInfo.
+ *
+ * The stepXref() method implements an audit-trail pattern: instead of updating a row
+ * in place it closes the current row (sets end_date) and opens a new one, preserving
+ * history. Expired rows are swept into the synthetic 'history' group by LibertyXrefInfo.
+ */
 class LibertyXref extends LibertyBase {
+	/** x_group value of the loaded xref's item definition */
 	public $mType;
+	/** item key of the loaded row (matches liberty_xref_item.item) */
 	public $mItem;
+	/** primary key of the loaded liberty_xref row */
 	public $mXrefId;
+	/** content_id this xref belongs to */
 	public $mContentId;
+	/** BitDate instance used for start/end date conversions */
 	public $mDate;
+	/** when set, scopes liberty_xref_item lookups to this content type */
 	public $mContentTypeGuid = '';
 
 	public function __construct( $iXrefId = NULL ) {
@@ -29,10 +59,23 @@ class LibertyXref extends LibertyBase {
 		$this->mDate->get_display_offset();
 	}
 
+	/** @return bool true if a row has been loaded (mXrefId is a valid integer) */
 	public function isValid() {
 		return $this->verifyId( $this->mXrefId );
 	}
 
+	/**
+	 * Load a single liberty_xref row by its primary key.
+	 *
+	 * Joins liberty_xref_item to resolve the group (mType), item display title,
+	 * and template.  Also derives source_title by appending xorder to the item
+	 * title for multi-cardinality rows, and computes ignore_start/end_date flags
+	 * so templates can treat NULL dates as "not set".
+	 *
+	 * On success populates mXrefId, mContentId, mType, mItem, and mInfo.
+	 *
+	 * @param int|null $pXrefId  liberty_xref.xref_id to load
+	 */
 	public function load( $pXrefId = NULL ) {
 		if( BitBase::verifyId( $pXrefId ) ) {
 			$guidFilter  = !empty( $this->mContentTypeGuid ) ? "AND s.`content_type_guid` = ?" : '';
@@ -62,6 +105,23 @@ class LibertyXref extends LibertyBase {
 		}
 	}
 
+	/**
+	 * Validate and normalise the param hash before store().
+	 *
+	 * Reads raw POST/form values from $pParamHash and builds a clean
+	 * $pParamHash['xref_store'] array ready for associateInsert/Update.
+	 *
+	 * Special flags in the hash:
+	 *   fAddXref   — new row for a multiple-cardinality item; auto-increments xorder
+	 *   fStepXref  — audit-trail step: opens a new row as the continuation of this one
+	 *
+	 * Date fields (start_Month/Day/Year/Hour/Minute + ignore_start_date etc.) are
+	 * converted from display timezone to UTC and stored as SQL TIMESTAMP strings.
+	 * Setting ignore_start_date/ignore_end_date to 'on' stores NULL for that date.
+	 *
+	 * @param array &$pParamHash  in/out; errors appended to $this->mErrors on failure
+	 * @return bool true if no errors
+	 */
 	public function verify( &$pParamHash ) {
 		$pParamHash['xref_id'] = ( @$this->verifyId( $pParamHash['xref_id'] ) ) ? (int) $pParamHash['xref_id'] : null;
 
@@ -141,6 +201,20 @@ class LibertyXref extends LibertyBase {
 		return count( $this->mErrors ) == 0;
 	}
 
+	/**
+	 * Persist one liberty_xref row (insert or update).
+	 *
+	 * Calls verify() first.  Inserts if $pParamHash['xref_id'] is absent;
+	 * updates the matching row otherwise.  On insert, allocates a new xref_id
+	 * from liberty_xref_seq and writes it back into $pParamHash['xref_id'].
+	 * Always reloads the row after writing so mInfo reflects the stored state.
+	 *
+	 * IMPORTANT: always pass a named variable — this method takes &$pParamHash
+	 * by reference and will fatal if given a literal array.
+	 *
+	 * @param array &$pParamHash  see verify() for expected keys
+	 * @return bool true on success
+	 */
 	public function store( &$pParamHash = NULL ) {
 		if( $this->verify( $pParamHash ) ) {
 			$table = BIT_DB_PREFIX."liberty_xref";
@@ -160,6 +234,19 @@ class LibertyXref extends LibertyBase {
 		return false;
 	}
 
+	/**
+	 * Store an xref row using the audit-trail stepping pattern.
+	 *
+	 * The expunge value in $pParamHash controls the step behaviour:
+	 *   2  — close the current row now (end_date = now) and immediately open a fresh
+	 *        continuation row (fStepXref), preserving the full history chain
+	 *   1  — close the current row (end_date = now) with no continuation; the xref
+	 *        is retired and will appear in the history group on next load
+	 *   0  — update in place (end_date cleared); standard non-stepping store
+	 *
+	 * @param array &$pParamHash  must include 'expunge' and 'xref_id'
+	 * @return bool always true
+	 */
 	public function stepXref( &$pParamHash = NULL ) {
 		if( isset( $pParamHash["expunge"] ) ) {
 			switch( $pParamHash["expunge"] ) {

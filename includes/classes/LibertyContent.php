@@ -50,8 +50,66 @@ if( !defined( 'BIT_CONTENT_DEFAULT_STATUS' ) ) {
 define( 'LIBERTY_SPLIT_REGEX', "!\.[3]split\.[3][\t ]*\n?!" );
 
 /**
- * Virtual base class (as much as one can have such things in PHP) for all
- * derived tikiwiki classes that require database access.
+ * Base class for all content types managed by the liberty content engine.
+ *
+ * Every piece of user-visible content in bitweaver — wiki pages, articles, blog posts,
+ * contacts, stock items, movements — is backed by a row in liberty_content and
+ * represented by a subclass of LibertyContent.  The shared row carries fields common
+ * to all content: title, creator/modifier user_id, timestamps, format_guid,
+ * content_status_id, and the raw data blob.
+ *
+ * ## Lifecycle
+ *
+ * Subclasses follow this pattern:
+ *   - **`verify(&$pParamHash)`** — validate and normalise inbound data; build
+ *     `$pParamHash['content_store']` ready for DB write.  Call `parent::verify()`
+ *     first, then extend with package-specific checks.
+ *   - **`store(&$pParamHash)`** — write to liberty_content (insert or update), then
+ *     call `parent::store()`.  Opens a transaction; the subclass writes its own table
+ *     inside the same transaction.
+ *   - **`load()`** — load from DB into `$this->mInfo`.  The subclass loads its own
+ *     table joined to liberty_content, then calls `parent::load()` to trigger
+ *     services and load preferences.
+ *   - **`expunge()`** — delete the content item and all related records.  The
+ *     subclass deletes its own table rows first, then calls `parent::expunge()` which
+ *     removes xref rows, history, hits, aliases, and the liberty_content row itself.
+ *
+ * ## Permissions
+ *
+ * Five permission strings are set as class properties and defaulted in `__construct()`:
+ *   - `mViewContentPerm`    — if empty, view is always allowed
+ *   - `mCreateContentPerm`  — required to create new content of this type
+ *   - `mUpdateContentPerm`  — required to edit existing content
+ *   - `mExpungeContentPerm` — required to delete content
+ *   - `mAdminContentPerm`   — supersedes all other checks; grants full access
+ *
+ * Per-item permission overrides (liberty_content_permissions) can supplement or
+ * revoke role permissions for a specific content item independently of global roles.
+ *
+ * ## XRef System
+ *
+ * LibertyContent is the gateway into the xref system for content subclasses:
+ *   - `loadXrefInfo()` — populate `$this->mXrefInfo` (a LibertyXrefInfo) with all
+ *     display groups and their rows for this content item.  Call this from page files
+ *     before assigning `gXrefInfo` to Smarty.  Package classes override this to
+ *     enrich rows (e.g. resolving contact titles from xref content_ids).
+ *   - `loadXrefTypeList()` — load sort_order=0 type markers into mInfo.
+ *   - `storeXref(&$pParamHash)` / `stepXref(&$pParamHash)` — write xref rows.
+ *   - `getXrefListTemplate()` / `getXrefRecordTemplate()` / `getXrefEditTemplate()` —
+ *     resolve the correct Smarty template for a group or item.
+ *
+ * ## Content Status
+ *
+ * `liberty_content.content_status_id` is a numeric threshold:
+ *   - >= 50  public / available
+ *   - < 0    various hidden/private/deleted tiers (thresholds configurable via kernel_config)
+ *
+ * ## Services
+ *
+ * `invokeServices($pServiceFunction, &$param)` calls all registered service functions
+ * of a given type (e.g. `content_store_function`, `content_list_sql_function`).
+ * Services augment content behaviour — categorisation, search indexing, access
+ * control — without modifying this class.
  *
  * @package liberty
  */
@@ -84,6 +142,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * @public
 	 */
 	public $mType;
+
+	/** Populated by loadXrefInfo() — LibertyXrefInfo instance for this content item */
+	public ?LibertyXrefInfo $mXrefInfo = null;
 
 	/**
 	 *Permissions hash specific to the user accessing this LibertyContent object
@@ -2155,8 +2216,35 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * @param number $pContentId a valid content id
 	 * @param array $pMixed a hash of params to add to the url
 	 */
+	/**
+	 * Hook for packages to enrich a single xref row after it has been loaded.
+	 *
+	 * Called by edit_xref.php when displaying a single xref for editing.
+	 * Override in a package class to add computed fields (e.g. contact title from
+	 * an xref content_id, component pack size) directly into the row array before
+	 * it reaches the template.
+	 *
+	 * @param array &$pXrefInfo  the raw xref row from liberty_xref (mutate in place)
+	 */
 	public function enrichXrefDisplay( array &$pXrefInfo ): void {}
 
+	/**
+	 * Resolve the Smarty group template for an xref group.
+	 *
+	 * Template resolution order (first match wins):
+	 *   1. `<package>/templates/<content_type_guid>/view_xref_<template>_group.tpl`
+	 *   2. `<package>/templates/view_xref_<template>_group.tpl`
+	 *   3. `bitpackage:liberty/list_xref.tpl`  (generic fallback)
+	 *
+	 * The package is taken from `$this->mType['handler_package']`, defaulting to
+	 * 'liberty'.  Pass the value of `$xrefGroup->mTemplate` as `$pTemplate`.
+	 * A null or empty template skips straight to the fallback.
+	 *
+	 * Called from templates as: `$gContent->getXrefListTemplate($xrefGroup->mTemplate)`
+	 *
+	 * @param string|null $pTemplate  liberty_xref_group.template value
+	 * @return string  bitpackage: path to the group template
+	 */
 	public function getXrefListTemplate( ?string $pTemplate = null ): string {
 		if( $pTemplate ) {
 			$package  = $this->mType['handler_package'] ?? 'liberty';
@@ -2175,6 +2263,20 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		return 'bitpackage:liberty/list_xref.tpl';
 	}
 
+	/**
+	 * Resolve the Smarty item template for displaying a single xref row (view path).
+	 *
+	 * Template resolution order (first match wins):
+	 *   1. `<package>/templates/<content_type_guid>/view_xref_<template>_item.tpl`
+	 *   2. `<package>/templates/view_xref_<template>_item.tpl`
+	 *   3. `bitpackage:liberty/view_xref_<template>_item.tpl`
+	 *   4. `bitpackage:liberty/view_xref_text_item.tpl`  (hardcoded fallback)
+	 *
+	 * Defaults to 'text' if `$pTemplate` is null/empty.
+	 *
+	 * @param string|null $pTemplate  liberty_xref_item.template value
+	 * @return string  bitpackage: path to the item view template
+	 */
 	public function getXrefRecordTemplate( ?string $pTemplate = null ): string {
 		$pTemplate = $pTemplate ?: 'text';
 		$package  = $this->mType['handler_package'] ?? 'liberty';
@@ -2195,6 +2297,20 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			: 'bitpackage:liberty/view_xref_text_item.tpl';
 	}
 
+	/**
+	 * Resolve the Smarty item template for editing a single xref row (edit path).
+	 *
+	 * Template resolution order (first match wins):
+	 *   1. `<package>/templates/<content_type_guid>/edit_xref_<template>_item.tpl`
+	 *   2. `<package>/templates/edit_xref_<template>_item.tpl`
+	 *   3. `bitpackage:liberty/edit_xref_<template>_item.tpl`
+	 *   4. `bitpackage:liberty/edit_xref.tpl`  (hardcoded fallback)
+	 *
+	 * Defaults to 'text' if `$pTemplate` is null/empty.
+	 *
+	 * @param string|null $pTemplate  liberty_xref_item.template value
+	 * @return string  bitpackage: path to the item edit template
+	 */
 	public function getXrefEditTemplate( ?string $pTemplate = null ): string {
 		$pTemplate = $pTemplate ?: 'text';
 		$package  = $this->mType['handler_package'] ?? 'liberty';
@@ -3794,167 +3910,65 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	// =========================================================================
-	// Xref methods — generic for any LibertyContent subclass.
-	// Queries scope to $this->mContentTypeGuid so each package sees only its
-	// own liberty_xref_group / liberty_xref_item / liberty_xref rows.
+	// Xref methods — delegates to LibertyXrefType (query logic) and
+	// LibertyXref / LibertyXrefInfo (data logic).
 	// =========================================================================
 
-	/**
-	 * Returns xref type groups (sort_order > 0) for this content type.
-	 * Each row includes xref_type aliased as 'source' for template use.
-	 */
+	/** @see LibertyXrefType::getDisplayGroups() */
 	public function getXrefGroupList(): array {
-		global $gBitUser;
-		$roles    = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-		$bindVars = array_merge( $roles, [ $gBitUser->mUserId ] );
-		$query = "SELECT g.*, g.`x_group` AS source FROM `".BIT_DB_PREFIX."liberty_xref_group` g
-				  LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=g.`role_id` )
-				  WHERE g.`content_type_guid` = '".$this->mContentTypeGuid."' AND g.`sort_order` > 0 AND (g.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
-				  ORDER BY g.`sort_order`";
-		$result = $this->mDb->query( $query, $bindVars );
-		$ret = [];
-		while ( $res = $result->fetchRow() ) {
-			$ret[] = $res;
-		}
-		return $ret;
+		return LibertyXrefType::getDisplayGroups( $this->mContentTypeGuid );
 	}
 
-	/**
-	 * Returns xref sources at sort_order=0 (the top-level type/category markers).
-	 */
+	/** @see LibertyXrefType::getTypeMarkers() */
 	public function getXrefSourceList(): array {
-		global $gBitUser;
-		$roles    = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-		$bindVars = array_merge( $roles, [ $gBitUser->mUserId ] );
-		$query = "SELECT g.`cross_ref_title` AS `type_name`, g.`item` FROM `".BIT_DB_PREFIX."liberty_xref_item` g
-				  JOIN `".BIT_DB_PREFIX."liberty_xref_group` t ON t.`x_group` = g.`x_group` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
-				  LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=g.`role_id` )
-				  WHERE g.`content_type_guid` = '".$this->mContentTypeGuid."' AND t.`sort_order` = 0 AND (g.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
-				  ORDER BY g.`item`";
-		$result = $this->mDb->query( $query, $bindVars );
-		$ret = [];
-		$cnt = 0;
-		while ( $res = $result->fetchRow() ) {
-			$ret[$cnt]['item'] = $res['item'];
-			$ret[$cnt++]['name'] = trim( $res['type_name'] );
-		}
-		return $ret;
+		return LibertyXrefType::getTypeMarkers( $this->mContentTypeGuid );
 	}
 
-	/**
-	 * Returns available xref source types, optionally filtered by group (sort_order
-	 * integer) or template name. Used to populate the add-xref type selector.
-	 */
-	public function getXrefTypeList( $xrefGroup = 0, $xrefTemplate = NULL ): array {
-		if ( $xrefTemplate ) {
-			$query = "SELECT s.`cross_ref_title` AS `type_name`, s.`item`, s.`template` FROM `".BIT_DB_PREFIX."liberty_xref_item` s
-					  WHERE s.`content_type_guid` = '".$this->mContentTypeGuid."' AND s.`template` = '$xrefTemplate'
-					  ORDER BY s.`cross_ref_title`";
-			$result = $this->mDb->query( $query, [] );
-		} elseif ( $xrefGroup > -1 ) {
-			$query = "SELECT s.`cross_ref_title` AS `type_name`, s.`item`, s.`template` FROM `".BIT_DB_PREFIX."liberty_xref_item` s
-					  JOIN `".BIT_DB_PREFIX."liberty_xref_group` t ON t.`x_group` = s.`x_group` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
-					  LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x ON x.`item` = s.`item` AND x.`content_id` = ? AND ( x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP )
-					  WHERE s.`content_type_guid` = '".$this->mContentTypeGuid."' AND t.`sort_order` = ? AND ( x.`xref_id` IS NULL OR x.`xorder` > 0 )
-					  ORDER BY s.`cross_ref_title`";
-			$result = $this->mDb->query( $query, [ $this->mContentId, $xrefGroup ] );
-		} else {
-			$query = "SELECT s.`cross_ref_title` AS `type_name`, s.`item`, s.`template` FROM `".BIT_DB_PREFIX."liberty_xref_item` s
-					  JOIN `".BIT_DB_PREFIX."liberty_xref_group` t ON t.`x_group` = s.`x_group` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
-					  LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x ON x.`item` = s.`item` AND x.`content_id` = ? AND ( x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP )
-					  WHERE s.`content_type_guid` = '".$this->mContentTypeGuid."' AND t.`sort_order` > 0 AND ( x.`xref_id` IS NULL OR x.`xorder` > 0 )
-					  ORDER BY s.`cross_ref_title`";
-			$result = $this->mDb->query( $query, [ $this->mContentId ] );
-		}
-		$ret = [];
-		while ( $res = $result->fetchRow() ) {
-			$ret['list'][$res['item']] = trim( $res['type_name'] );
-			$ret['type'][$res['item']] = trim( $res['template'] ) !== '' ? trim( $res['template'] ) : 'generic';
-		}
-		return $ret;
+	/** @see LibertyXrefType::getAvailableItems() */
+	public function getXrefTypeList( $xrefGroup = 0, $xrefTemplate = null ): array {
+		return LibertyXrefType::getAvailableItems( $this->mContentTypeGuid, $this->mContentId, $xrefGroup, $xrefTemplate );
 	}
 
-	/**
-	 * Returns distinct xref template format names for this content type.
-	 */
+	/** @see LibertyXrefType::getTemplateFormats() */
 	public function getXrefFormatList(): array {
-		global $gBitUser;
-		$roles    = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-		$bindVars = array_merge( $roles, [ $gBitUser->mUserId ] );
-		$query = "SELECT DISTINCT g.`template` FROM `".BIT_DB_PREFIX."liberty_xref_item` g
-				  LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=g.`role_id` )
-				  WHERE g.`content_type_guid` = '".$this->mContentTypeGuid."' AND (g.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
-				  ORDER BY g.`template`";
-		$result = $this->mDb->query( $query, $bindVars );
-		$ret = [];
-		while ( $res = $result->fetchRow() ) {
-			$ret[] = trim( $res['template'] ) !== '' ? trim( $res['template'] ) : 'generic';
-		}
-		return $ret;
+		return LibertyXrefType::getTemplateFormats( $this->mContentTypeGuid );
 	}
 
 	/**
-	 * Loads xref type markers (sort_order=0 sources, showing which categories apply
-	 * to this content item) into mInfo[$this->mXrefTypeKey].
-	 * Subclasses set $mXrefTypeKey to control the mInfo key (default: 'xref_types').
+	 * Load sort_order=0 type markers for this content item into mInfo.
+	 *
+	 * Results land in mInfo[$this->mXrefTypeKey] (default: 'xref_types').
+	 * Subclasses set $mXrefTypeKey to a package-specific key, e.g. Contact uses
+	 * 'contact_types' so edit.php can detect $isPerson.  No-ops if already populated.
+	 *
+	 * @see LibertyXrefType::getContentTypeMarkers()
 	 */
 	public function loadXrefTypeList(): void {
-		if ( $this->isValid() && empty( $this->mInfo[$this->mXrefTypeKey] ) ) {
-			global $gBitUser;
-			$roles    = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-			$bindVars = array_merge( [ $this->mContentId ], $roles, [ $gBitUser->mUserId ] );
-			$sql = "SELECT r.`item`, r.`cross_ref_title`, d.`content_id`
-					FROM `".BIT_DB_PREFIX."liberty_xref_item` r
-					JOIN `".BIT_DB_PREFIX."liberty_xref_group` t ON t.`x_group` = r.`x_group` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
-					LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` d ON d.`content_id` = ? AND d.`item` = r.`item`
-					LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=r.`role_id` )
-					WHERE r.`content_type_guid` = '".$this->mContentTypeGuid."' AND t.`sort_order` = 0 AND (r.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
-					ORDER BY r.`item`";
-			$result = $this->mDb->query( $sql, $bindVars );
-			while ( $res = $result->fetchRow() ) {
-				$this->mInfo[$this->mXrefTypeKey][] = $res;
-			}
+		if( $this->isValid() && empty( $this->mInfo[$this->mXrefTypeKey] ) ) {
+			$this->mInfo[$this->mXrefTypeKey] = LibertyXrefType::getContentTypeMarkers( $this->mContentTypeGuid, $this->mContentId );
 		}
 	}
 
 	/**
-	 * Loads all xref records for this content item into mInfo keyed by type_source
-	 * (the liberty_xref_group.xref_type text key, or 'history' for expired records).
+	 * Populate mXrefInfo with a LibertyXrefInfo instance for this content item.
+	 * Creates one LibertyXrefGroup per display group (sort_order > 0), each holding
+	 * its raw xref data rows.
 	 */
-	public function loadXrefList(): void {
-		if ( $this->isValid() && empty( $this->mInfo['xref'] ) ) {
-			global $gBitUser;
-			$roles    = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-			$bindVars = array_merge( [ $this->mDb->NOW(), $this->mContentId ], $roles, [ $gBitUser->mUserId ] );
-			$sql = "SELECT s.`x_group`, x.`xref_id`, x.`last_update_date`, x.`item`, t.`title` AS type_title,
-					CASE
-					WHEN x.`end_date` < ? THEN 'history'
-					ELSE t.`x_group` END AS type_source,
-					CASE
-					WHEN x.`xorder` = 0 THEN s.`cross_ref_title`
-					ELSE s.`cross_ref_title` || '-' || x.`xorder` END
-					AS source_title,
-					x.`xref`, x.`xkey`, x.`xkey_ext`, x.`xorder`, x.`data`,
-					x.`start_date`, x.`end_date`, s.`template`,
-					pc.`add1` || ',' || pc.`add2` || ',' || pc.`add4` || ',' || pc.`town` AS address
-					FROM `".BIT_DB_PREFIX."liberty_xref` x
-					JOIN `".BIT_DB_PREFIX."liberty_xref_item` s ON s.`item` = x.`item` AND s.`content_type_guid` = '".$this->mContentTypeGuid."'
-					LEFT JOIN `".BIT_DB_PREFIX."address_postcode` pc ON pc.`postcode` = x.`xkey`
-					JOIN `".BIT_DB_PREFIX."liberty_xref_group` t ON t.`x_group` = s.`x_group` AND t.`content_type_guid` = '".$this->mContentTypeGuid."'
-					LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm ON ( purm.`user_id`=".$gBitUser->mUserId." ) AND ( purm.`role_id`=s.`role_id` )
-					WHERE x.`content_id` = ? AND (s.`role_id` IN(". implode(',', array_fill(0, count($roles), '?')) ." ) OR purm.`user_id`=?)
-					ORDER BY x.`item`, x.`xorder`";
-			$result = $this->mDb->query( $sql, $bindVars );
-			if ( $result ) {
-				while ( $res = $result->fetchRow() ) {
-					$this->mInfo[$res['type_source']][] = $res;
-				}
-			}
+	public function loadXrefInfo(): void {
+		if( $this->isValid() && !empty( $this->mContentTypeGuid ) ) {
+			$this->mXrefInfo = new LibertyXrefInfo( $this->mContentTypeGuid );
+			$this->mXrefInfo->load( $this->mContentId );
 		}
 	}
 
 	/**
-	 * Loads a single xref record by xref_id and then loads the parent content item.
+	 * Load a single xref row and its parent content item by xref_id.
+	 *
+	 * Used by edit_xref.php to populate the edit form for one row.  Loads the
+	 * content item this xref belongs to into $this, then stores the xref's own
+	 * data into mInfo['xref_store'] and mInfo['xref_title'] for template use.
+	 *
+	 * @param int|null $pXrefId  liberty_xref.xref_id to load
 	 */
 	public function loadXref( $pXrefId = NULL ): void {
 		if ( BitBase::verifyId( $pXrefId ) ) {
@@ -3971,7 +3985,17 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
-	 * Stores or updates an xref record for this content item.
+	 * Write one xref row for this content item (insert or update).
+	 *
+	 * Delegates to LibertyXref::store().  On success, reloads the content item
+	 * so mInfo reflects the current DB state, and writes the new xref_id back
+	 * into $pParamHash['xref_id'].
+	 *
+	 * IMPORTANT: always pass a named variable — LibertyXref::store() takes
+	 * &$pParamHash by reference; passing a literal array is a fatal error.
+	 *
+	 * @param array &$pParamHash  see LibertyXref::verify() for expected keys
+	 * @return bool true on success
 	 */
 	public function storeXref( &$pParamHash ): bool {
 		$xref = new LibertyXref();
@@ -3990,7 +4014,15 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
-	 * Steps (creates a new dated version of) an xref record for this content item.
+	 * Write an xref row using the audit-trail stepping pattern.
+	 *
+	 * Delegates to LibertyXref::stepXref().  The expunge value in $pParamHash
+	 * controls whether the current row is closed and a new one opened (2),
+	 * just closed (1), or updated in place (0).  See LibertyXref::stepXref()
+	 * for the full semantics.  Reloads the content item on success.
+	 *
+	 * @param array &$pParamHash  must include 'xref_id' and 'expunge'
+	 * @return bool true on success
 	 */
 	public function stepXref( &$pParamHash ): bool {
 		$xref = new LibertyXref();
