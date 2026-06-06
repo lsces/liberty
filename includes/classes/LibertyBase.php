@@ -26,34 +26,36 @@ namespace Bitweaver\Liberty;
 use Bitweaver\BitBase;
 
 /**
- * Virtual base class (as much as one can have such things in PHP) for all
- * derived bitweaver classes that manage content.
+ * Intermediate base class between BitBase and LibertyContent.
+ *
+ * Adds `$mContentId` and the static object-factory methods used throughout
+ * the codebase to instantiate the correct subclass for a given content item.
+ *
+ * `getLibertyObject()` is the single entry point for loading any content by
+ * content_id: it looks up the content_type_guid, resolves the handler class
+ * registered with `$gLibertySystem`, checks the APCu cache, and calls `load()`
+ * on a fresh instance if not cached.  All "open this content item" code paths
+ * go through here.
  *
  * @package liberty
  */
 #[\AllowDynamicProperties]
 class LibertyBase extends BitBase {
-	/**
-	 * Content Id if an object has been loaded
-	 * @public
-	 */
+	/** liberty_content.content_id of the loaded object, or null when not loaded */
 	public $mContentId;
 
-	/**
-	 * Constructor building on BitBase object
-	 *
-	 * Object need to init the database connection early
-	 * Database will be linked via a previously activated BitDb object
-	 * which will provide the mDb pointer to that database
-	 */
 	public function __construct() {
 		parent::__construct();
 	}
 
 	/**
-	 * given a content_type_guid this will return an object of the proper type
+	 * Return an unloaded instance of the handler class for a content type.
 	 *
-	 * @param string the content type to be loaded
+	 * Useful for type introspection when no content_id is available — e.g. to
+	 * call static methods or check class capabilities.
+	 *
+	 * @param string $pContentTypeGuid  e.g. 'contact', 'stockassembly'
+	 * @return object|null  new instance with mContentId unset, or null if unknown type
 	 */
 	public function getLibertyClass( $pContentTypeGuid ) {
 		// We can abuse getLibertyObject to do the work
@@ -64,12 +66,19 @@ class LibertyBase extends BitBase {
 	}
 
 	/**
-	 * Given a content_id, this will return and object of the proper type
+	 * Load and return an object of the correct handler class for a content item.
 	 *
-	 * @param int content_id of the object to be returned
-	 * @param string optional content_type_guid of pConId. This will save a select if you happen to have this info. If not, this method will look it up for you.
-	 * @param bool call load on the content. Defaults to true.
-	 * @return object of the appropriate content type class
+	 * This is the canonical way to load any content by content_id when the type
+	 * is not known in advance.  Resolution order:
+	 *   1. If $pContentTypeGuid is not supplied, look it up from liberty_content.
+	 *   2. Resolve the handler class from $gLibertySystem->mContentTypes.
+	 *   3. Return the cached APCu object if $pLoadFromCache is true and one exists.
+	 *   4. Otherwise instantiate the handler class and call load().
+	 *
+	 * @param int         $pContentId        liberty_content.content_id
+	 * @param string|null $pContentTypeGuid  skip the DB lookup if already known
+	 * @param bool        $pLoadFromCache    check APCu before instantiating (default true)
+	 * @return object|null  loaded content object, or null if not found / unknown type
 	 */
 	public static function getLibertyObject( $pContentId, $pContentTypeGuid=null, $pLoadFromCache = true ) {
 		$ret = null;
@@ -102,12 +111,14 @@ class LibertyBase extends BitBase {
 	}
 
 	/**
-	 * Simple method to create a given class with a specified primary_id. The purpose of a method is to allow for derived classes to override as necessary.
+	 * Instantiate $pClass with a package-table primary key and call load().
 	 *
-	 * @param string $pClass to be created
-	 * @param integer $pPrimaryId id from the secondary table of the object to be returned
-	 * @param bool $pLoadFromCache load the contentfrom cache
-	 * @return object of the appropriate content type class
+	 * Override point for subclasses whose constructor takes a package-specific
+	 * primary id rather than a content_id (e.g. legacy FishEye gallery_id).
+	 *
+	 * @param string $pClass      fully-qualified class name
+	 * @param int    $pPrimaryId  package-table primary key
+	 * @return object
 	 */
 	public static function getNewObjectById( $pClass, $pPrimaryId, $pLoadFromCache=true ) {
 		if( $ret = new $pClass( $pPrimaryId ) ) {
@@ -117,12 +128,14 @@ class LibertyBase extends BitBase {
 	}
 
 	/**
-	 * Simple method to create a given class with a specified content_id. The purpose of a method is to allow for derived classes to override as necessary.
+	 * Instantiate $pClass with a content_id and call load().
 	 *
-	 * @param string $pClass to be created
-	 * @param integer $pContentId of the object to be returned
-	 * @param bool $pLoadFromCache load the contentfrom cache
-	 * @return object of the appropriate content type class
+	 * Default factory used by getLibertyObject().  Subclasses that need
+	 * different constructor signatures override this method.
+	 *
+	 * @param string $pClass      fully-qualified class name
+	 * @param int    $pContentId  liberty_content.content_id
+	 * @return object
 	 */
 	public static function getNewObject( $pClass, $pContentId, $pLoadFromCache=true ) {
 		if( $ret = new $pClass( null, $pContentId ) ) {
