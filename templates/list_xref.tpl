@@ -6,12 +6,12 @@
 	{jstab title="`$tabTitle` ({$xrefGroup->mXrefs|@count})"}
 	{legend legend=$tabTitle}
 	<div class="form-group table-responsive">
-		<table>
+		<table class="table">
 			<thead>
 				<tr>
 					<th style="width:30%">{tr}Type{/tr}</th>
-					<th style="width:30%">{tr}Key{/tr}</th>
-					<th style="width:40%">{tr}Value{/tr}</th>
+					<th style="width:30%">{tr}Value{/tr}</th>
+					<th style="width:40%">{tr}Notes{/tr}</th>
 					{if $xrefAllowEdit}
 						{if $isHistory}<th>{tr}Ended{/tr}</th>{else}<th>{tr}Started{/tr}</th>{/if}
 						<th>{tr}Updated{/tr}</th>
@@ -47,7 +47,7 @@
 	{jstab title="$source_title ($xrefcnt)"}
 	{legend legend=$source_title}
 	<div class="form-group table-responsive">
-		<table>
+		<table class="table">
 			<thead>
 				<tr>
 					<th style="width:30%">{tr}Type{/tr}</th>
