@@ -33,12 +33,18 @@ namespace Bitweaver\Liberty;
 class LibertyXrefInfo {
 	/** content_type_guid this info object was built for */
 	public string $mContentTypeGuid;
+	/** optional package-level guid whose xref_group/xref_item rows are also loaded (e.g. 'stock') */
+	public ?string $mPackageGuid;
 	/** @var LibertyXrefGroup[] keyed by x_group, ordered by sort_order */
 	public array $mGroups = [];
 
-	/** @param string $contentTypeGuid e.g. 'contact', 'stockmovement' */
-	public function __construct( string $contentTypeGuid ) {
+	/**
+	 * @param string      $contentTypeGuid e.g. 'stockassembly', 'contact'
+	 * @param string|null $packageGuid     e.g. 'stock' — additional guid whose xref_group rows are merged in
+	 */
+	public function __construct( string $contentTypeGuid, ?string $packageGuid = null ) {
 		$this->mContentTypeGuid = $contentTypeGuid;
+		$this->mPackageGuid     = $packageGuid;
 	}
 
 	/**
@@ -56,11 +62,15 @@ class LibertyXrefInfo {
 		$userId   = $gBitUser->mUserId;
 		$bindVars = array_merge( $roles, [ $userId ] );
 
+		$guidFilter = $this->mPackageGuid
+			? "g.`content_type_guid` IN ('{$this->mContentTypeGuid}', '{$this->mPackageGuid}')"
+			: "g.`content_type_guid` = '{$this->mContentTypeGuid}'";
+
 		$sql = "SELECT g.`x_group`, g.`title`, g.`sort_order`, g.`template`, g.`role_id`
 				FROM `" . BIT_DB_PREFIX . "liberty_xref_group` g
 				LEFT OUTER JOIN `" . BIT_DB_PREFIX . "users_roles_map` purm
 					ON purm.`user_id` = $userId AND purm.`role_id` = g.`role_id`
-				WHERE g.`content_type_guid` = '{$this->mContentTypeGuid}'
+				WHERE $guidFilter
 				AND g.`sort_order` > 0
 				AND (g.`role_id` IN(" . implode( ',', array_fill( 0, count( $roles ), '?' ) ) . ") OR purm.`user_id` = ?)
 				ORDER BY g.`sort_order`";
@@ -70,7 +80,7 @@ class LibertyXrefInfo {
 
 		$allHistory = [];
 		while( $row = $result->fetchRow() ) {
-			$group      = new LibertyXrefGroup( $row, $this->mContentTypeGuid );
+			$group      = new LibertyXrefGroup( $row, $this->mContentTypeGuid, $this->mPackageGuid );
 			$allHistory = array_merge( $allHistory, $group->loadXrefs( $contentId ) );
 			$this->mGroups[$row['x_group']] = $group;
 		}
@@ -78,7 +88,8 @@ class LibertyXrefInfo {
 		if( !empty( $allHistory ) ) {
 			$historyGroup = new LibertyXrefGroup(
 				[ 'x_group' => 'history', 'title' => 'History', 'sort_order' => 999, 'template' => null, 'role_id' => 0 ],
-				$this->mContentTypeGuid
+				$this->mContentTypeGuid,
+				$this->mPackageGuid
 			);
 			$historyGroup->mXrefs          = $allHistory;
 			$this->mGroups['history']      = $historyGroup;

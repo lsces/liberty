@@ -40,17 +40,21 @@ class LibertyXrefGroup extends LibertyBase {
 	public ?string $mTemplate;
 	/** role_id gate from liberty_xref_group.role_id; 0 = visible to all */
 	public int     $mRoleId;
+	/** optional package-level guid — xref_item rows with this guid are also matched */
+	public ?string $mPackageGuid;
 	/** @var array[] active liberty_xref data rows for the current content item */
 	public array   $mXrefs = [];
 
 	/**
-	 * @param array  $groupRow        row from liberty_xref_group (x_group, title, sort_order, template, role_id)
-	 * @param string $contentTypeGuid content type this group belongs to
+	 * @param array       $groupRow        row from liberty_xref_group (x_group, title, sort_order, template, role_id)
+	 * @param string      $contentTypeGuid content type this group belongs to
+	 * @param string|null $packageGuid     optional package-level guid (e.g. 'stock')
 	 */
-	public function __construct( array $groupRow, string $contentTypeGuid ) {
+	public function __construct( array $groupRow, string $contentTypeGuid, ?string $packageGuid = null ) {
 		parent::__construct();
 		$this->mXGroup          = $groupRow['x_group'];
 		$this->mContentTypeGuid = $contentTypeGuid;
+		$this->mPackageGuid     = $packageGuid;
 		$this->mTitle           = $groupRow['title'];
 		$this->mSortOrder       = (int)( $groupRow['sort_order'] ?? 0 );
 		$this->mTemplate        = !empty( $groupRow['template'] ) ? trim( $groupRow['template'] ) : null;
@@ -87,6 +91,10 @@ class LibertyXrefGroup extends LibertyBase {
 		$userId   = $gBitUser->mUserId;
 		$bindVars = array_merge( [ $this->mDb->NOW(), $contentId ], $roles, [ $userId ] );
 
+		$guidFilter = $this->mPackageGuid
+			? "IN ('{$this->mContentTypeGuid}', '{$this->mPackageGuid}')"
+			: "= '{$this->mContentTypeGuid}'";
+
 		$sql = "SELECT x.`xref_id`, x.`item`, x.`xref`, x.`xkey`, x.`xkey_ext`,
 					x.`xorder`, x.`data`, x.`start_date`, x.`end_date`, x.`last_update_date`,
 					s.`template`, s.`cross_ref_href`,
@@ -98,7 +106,7 @@ class LibertyXrefGroup extends LibertyBase {
 				FROM `" . BIT_DB_PREFIX . "liberty_xref` x
 				JOIN `" . BIT_DB_PREFIX . "liberty_xref_item` s
 					ON s.`item` = x.`item`
-					AND s.`content_type_guid` = '{$this->mContentTypeGuid}'
+					AND s.`content_type_guid` $guidFilter
 					AND s.`x_group` = '{$this->mXGroup}'
 				LEFT JOIN `" . BIT_DB_PREFIX . "address_postcode` pc ON pc.`postcode` = x.`xkey`
 				LEFT OUTER JOIN `" . BIT_DB_PREFIX . "users_roles_map` purm

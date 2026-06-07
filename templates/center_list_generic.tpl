@@ -21,7 +21,7 @@
 
 		{form id="checkform"}
 			<ul class="list-inline navbar">
-				<li>{biticon ipackage="icons" iname="go-next"  ipackage="icons"  iexplain="sort by"}</li>
+				<li>{biticon ipackage="icons" iname="go-next"  iexplain="sort by"}</li>
 				<li>{smartlink ititle="Title" isort="title" icontrol=$listInfo}</li>
 				<li>{smartlink ititle="Last Modified" iorder="desc" idefault=1 isort="last_modified" icontrol=$listInfo}</li>
 				<li>{smartlink ititle="Author" isort="creator_user" icontrol=$listInfo}</li>

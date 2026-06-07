@@ -105,7 +105,7 @@
 					<td>
 						{if $src.num_entries eq 0}
 							<a href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_sources.php?fDeleteSource=1&amp;source={$src.item|escape}&amp;del_content_type_guid={$src.content_type_guid|escape}&amp;content_type_guid={$activeGuid|escape}"
-							   onclick="return confirm('{tr}Delete this source?{/tr}')">{biticon ipackage="icons" iname="user-trash" ipackage="icons" iforce=icon_text iexplain="Delete"}</a>
+							   onclick="return confirm('{tr}Delete this source?{/tr}')">{biticon ipackage="icons" iname="user-trash" iforce=icon_text iexplain="Delete"}</a>
 						{/if}
 					</td>
 				</tr>
