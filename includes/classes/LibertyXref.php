@@ -145,7 +145,7 @@ class LibertyXref extends LibertyBase {
 				$sql  = "SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x WHERE x.`content_id` = ? AND x.`item` = ?";
 				$next = $this->mDb->getOne( $sql, [ $pParamHash['xref_store']['content_id'], $pParamHash['xref_store']['item'] ] );
 			}
-			$pParamHash['xref_store']['xorder'] = $next;
+			$pParamHash['xref_store']['xorder'] = (int)$next;
 		}
 
 		if( isset( $pParamHash['fStepXref'] ) ) {
