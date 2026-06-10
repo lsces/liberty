@@ -13,7 +13,7 @@
 			<div class="form-group">
 				{formlabel label="Type"}
 				{forminput}
-					<p class="form-control-static">{$xrefInfo.source_title|escape}</p>
+					<p class="form-control-static">{$xrefInfo.template_title|escape}</p>
 				{/forminput}
 			</div>
 
