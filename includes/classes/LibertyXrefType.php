@@ -199,6 +199,102 @@ class LibertyXrefType {
 	}
 
 	/**
+	 * Load all xref groups and their rows for a specific content item.
+	 *
+	 * Replaces the former LibertyXrefInfo::load() + LibertyXrefGroup::loadXrefs()
+	 * two-class pattern. Returns a LibertyXrefContent whose mGroups array is keyed
+	 * by x_group name. A synthetic 'history' group (sort_order 999) is appended
+	 * when any expired rows are found.
+	 *
+	 * Each group's mXrefs array holds LibertyXref instances built via
+	 * LibertyXref::fromRow(). Templates continue to use {$xrefInfo.xkey} dot
+	 * notation — LibertyXref::ArrayAccess maps this transparently.
+	 *
+	 * Packages that enrich rows after loading (e.g. resolving contact titles)
+	 * should override loadXrefInfo() in their class, call the parent, then walk
+	 * $this->mXrefInfo->mGroups and mutate as needed.
+	 *
+	 * @param int $contentId  liberty_content.content_id to load rows for
+	 * @return LibertyXrefContent
+	 */
+	public function loadContent( int $contentId ): LibertyXrefContent {
+		global $gBitSystem, $gBitUser;
+
+		$db          = $gBitSystem->mDb;
+		$roles       = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
+		$userId      = (int)( $gBitUser->mUserId ?? 0 );
+		$guidFilter  = $this->packageGuid
+			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
+			: "= '$this->contentTypeGuid'";
+		$rolePlaceholders = implode( ',', array_fill( 0, count( $roles ), '?' ) );
+
+		$content    = new LibertyXrefContent();
+		$allHistory = [];
+
+		$groupResult = $db->query(
+			"SELECT g.`x_group`, g.`title`, g.`sort_order`, g.`template`, g.`role_id`
+			 FROM `".BIT_DB_PREFIX."liberty_xref_group` g
+			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
+			     ON purm.`user_id` = $userId AND purm.`role_id` = g.`role_id`
+			 WHERE g.`content_type_guid` $guidFilter AND g.`sort_order` > 0
+			   AND (g.`role_id` IN($rolePlaceholders) OR purm.`user_id` = ?)
+			 ORDER BY g.`sort_order`",
+			array_merge( $roles, [ $userId ] )
+		);
+		if( !$groupResult ) return $content;
+
+		while( $groupRow = $groupResult->fetchRow() ) {
+			$group     = new LibertyXrefGroup( $groupRow, $this->contentTypeGuid, $this->packageGuid );
+			$xGroup    = $groupRow['x_group'];
+			$rowResult = $db->query(
+				"SELECT x.`xref_id`, x.`item`, x.`xref`, x.`xkey`, x.`xkey_ext`,
+				        x.`xorder`, x.`data`, x.`start_date`, x.`end_date`, x.`last_update_date`,
+				        s.`template`, s.`cross_ref_href`,
+				        CASE WHEN x.`xorder` = 0 THEN s.`cross_ref_title`
+				             ELSE s.`cross_ref_title` || '-' || x.`xorder` END AS xref_title,
+				        CASE WHEN x.`end_date` IS NOT NULL AND x.`end_date` < ? THEN 'history'
+				             ELSE s.`x_group` END AS type_source,
+				        pc.`add1` || ',' || pc.`add2` || ',' || pc.`add4` || ',' || pc.`town` AS address
+				 FROM `".BIT_DB_PREFIX."liberty_xref` x
+				 JOIN `".BIT_DB_PREFIX."liberty_xref_item` s
+				     ON s.`item` = x.`item`
+				     AND s.`content_type_guid` $guidFilter
+				     AND s.`x_group` = '$xGroup'
+				 LEFT JOIN `".BIT_DB_PREFIX."address_postcode` pc ON pc.`postcode` = x.`xkey`
+				 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
+				     ON purm.`user_id` = $userId AND purm.`role_id` = s.`role_id`
+				 WHERE x.`content_id` = ?
+				   AND (s.`role_id` IN($rolePlaceholders) OR purm.`user_id` = ?)
+				 ORDER BY x.`item`, x.`xorder`",
+				array_merge( [ $db->NOW(), $contentId ], $roles, [ $userId ] )
+			);
+			if( $rowResult ) {
+				while( $row = $rowResult->fetchRow() ) {
+					$xref = LibertyXref::fromRow( $row );
+					if( $row['type_source'] === 'history' ) {
+						$allHistory[] = $xref;
+					} else {
+						$group->mXrefs[] = $xref;
+					}
+				}
+			}
+			$content->mGroups[$xGroup] = $group;
+		}
+
+		if( !empty( $allHistory ) ) {
+			$historyGroup          = new LibertyXrefGroup(
+				[ 'x_group' => 'history', 'title' => 'History', 'sort_order' => 999, 'template' => null, 'role_id' => 0 ],
+				$this->contentTypeGuid,
+				$this->packageGuid
+			);
+			$historyGroup->mXrefs  = $allHistory;
+			$content->mGroups['history'] = $historyGroup;
+		}
+
+		return $content;
+	}
+
+	/**
 	 * Return the distinct template format names defined across all item slots for
 	 * this content type, filtered to the current user's roles.
 	 *

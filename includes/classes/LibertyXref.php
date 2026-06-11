@@ -27,13 +27,13 @@ use Bitweaver\BitDate;
  *   last_update_date — last write timestamp
  *
  * This class handles load/verify/store for a single row.  For bulk loading of all
- * xref rows belonging to a content item, use LibertyXrefGroup / LibertyXrefInfo.
+ * xref rows belonging to a content item, use LibertyXrefGroup / LibertyXrefContent.
  *
  * The stepXref() method implements an audit-trail pattern: instead of updating a row
  * in place it closes the current row (sets end_date) and opens a new one, preserving
- * history. Expired rows are swept into the synthetic 'history' group by LibertyXrefInfo.
+ * history. Expired rows are swept into the synthetic 'history' group by LibertyXrefType::loadContent().
  */
-class LibertyXref extends BitBase {
+class LibertyXref extends BitBase implements \ArrayAccess {
 	/** x_group value of the loaded xref's item definition */
 	public $mType;
 	/** item key of the loaded row (matches liberty_xref_item.item) */
@@ -46,6 +46,8 @@ class LibertyXref extends BitBase {
 	public $mDate;
 	/** when set, scopes liberty_xref_item lookups to this content type */
 	public $mContentTypeGuid = '';
+	/** flat row data — populated by load() and fromRow(); underpins ArrayAccess */
+	protected array $mRow = [];
 
 	public function __construct( $iXrefId = NULL ) {
 		$this->mXrefId = NULL;
@@ -58,6 +60,30 @@ class LibertyXref extends BitBase {
 		$this->mDate = new BitDate();
 		$this->mDate->get_display_offset();
 	}
+
+	/**
+	 * Construct a LibertyXref instance from a bulk-loaded result row.
+	 *
+	 * Used by LibertyXrefType::loadContent() to populate LibertyXrefGroup::mXrefs
+	 * without going through load(). The row is stored flat in $mRow; ArrayAccess
+	 * exposes it so templates continue to use {$xrefInfo.xkey} syntax unchanged.
+	 *
+	 * @param array $row  result row from the LibertyXrefType::loadContent() query
+	 */
+	public static function fromRow( array $row ): self {
+		$xref              = new self();
+		$xref->mRow        = $row;
+		$xref->mXrefId     = $row['xref_id'] ?? null;
+		$xref->mItem       = $row['item'] ?? null;
+		$xref->mContentId  = $row['content_id'] ?? null;
+		return $xref;
+	}
+
+	// ArrayAccess — lets templates use {$xrefInfo.key} dot notation on bulk-loaded rows.
+	public function offsetExists( mixed $offset ): bool  { return isset( $this->mRow[$offset] ); }
+	public function offsetGet( mixed $offset ): mixed    { return $this->mRow[$offset] ?? null; }
+	public function offsetSet( mixed $offset, mixed $value ): void { $this->mRow[$offset] = $value; }
+	public function offsetUnset( mixed $offset ): void   { unset( $this->mRow[$offset] ); }
 
 	/** @return bool true if a row has been loaded (mXrefId is a valid integer) */
 	public function isValid() {
@@ -96,11 +122,12 @@ class LibertyXref extends BitBase {
 				$this->mXrefId    = $pXrefId;
 				$this->mContentId = $result['content_id'];
 				$this->mType      = $result["x_group"];
-				$this->mItem    = $result['item'];
+				$this->mItem      = $result['item'];
 				$this->mInfo['title']       = $result['source_title'];
 				$this->mInfo['format_guid'] = 'text';
 				unset( $result['source_title'] );
 				$this->mInfo['data'] = $result;
+				$this->mRow = $result;
 			}
 		}
 	}

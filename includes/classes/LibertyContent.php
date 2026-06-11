@@ -89,7 +89,7 @@ define( 'LIBERTY_SPLIT_REGEX', "!\.[3]split\.[3][\t ]*\n?!" );
  * ## XRef System
  *
  * LibertyContent is the gateway into the xref system for content subclasses:
- *   - `loadXrefInfo()` — populate `$this->mXrefInfo` (a LibertyXrefInfo) with all
+ *   - `loadXrefInfo()` — populate `$this->mXrefInfo` (a LibertyXrefContent) with all
  *     display groups and their rows for this content item.  Call this from page files
  *     before assigning `gXrefInfo` to Smarty.  Package classes override this to
  *     enrich rows (e.g. resolving contact titles from xref content_ids).
@@ -149,8 +149,8 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 */
 	public $mType;
 
-	/** Populated by loadXrefInfo() — LibertyXrefInfo instance for this content item */
-	public ?LibertyXrefInfo $mXrefInfo = null;
+	/** Populated by loadXrefInfo() — LibertyXrefContent instance for this content item */
+	public ?LibertyXrefContent $mXrefInfo = null;
 
 	/**
 	 *Permissions hash specific to the user accessing this LibertyContent object
@@ -3920,7 +3920,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 
 	// =========================================================================
 	// Xref methods — delegates to LibertyXrefType (query logic) and
-	// LibertyXref / LibertyXrefInfo (data logic).
+	// LibertyXref / LibertyXrefContent (data logic).
 	// =========================================================================
 
 	/**
@@ -3935,7 +3935,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * All public xref query methods on LibertyContent delegate here — do not
 	 * construct LibertyXrefType directly in page or subclass code.
 	 */
-	private function xrefType(): LibertyXrefType {
+	protected function xrefType(): LibertyXrefType {
 		return $this->mXrefType ??= new LibertyXrefType( $this->mContentTypeGuid, $this->mPackageGuid ?: null );
 	}
 
@@ -3975,14 +3975,14 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
-	 * Populate mXrefInfo with a LibertyXrefInfo instance for this content item.
+	 * Populate mXrefInfo with a LibertyXrefContent for this content item.
 	 * Creates one LibertyXrefGroup per display group (sort_order > 0), each holding
-	 * its raw xref data rows.
+	 * LibertyXref instances for its active rows, plus a synthetic 'history' group
+	 * when expired rows exist.
 	 */
 	public function loadXrefInfo(): void {
 		if( $this->isValid() && !empty( $this->mContentTypeGuid ) ) {
-			$this->mXrefInfo = new LibertyXrefInfo( $this->mContentTypeGuid );
-			$this->mXrefInfo->load( $this->mContentId );
+			$this->mXrefInfo = $this->xrefType()->loadContent( $this->mContentId );
 		}
 	}
 
