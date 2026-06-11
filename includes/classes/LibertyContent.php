@@ -135,7 +135,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	/** Set when handler_package differs from content_type_guid (e.g. 'stock' for stockcomponent/stockassembly). Used to scope xref_item lookups via IN(). */
 	public string $mPackageGuid = '';
 
-	/** Lazy-initialised by xrefType(); reset to null in registerContentType(). */
+	/** Cached LibertyXrefType instance scoped to mContentTypeGuid + mPackageGuid. Lazy-initialised by xrefType(); reset to null in registerContentType() so a re-registration gets a fresh instance. Not serialised — rebuilt on first use after deserialise. */
 	protected ?LibertyXrefType $mXrefType = null;
 
 	/**
@@ -3923,23 +3923,38 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	// LibertyXref / LibertyXrefInfo (data logic).
 	// =========================================================================
 
-	/** Return a LibertyXrefType scoped to this content object's type and package guids. */
+	/**
+	 * Return a LibertyXrefType instance scoped to this content object.
+	 *
+	 * The instance is created once from mContentTypeGuid and mPackageGuid, then
+	 * cached in mXrefType for the lifetime of the request.  mPackageGuid is set
+	 * by registerContentType() when handler_package differs from the content type
+	 * guid (e.g. 'stock' for stockcomponent/stockassembly), enabling the dual-guid
+	 * IN() query that covers both package-level and content-type-level xref schema rows.
+	 *
+	 * All public xref query methods on LibertyContent delegate here — do not
+	 * construct LibertyXrefType directly in page or subclass code.
+	 */
 	private function xrefType(): LibertyXrefType {
 		return $this->mXrefType ??= new LibertyXrefType( $this->mContentTypeGuid, $this->mPackageGuid ?: null );
 	}
 
+	/** @see LibertyXrefType::getDisplayGroups() */
 	public function getXrefGroupList(): array {
 		return $this->xrefType()->getDisplayGroups();
 	}
 
+	/** @see LibertyXrefType::getTypeMarkers() */
 	public function getXrefSourceList(): array {
 		return $this->xrefType()->getTypeMarkers();
 	}
 
+	/** @see LibertyXrefType::getAvailableItems() */
 	public function getXrefTypeList( $xrefGroup = 0, $xrefTemplate = null ): array {
 		return $this->xrefType()->getAvailableItems( $this->mContentId, $xrefGroup, $xrefTemplate );
 	}
 
+	/** @see LibertyXrefType::getTemplateFormats() */
 	public function getXrefFormatList(): array {
 		return $this->xrefType()->getTemplateFormats();
 	}
