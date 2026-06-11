@@ -22,8 +22,36 @@ namespace Bitweaver\Liberty;
  *
  * Neither table holds user data.  Live data lives in liberty_xref.
  *
- * Instance methods are content-type-scoped runtime queries, called via LibertyContent.
- * Static methods are unfiltered admin queries across all content types.
+ * ## Dual-guid schema (package-level + content-type-level)
+ *
+ * A package with multiple content types may define groups/items at two levels:
+ *
+ *   Package-level   — groups shared across all content types in the package.
+ *                     content_type_guid = the package guid (e.g. 'stock').
+ *                     Example: 'stgrp', 'supplier', 'kitlocker' in stock — these
+ *                     apply equally to stockcomponent and stockassembly.
+ *
+ *   Content-type-level — groups specific to one content type.
+ *                        content_type_guid = the content type guid
+ *                        (e.g. 'stockcomponent', 'stockassembly').
+ *                        Example: 'quantity', 'values' for stockcomponent.
+ *
+ * To cover both levels, supply $packageGuid to the constructor.  The runtime
+ * queries will then filter on IN(contentTypeGuid, packageGuid) in WHERE, while
+ * the item↔group JOIN always uses t.content_type_guid = s.content_type_guid so
+ * each item only matches its own group — preventing cross-matching when two guids
+ * share an x_group name (e.g. 'quantity' on both stockcomponent and stockassembly).
+ *
+ * The stock package is the reference implementation of this pattern.
+ *
+ * ## Usage
+ *
+ * Always access via LibertyContent::xrefType(), which lazily constructs and caches
+ * the instance using mContentTypeGuid and mPackageGuid (set by registerContentType()).
+ * Do not instantiate directly in page code.
+ *
+ * Instance methods — content-type-scoped runtime queries, role-filtered.
+ * Static methods  — unfiltered admin queries across all content types.
  */
 class LibertyXrefType {
 
