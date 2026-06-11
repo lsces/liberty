@@ -33,7 +33,7 @@ use Bitweaver\BitDate;
  * in place it closes the current row (sets end_date) and opens a new one, preserving
  * history. Expired rows are swept into the synthetic 'history' group by LibertyXrefInfo.
  */
-class LibertyXref extends LibertyBase {
+class LibertyXref extends BitBase {
 	/** x_group value of the loaded xref's item definition */
 	public $mType;
 	/** item key of the loaded row (matches liberty_xref_item.item) */
