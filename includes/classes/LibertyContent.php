@@ -132,6 +132,12 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 */
 	public $mContentTypeGuid;
 
+	/** Set when handler_package differs from content_type_guid (e.g. 'stock' for stockcomponent/stockassembly). Used to scope xref_item lookups via IN(). */
+	public string $mPackageGuid = '';
+
+	/** Lazy-initialised by xrefType(); reset to null in registerContentType(). */
+	protected ?LibertyXrefType $mXrefType = null;
+
 	/**
 	 * mInfo key used by loadXrefTypeList(); subclasses may override (e.g. 'contact_types')
 	 */
@@ -1883,6 +1889,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gLibertySystem;
 		$gLibertySystem->registerContentType( $pContentGuid, $pTypeParams );
 		$this->mType = $pTypeParams;
+		$pkg = $pTypeParams['handler_package'] ?? '';
+		$this->mPackageGuid = ( $pkg && $pkg !== $pContentGuid ) ? $pkg : '';
+		$this->mXrefType = null;
 	}
 
 	/**
@@ -3914,24 +3923,25 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	// LibertyXref / LibertyXrefInfo (data logic).
 	// =========================================================================
 
-	/** @see LibertyXrefType::getDisplayGroups() */
+	/** Return a LibertyXrefType scoped to this content object's type and package guids. */
+	private function xrefType(): LibertyXrefType {
+		return $this->mXrefType ??= new LibertyXrefType( $this->mContentTypeGuid, $this->mPackageGuid ?: null );
+	}
+
 	public function getXrefGroupList(): array {
-		return LibertyXrefType::getDisplayGroups( $this->mContentTypeGuid );
+		return $this->xrefType()->getDisplayGroups();
 	}
 
-	/** @see LibertyXrefType::getTypeMarkers() */
 	public function getXrefSourceList(): array {
-		return LibertyXrefType::getTypeMarkers( $this->mContentTypeGuid );
+		return $this->xrefType()->getTypeMarkers();
 	}
 
-	/** @see LibertyXrefType::getAvailableItems() */
 	public function getXrefTypeList( $xrefGroup = 0, $xrefTemplate = null ): array {
-		return LibertyXrefType::getAvailableItems( $this->mContentTypeGuid, $this->mContentId, $xrefGroup, $xrefTemplate );
+		return $this->xrefType()->getAvailableItems( $this->mContentId, $xrefGroup, $xrefTemplate );
 	}
 
-	/** @see LibertyXrefType::getTemplateFormats() */
 	public function getXrefFormatList(): array {
-		return LibertyXrefType::getTemplateFormats( $this->mContentTypeGuid );
+		return $this->xrefType()->getTemplateFormats();
 	}
 
 	/**
@@ -3945,7 +3955,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 */
 	public function loadXrefTypeList(): void {
 		if( $this->isValid() && empty( $this->mInfo[$this->mXrefTypeKey] ) ) {
-			$this->mInfo[$this->mXrefTypeKey] = LibertyXrefType::getContentTypeMarkers( $this->mContentTypeGuid, $this->mContentId );
+			$this->mInfo[$this->mXrefTypeKey] = $this->xrefType()->getContentTypeMarkers( $this->mContentId );
 		}
 	}
 
