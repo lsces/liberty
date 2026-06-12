@@ -255,7 +255,8 @@ class LibertyXrefType {
 				        CASE WHEN x.`end_date` IS NOT NULL AND x.`end_date` < ? THEN 'history'
 				             ELSE s.`x_group` END AS type_source,
 				        pc.`add1` || ',' || pc.`add2` || ',' || pc.`add4` || ',' || pc.`town` AS address,
-				        lc_linked.`title` AS linked_title
+				        lc_linked.`title` AS linked_title,
+				        lc_linked.`data` AS linked_data
 				 FROM `".BIT_DB_PREFIX."liberty_xref` x
 				 JOIN `".BIT_DB_PREFIX."liberty_xref_item` s
 				     ON s.`item` = x.`item`
