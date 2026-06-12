@@ -46,6 +46,8 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 	public $mDate;
 	/** when set, scopes liberty_xref_item lookups to this content type */
 	public $mContentTypeGuid = '';
+	/** when set alongside mContentTypeGuid, extends the scope to include package-level items (dual-guid schema) */
+	public string $mPackageGuid = '';
 	/** flat row data — populated by load() and fromRow(); underpins ArrayAccess */
 	protected array $mRow = [];
 
@@ -104,8 +106,16 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 	 */
 	public function load( $pXrefId = NULL ) {
 		if( BitBase::verifyId( $pXrefId ) ) {
-			$guidFilter  = !empty( $this->mContentTypeGuid ) ? "AND s.`content_type_guid` = ?" : '';
-			$bindVars    = !empty( $this->mContentTypeGuid ) ? [ $this->mContentTypeGuid, $pXrefId ] : [ $pXrefId ];
+			if( !empty( $this->mContentTypeGuid ) && !empty( $this->mPackageGuid ) ) {
+				$guidFilter = "AND s.`content_type_guid` IN(?,?)";
+				$bindVars   = [ $this->mContentTypeGuid, $this->mPackageGuid, $pXrefId ];
+			} elseif( !empty( $this->mContentTypeGuid ) ) {
+				$guidFilter = "AND s.`content_type_guid` = ?";
+				$bindVars   = [ $this->mContentTypeGuid, $pXrefId ];
+			} else {
+				$guidFilter = '';
+				$bindVars   = [ $pXrefId ];
+			}
 			$sql = "SELECT x.*, CASE
 					WHEN x.`xorder` = 0 THEN s.`cross_ref_title`
 					ELSE s.`cross_ref_title` || '-' || x.`xorder` END
@@ -164,8 +174,16 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 		if( isset( $pParamHash['fAddXref'] ) ) {
 			$pParamHash['xref_store']['item']       = isset( $pParamHash['Array_xref_type_list'] ) ? $pParamHash['Array_xref_type_list']['Array.item'] : $pParamHash['item'];
 			$pParamHash['xref_store']['content_id'] = $pParamHash['content_id'];
-			$guidWhere = !empty( $this->mContentTypeGuid ) ? "AND x.`content_type_guid` = ?" : '';
-			$guidBind  = !empty( $this->mContentTypeGuid ) ? [ $pParamHash['xref_store']['item'], $this->mContentTypeGuid ] : [ $pParamHash['xref_store']['item'] ];
+			if( !empty( $this->mContentTypeGuid ) && !empty( $this->mPackageGuid ) ) {
+				$guidWhere = "AND x.`content_type_guid` IN(?,?)";
+				$guidBind  = [ $pParamHash['xref_store']['item'], $this->mContentTypeGuid, $this->mPackageGuid ];
+			} elseif( !empty( $this->mContentTypeGuid ) ) {
+				$guidWhere = "AND x.`content_type_guid` = ?";
+				$guidBind  = [ $pParamHash['xref_store']['item'], $this->mContentTypeGuid ];
+			} else {
+				$guidWhere = '';
+				$guidBind  = [ $pParamHash['xref_store']['item'] ];
+			}
 			$sql  = "SELECT x.`multiple` FROM `".BIT_DB_PREFIX."liberty_xref_item` x WHERE x.`item` = ? $guidWhere";
 			$next = $this->mDb->getOne( $sql, $guidBind );
 			if( $next > 0 ) {

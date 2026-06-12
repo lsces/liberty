@@ -3999,6 +3999,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		if ( BitBase::verifyId( $pXrefId ) ) {
 			$xref = new LibertyXref();
 			$xref->mContentTypeGuid = $this->mContentTypeGuid;
+			$xref->mPackageGuid     = $this->mPackageGuid;
 			$xref->load( $pXrefId );
 			if ( $xref->mContentId ) {
 				$this->load( $xref->mContentId );
@@ -4025,6 +4026,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	public function storeXref( &$pParamHash ): bool {
 		$xref = new LibertyXref();
 		$xref->mContentTypeGuid = $this->mContentTypeGuid;
+		$xref->mPackageGuid     = $this->mPackageGuid;
 		if ( BitBase::verifyId( $pParamHash['xref_id'] ?? null ) ) {
 			$xref->load( $pParamHash['xref_id'] );
 		}
@@ -4052,6 +4054,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	public function stepXref( &$pParamHash ): bool {
 		$xref = new LibertyXref();
 		$xref->mContentTypeGuid = $this->mContentTypeGuid;
+		$xref->mPackageGuid     = $this->mPackageGuid;
 		$xref->load( $pParamHash['xref_id'] );
 		if ( $xref->stepXref( $pParamHash ) ) {
 			$this->mInfo['xref_title'] = $xref->mContentId;
