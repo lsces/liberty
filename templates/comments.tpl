@@ -16,7 +16,7 @@
 
 		{if $gBitSystem->isFeatureActive('comments_ajax') && $gBitUser->hasPermission( 'p_liberty_post_comments' )}
 			<div class="form-group">
-				<input type="submit" class="btn btn-default" name="post_comment_request" value="{tr}Add Comment{/tr}" onclick="LibertyComment.attachForm('comment_{$gContent->mContentId}', '{$gContent->mContentId}', {if $gContent->mContentId}{$gContent->mContentId}{elseif $commentsParentId}{$commentsParentId}{else}null{/if})"/>
+				<button type="button" class="btn btn-link" name="post_comment_request" onclick="LibertyComment.attachForm('comment_{$gContent->mContentId}', '{$gContent->mContentId}', {if $gContent->mContentId}{$gContent->mContentId}{elseif $commentsParentId}{$commentsParentId}{else}null{/if})">{biticon ipackage="icons" iname="insert-text" iexplain="Add Comment"}</button>
 			</div>
 		{/if}
 
