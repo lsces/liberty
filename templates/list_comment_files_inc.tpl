@@ -6,7 +6,7 @@
 	<p>
 		<div class="attachments">
 		{foreach from=$storageHash item=item key=id}
-			<a class="btn btn-default" href="{$item.download_url}">{biticon ipackage="icons" iname="network-receive"} {$item.file_name|default:"File `$id`"|escape} <small>({$item.file_size|display_bytes})</small></a> <small>{jspopup notra=1 href="`$item.display_url`&popup=y" title="Details..."}</small>
+			<a class="btn btn-default" href="{$item.download_url}">{biticon ipackage="icons" iname="go-down" iexplain="Download"} {$item.file_name|default:"File `$id`"|escape} <small>({$item.file_size|display_bytes})</small></a> <small>{jspopup notra=1 href="`$item.display_url`&popup=y" title="Details..."}</small>
 		{/foreach}
 		</div>
 	</p>
