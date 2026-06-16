@@ -83,7 +83,7 @@
 			{/legend}
 		{elseif $gBitUser->hasPermission( 'p_liberty_post_comments' )}
 			<div class="form-group">
-				<input type="submit" class="btn btn-default" name="post_comment_request" value="{tr}Add Comment{/tr}" />
+				<button type="button" class="btn btn-link" name="post_comment_request">{biticon ipackage="icons" iname="insert-text" iexplain="Add Comment"}</button>
 			</div>
 		{/if}
 	{/form}
