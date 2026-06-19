@@ -1889,6 +1889,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		global $gLibertySystem;
 		$gLibertySystem->registerContentType( $pContentGuid, $pTypeParams );
 		$this->mType = $pTypeParams;
+		$this->mContentTypeGuid = $pContentGuid;
 		$pkg = $pTypeParams['handler_package'] ?? '';
 		$this->mPackageGuid = ( $pkg && $pkg !== $pContentGuid ) ? $pkg : '';
 		$this->mXrefType = null;
