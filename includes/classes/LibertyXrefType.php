@@ -232,7 +232,7 @@ class LibertyXrefType {
 		$allHistory = [];
 
 		$groupResult = $db->query(
-			"SELECT g.`x_group`, g.`title`, g.`sort_order`, g.`template`, g.`role_id`
+			"SELECT g.`x_group`, g.`title`, g.`sort_order`, g.`template`, g.`role_id`, g.`content_type_guid` AS group_guid
 			 FROM `".BIT_DB_PREFIX."liberty_xref_group` g
 			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
 			     ON purm.`user_id` = $userId AND purm.`role_id` = g.`role_id`
@@ -246,6 +246,7 @@ class LibertyXrefType {
 		while( $groupRow = $groupResult->fetchRow() ) {
 			$group     = new LibertyXrefGroup( $groupRow, $this->contentTypeGuid, $this->packageGuid );
 			$xGroup    = $groupRow['x_group'];
+			$groupGuid = $groupRow['group_guid'];
 			$rowResult = $db->query(
 				"SELECT x.`xref_id`, x.`item`, x.`xref`, x.`xkey`, x.`xkey_ext`,
 				        x.`xorder`, x.`data`, x.`start_date`, x.`end_date`, x.`last_update_date`,
@@ -260,7 +261,7 @@ class LibertyXrefType {
 				 FROM `".BIT_DB_PREFIX."liberty_xref` x
 				 JOIN `".BIT_DB_PREFIX."liberty_xref_item` s
 				     ON s.`item` = x.`item`
-				     AND s.`content_type_guid` $guidFilter
+				     AND s.`content_type_guid` = '$groupGuid'
 				     AND s.`x_group` = '$xGroup'
 				 LEFT JOIN `".BIT_DB_PREFIX."address_postcode` pc ON pc.`postcode` = x.`xkey`
 				 LEFT JOIN `".BIT_DB_PREFIX."liberty_content` lc_linked ON lc_linked.`content_id` = x.`xref`
