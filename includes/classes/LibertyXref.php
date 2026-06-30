@@ -214,6 +214,8 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 
 		$pParamHash['xref_store']['last_update_date'] = $this->mDb->NOW();
 
+		$gBitSystem->mServerTimestamp->get_display_offset();
+
 		if( !empty( $pParamHash['start_date'] ) ) {
 			$d = $pParamHash['start_date'];
 			if( is_int( $d ) ) {
