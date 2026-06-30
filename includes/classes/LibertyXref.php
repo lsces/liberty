@@ -213,35 +213,21 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 
 		$pParamHash['xref_store']['last_update_date'] = $this->mDb->NOW();
 
-		if( !empty( $pParamHash['start_Month'] ) ) {
-			$dateString = $this->mDate->gmmktime(
-				$pParamHash['start_Hour'],
-				$pParamHash['start_Minute'],
-				$pParamHash['start_Second'] ?? 0,
-				$pParamHash['start_Month'],
-				$pParamHash['start_Day'],
-				$pParamHash['start_Year'],
-			);
-			$timestamp = $this->mDate->getUTCFromDisplayDate( $dateString );
-			if( $timestamp !== -1 ) { $pParamHash['start_date'] = $timestamp; }
+		if( !empty( $pParamHash['start_date'] ) ) {
+			$d = $pParamHash['start_date'];
+			if( is_int( $d ) ) { $d = date( 'Y-m-d H:i:s', $d ); }
+			else { $d = str_replace( 'T', ' ', trim( (string)$d ) ); if( strlen( $d ) === 16 ) { $d .= ':00'; } }
+			$pParamHash['xref_store']['start_date'] = $d;
 		}
-		if( !empty( $pParamHash['start_date'] ) )                                                    { $pParamHash['xref_store']['start_date'] = $this->mDate->date("Y-m-d H:i:s", $pParamHash['start_date'], true); }
-		if( isset( $pParamHash['ignore_start_date'] ) && $pParamHash['ignore_start_date'] == 'on' ) { $pParamHash['xref_store']['start_date']  = null; }
+		if( isset( $pParamHash['ignore_start_date'] ) && $pParamHash['ignore_start_date'] == 'on' ) { $pParamHash['xref_store']['start_date'] = null; }
 
-		if( !empty( $pParamHash['end_Month'] ) ) {
-			$dateString = $this->mDate->gmmktime(
-				$pParamHash['end_Hour'],
-				$pParamHash['end_Minute'],
-				$pParamHash['end_Second'] ?? 0,
-				$pParamHash['end_Month'],
-				$pParamHash['end_Day'],
-				$pParamHash['end_Year'],
-			);
-			$timestamp = $this->mDate->getUTCFromDisplayDate( $dateString );
-			if( $timestamp !== -1 ) { $pParamHash['end_date'] = $timestamp; }
+		if( !empty( $pParamHash['end_date'] ) ) {
+			$d = $pParamHash['end_date'];
+			if( is_int( $d ) ) { $d = date( 'Y-m-d H:i:s', $d ); }
+			else { $d = str_replace( 'T', ' ', trim( (string)$d ) ); if( strlen( $d ) === 16 ) { $d .= ':00'; } }
+			$pParamHash['xref_store']['end_date'] = $d;
 		}
-		if( !empty( $pParamHash['end_date'] ) )                                                    { $pParamHash['xref_store']['end_date'] = $this->mDate->date("Y-m-d H:i:s", $pParamHash['end_date'], true); }
-		if( isset( $pParamHash['ignore_end_date'] ) && $pParamHash['ignore_end_date'] == 'on' ) { $pParamHash['xref_store']['end_date']  = null; }
+		if( isset( $pParamHash['ignore_end_date'] ) && $pParamHash['ignore_end_date'] == 'on' ) { $pParamHash['xref_store']['end_date'] = null; }
 
 		return count( $this->mErrors ) == 0;
 	}
