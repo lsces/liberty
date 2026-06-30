@@ -1,16 +1,15 @@
 {strip}
 <td>{$xrefInfo.xref_title|escape}</td>
-<td>&nbsp;</td>
-<td>{$xrefInfo.xkey_ext|escape}, {$xrefInfo.xkey|escape}</td>
+<td>{$xrefInfo.xkey_ext|escape}{if $xrefInfo.xkey}, {$xrefInfo.xkey|escape}{/if}</td>
 <td>{$xrefInfo.data|escape}</td>
 <td>
 	{if !$isHistory}
-		{$xrefInfo.start_date|bit_short_date}
+		{$xrefInfo.start_date|bit_short_datetime}
 	{else}
-		{$xrefInfo.end_date|bit_short_date}
+		{$xrefInfo.end_date|bit_short_datetime}
 	{/if}
 </td>
-<td>{$xrefInfo.last_update_date|bit_short_date}</td>
+{if $gBitSystem->isFeatureActive( 'contact_list_last_modified' )}<td>{$xrefInfo.last_update_date|bit_short_date}</td>{/if}
 <td>
 	<span class="actionicon">
 		{if $xrefAllowEdit|default:true && $gContent->hasUpdatePermission() && !$isHistory}

@@ -160,6 +160,7 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 	 * @return bool true if no errors
 	 */
 	public function verify( &$pParamHash ) {
+		global $gBitSystem;
 		$pParamHash['xref_id'] = ( @$this->verifyId( $pParamHash['xref_id'] ) ) ? (int) $pParamHash['xref_id'] : null;
 
 		if( isset( $pParamHash['content_id'] ) ) {
@@ -215,16 +216,26 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 
 		if( !empty( $pParamHash['start_date'] ) ) {
 			$d = $pParamHash['start_date'];
-			if( is_int( $d ) ) { $d = date( 'Y-m-d H:i:s', $d ); }
-			else { $d = str_replace( 'T', ' ', trim( (string)$d ) ); if( strlen( $d ) === 16 ) { $d .= ':00'; } }
+			if( is_int( $d ) ) {
+				$d = gmdate( 'Y-m-d H:i:s', $d );
+			} else {
+				$d = str_replace( 'T', ' ', trim( (string)$d ) );
+				if( strlen( $d ) === 16 ) { $d .= ':00'; }
+				$d = gmdate( 'Y-m-d H:i:s', $gBitSystem->mServerTimestamp->getUTCFromDisplayDate( $d ) );
+			}
 			$pParamHash['xref_store']['start_date'] = $d;
 		}
 		if( isset( $pParamHash['ignore_start_date'] ) && $pParamHash['ignore_start_date'] == 'on' ) { $pParamHash['xref_store']['start_date'] = null; }
 
 		if( !empty( $pParamHash['end_date'] ) ) {
 			$d = $pParamHash['end_date'];
-			if( is_int( $d ) ) { $d = date( 'Y-m-d H:i:s', $d ); }
-			else { $d = str_replace( 'T', ' ', trim( (string)$d ) ); if( strlen( $d ) === 16 ) { $d .= ':00'; } }
+			if( is_int( $d ) ) {
+				$d = gmdate( 'Y-m-d H:i:s', $d );
+			} else {
+				$d = str_replace( 'T', ' ', trim( (string)$d ) );
+				if( strlen( $d ) === 16 ) { $d .= ':00'; }
+				$d = gmdate( 'Y-m-d H:i:s', $gBitSystem->mServerTimestamp->getUTCFromDisplayDate( $d ) );
+			}
 			$pParamHash['xref_store']['end_date'] = $d;
 		}
 		if( isset( $pParamHash['ignore_end_date'] ) && $pParamHash['ignore_end_date'] == 'on' ) { $pParamHash['xref_store']['end_date'] = null; }

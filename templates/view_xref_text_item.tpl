@@ -5,12 +5,12 @@
 {if $xrefAllowEdit|default:false}
 <td>
 	{if !$isHistory}
-		{$xrefInfo.start_date|bit_short_date}
+		{$xrefInfo.start_date|bit_short_datetime}
 	{else}
-		{$xrefInfo.end_date|bit_short_date}
+		{$xrefInfo.end_date|bit_short_datetime}
 	{/if}
 </td>
-<td>{$xrefInfo.last_update_date|bit_short_date}</td>
+{if $gBitSystem->isFeatureActive( 'contact_list_last_modified' )}<td>{$xrefInfo.last_update_date|bit_short_date}</td>{/if}
 <td>
 	<span class="actionicon">
 		{if $gContent->hasUpdatePermission() && !$isHistory}
