@@ -4,6 +4,46 @@
 `liberty_xref.xorder` — used for BOM grouping and sort. Must be explicitly selected
 in queries; it is not auto-included in standard SELECT lists.
 
+## LibertyXref / entry_date (added 2026-08-10)
+`liberty_xref.entry_date` existed in the schema but was completely dead everywhere (0 of
+2369 rows populated, checked across the whole DB) until `LibertyXref::verify()`/`store()`
+started stamping it: set once at insert time (`$this->mDb->NOW()`), left untouched on
+update, unless the caller explicitly passes `'entry_date'` in `$pParamHash` to override the
+default — e.g. to stamp a whole batch of related xrefs (inserted across several `store()`
+calls) with one shared value for later grouping. `LibertyXrefType::loadContent()`'s SELECT
+now includes `x.entry_date` so it's available on loaded xref rows without an extra query.
+First real use: stock's per-assembly quantity-line grouping (see `stock/CLAUDE.md`'s
+"Multi-assembly movements" section) — every BOM line `explodeFromAssembly()` inserts for one
+assembly-add gets the *same* `entry_date` as that assembly's own `ASSEMBLY` xref, letting
+later code scope matches to just that batch. Race condition if two batches are stamped at
+exactly the same instant is real but doesn't matter in practice — the web interface can't
+submit two separate form actions in the same instant.
+
+## isValid() — deliberately not a real existence check (2026-08-10)
+`LibertyContent::isValid()` only checks `verifyId($this->mContentId)` — it does **not**
+verify that `load()` actually found a matching row, despite what its own docblock claims
+("establish if the object has been loaded with a valid record"). This means a
+syntactically-valid-but-nonexistent content_id reads as "valid" through the base class.
+
+**A stricter fix was tried and reverted the same day.** The obvious correct version —
+`return verifyId($this->mContentId) && $this->mDb->getOne("SELECT 1 FROM liberty_content
+WHERE content_id=? AND content_type_guid=?", ...)` — works fine for view/edit pages, but
+`LibertyContent::storePreference()` calls `LibertyContent::isValid()` **explicitly**,
+bypassing every subclass override (including `RoleUser`'s own, which uses `mUserId` not
+`mContentId`). `RoleUser::mContentId` stays `null` until `load()` succeeds, and
+`storePreference()` is exercised by `users/register.php` during account creation — tightening
+the base method risked turning a currently-working preference save into a silent no-op
+mid-registration. A full codebase audit (all `LibertyContent` subclasses, every `isValid()`
+override, every explicit-base-class call site) confirmed this specific risk and found most
+real content types (wiki, blogs, fisheye, newsletters, nexus, users) already override
+`isValid()` with their own non-content-id key anyway, so a base fix would have bought little.
+
+**How to apply**: if a view/edit page needs to correctly 404 on a bad content_id, add the
+same query-based override to *that content type's own class* (see `StockMovement`/
+`StockAssembly`/`StockComponent` in `stock/includes/classes/`, and `Contact` in
+`contact/includes/classes/Contact.php` — all four use an identical pattern). Do not touch
+`LibertyContent::isValid()` itself without re-running that audit first.
+
 ## LibertyXrefType — instance class
 `LibertyXrefType` is an **instance class**, not a bag of statics. Construct with
 `new LibertyXrefType( $contentTypeGuid, $packageGuid = null )`. In page/class code,
