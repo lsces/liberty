@@ -875,6 +875,15 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 
 	/**
 	 * Check mContentId to establish if the object has been loaded with a valid record
+	 *
+	 * NOTE: deliberately just an ID-format check, not a real existence check. A stricter
+	 * version (query liberty_content for a matching content_id + content_type_guid) was
+	 * tried here and reverted 2026-08-10 — LibertyContent::storePreference() calls
+	 * `LibertyContent::isValid()` explicitly (bypassing subclass overrides, e.g. RoleUser's),
+	 * and RoleUser's mContentId stays null until load() succeeds, so tightening this
+	 * base method risks breaking user registration/preference saves. Fix per-package
+	 * instead (see StockMovement/StockAssembly/StockComponent, and Contact) where the
+	 * blast radius is known and testable.
 	 */
 	public function isValid() {
 		return BitBase::verifyId( $this->mContentId );
