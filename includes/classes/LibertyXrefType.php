@@ -249,7 +249,7 @@ class LibertyXrefType {
 			$groupGuid = $groupRow['group_guid'];
 			$rowResult = $db->query(
 				"SELECT x.`xref_id`, x.`item`, x.`xref`, x.`xkey`, x.`xkey_ext`,
-				        x.`xorder`, x.`data`, x.`start_date`, x.`end_date`, x.`last_update_date`,
+				        x.`xorder`, x.`data`, x.`start_date`, x.`end_date`, x.`last_update_date`, x.`entry_date`,
 				        s.`template`, s.`cross_ref_href`,
 				        CASE WHEN x.`xorder` = 0 THEN s.`cross_ref_title`
 				             ELSE s.`cross_ref_title` || '-' || x.`xorder` END AS xref_title,

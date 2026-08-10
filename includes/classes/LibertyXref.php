@@ -24,6 +24,10 @@ use Bitweaver\BitDate;
  *   data         — free-text blob, e.g. notes or a "from" label
  *   start_date   — when this xref became active (NULL = open / not date-bounded)
  *   end_date     — when this xref expired (NULL = still active)
+ *   entry_date   — when this row was first created; set once on insert, never touched by
+ *                  updates thereafter. Pass 'entry_date' in $pParamHash to override the
+ *                  default (NOW()) — e.g. to stamp a batch of related xrefs (inserted across
+ *                  several store() calls) with one shared value for later grouping.
  *   last_update_date — last write timestamp
  *
  * This class handles load/verify/store for a single row.  For bulk loading of all
@@ -211,6 +215,14 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 		if( isset( $pParamHash['xkey'] ) )     { $pParamHash['xref_store']['xkey']     = $pParamHash['xkey']; }
 		if( isset( $pParamHash['xkey_ext'] ) ) { $pParamHash['xref_store']['xkey_ext'] = $pParamHash['xkey_ext']; }
 		if( isset( $pParamHash['edit'] ) )     { $pParamHash['xref_store']['data']     = $pParamHash['edit']; }
+
+		// entry_date: stamped once at insert time, left untouched on update — unless the
+		// caller explicitly overrides it (e.g. to align a batch of related xrefs).
+		if( isset( $pParamHash['entry_date'] ) ) {
+			$pParamHash['xref_store']['entry_date'] = $pParamHash['entry_date'];
+		} elseif( empty( $pParamHash['xref_id'] ) ) {
+			$pParamHash['xref_store']['entry_date'] = $this->mDb->NOW();
+		}
 
 		$pParamHash['xref_store']['last_update_date'] = $this->mDb->NOW();
 
