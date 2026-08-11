@@ -44,6 +44,18 @@ same query-based override to *that content type's own class* (see `StockMovement
 `contact/includes/classes/Contact.php` — all four use an identical pattern). Do not touch
 `LibertyContent::isValid()` itself without re-running that audit first.
 
+**Side effect found 2026-08-11**: giving these four classes a real, DB-querying `isValid()` is
+what first exposed a pre-existing, unrelated kernel bug — `LibertyContent::getCacheKey()` calls
+`isValid()` to decide the cache key, and `BitBase::__destruct()` was unsetting `$this->mDb`
+*before* calling `storeInCache()` (which reaches `getCacheKey()`). Before this fix, `isValid()`
+never needed `mDb`, so the ordering never mattered; afterward, any of these four objects being
+destroyed with `BIT_CACHE_OBJECTS` active crashed with "Call to a member function getOne() on
+null" — live on srv10 since this fix's own deploy window (4032+ occurrences via `Contact` alone).
+Fixed in `kernel/includes/classes/BitBase.php` (kernel repo commit `893a876`) — the destructor no
+longer pre-emptively unsets `mDb`, since `__sleep()` already does that at the correct point.
+Nothing about this `isValid()` fix itself was wrong; the kernel bug was just latent until this
+gave it a trigger. See `project_apcu_object_cache_stale_assets` memory for the full chain.
+
 ## LibertyXrefType — instance class
 `LibertyXrefType` is an **instance class**, not a bag of statics. Construct with
 `new LibertyXrefType( $contentTypeGuid, $packageGuid = null )`. In page/class code,
