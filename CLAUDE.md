@@ -149,6 +149,63 @@ $row['parsed_data'] = LibertyContent::parseDataHash( $parseHash );
 `storeXref()` takes `&$pParamHash` by reference — always assign hash to a named variable
 before calling. Passing a literal array is a fatal error.
 
+## Package registration — includes/bit_setup_inc.php (found 2026-08-15, scoping the food package)
+Every package needs an `includes/bit_setup_inc.php` — this is the "base" package convention:
+the file that makes a directory a package bitweaver actually recognizes, not a schema file or
+any central hardcoded list. Minimum required shape (see `stock/includes/bit_setup_inc.php` as
+the reference example):
+
+```php
+<?php
+$pRegisterHash = [
+	'package_name' => 'stock',                              // lowercase package dir name
+	'package_path' => dirname( dirname( __FILE__ ) ).'/',
+	'homeable'     => true,
+];
+define( 'STOCK_PKG_NAME', $pRegisterHash['package_name'] );
+define( 'STOCK_PKG_URL', BIT_ROOT_URL . basename( $pRegisterHash['package_path'] ) . '/' );
+define( 'STOCK_PKG_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/' );
+define( 'STOCK_PKG_INCLUDE_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/includes/');
+define( 'STOCK_PKG_CLASS_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/includes/classes/');
+define( 'STOCK_PKG_ADMIN_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/admin/');
+
+$gBitSystem->registerPackage( $pRegisterHash );
+
+if( $gBitSystem->isPackageActive( 'stock' ) ) {
+	// only runs once the package is actually installed+enabled:
+	// app-menu registration ($gBitSystem->registerAppMenu()), service registration
+	// ($gLibertySystem->registerService()), package-specific defines, and hook functions
+	// (e.g. stock's own *_expunge_user() callback for user-deletion cleanup) all go here.
+}
+```
+
+The six `<PKG>_PKG_*` constants (`_PKG_NAME`, `_PKG_URL`, `_PKG_PATH`, `_PKG_INCLUDE_PATH`,
+`_PKG_CLASS_PATH`, `_PKG_ADMIN_PATH`) are **not defined anywhere centrally** — each package
+defines its own copy in its own `bit_setup_inc.php`, by convention, from its own directory name.
+Don't go looking for a master registry file; there isn't one — `registerPackage()` is the actual
+discovery mechanism, called once per package as bitweaver's bootstrap includes each package's
+`bit_setup_inc.php` in turn.
+
+**The six manual `define()` lines above are a bodge, not the real mechanism.**
+`registerPackage()` is *itself* capable of defining all six constants automatically from
+`$pRegisterHash` — that's the actual, intended, single-source-of-truth mechanism. The manual
+defines exist purely because VS Code's static analysis can't follow that dynamic
+definition-from-hash and flags every `STOCK_PKG_*` reference elsewhere in the package as an
+undefined constant. So each package pre-defines them by hand (matching stock's own inline
+comment: `// fix to quieten down VS Code which can't see the dynamic creation of these ...`),
+and `registerPackage()` detects they're already defined and skips redefining them — the manual
+block and the automatic mechanism don't conflict, the manual one just wins by going first.
+Stripping the hardcoding would be the cleaner fix (one definition, not two ways to get the same
+six constants) but reintroduces the VS Code false-positive undefined-constant warnings across
+every file that references them — a real editor-tooling cost, not a hypothetical one. Left as-is
+deliberately; **copy the manual-define pattern for any new package** (including `food`) rather
+than relying on the automatic path alone.
+
+**How to apply:** any new package (e.g. the planned `food` package — see
+`[[project_food_package_scoping]]` in Claude's memory) needs this file before anything else —
+before schema, before content classes — since nothing else about the package can be reached
+until `registerPackage()` has run.
+
 ## Content owner change
 `edit_content_owner_inc.tpl` provides an Owner dropdown gated on:
 - Feature `liberty_allow_change_owner` active
