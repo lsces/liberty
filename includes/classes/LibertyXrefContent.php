@@ -22,4 +22,27 @@ namespace Bitweaver\Liberty;
 class LibertyXrefContent {
 	/** @var LibertyXrefGroup[] Loaded groups, keyed by x_group name */
 	public array $mGroups = [];
+
+	/**
+	 * Every xref_id for a given item tag, scanning already-loaded groups — no
+	 * fresh query, just a lookup into data loadContent() already fetched.
+	 *
+	 * Returns an array (not a single id) because an item tag can be multiple=1
+	 * (several rows sharing one item code, e.g. FoodAssembly's ingredient rows)
+	 * — for a multiple=0 item (a type marker or single-value field, e.g. Food's
+	 * own REM/DUID/PFID) this is just a single-element or empty array.
+	 *
+	 * @return int[]
+	 */
+	public function findByItem( string $pItem ): array {
+		$ret = [];
+		foreach( $this->mGroups as $group ) {
+			foreach( $group->mXrefs as $xref ) {
+				if( $xref['item'] === $pItem ) {
+					$ret[] = (int)$xref['xref_id'];
+				}
+			}
+		}
+		return $ret;
+	}
 }
