@@ -217,14 +217,19 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 		if( isset( $pParamHash['edit'] ) )     { $pParamHash['xref_store']['data']     = $pParamHash['edit']; }
 
 		// entry_date: stamped once at insert time, left untouched on update — unless the
-		// caller explicitly overrides it (e.g. to align a batch of related xrefs).
+		// caller explicitly overrides it (e.g. to align a batch of related xrefs, or an
+		// importer backdating to the source record's own timestamp).
 		if( isset( $pParamHash['entry_date'] ) ) {
-			$pParamHash['xref_store']['entry_date'] = $pParamHash['entry_date'];
+			$pParamHash['xref_store']['entry_date'] = is_int( $pParamHash['entry_date'] )
+				? gmdate( 'Y-m-d H:i:s', $pParamHash['entry_date'] ) : $pParamHash['entry_date'];
 		} elseif( empty( $pParamHash['xref_id'] ) ) {
 			$pParamHash['xref_store']['entry_date'] = $this->mDb->NOW();
 		}
 
-		$pParamHash['xref_store']['last_update_date'] = $this->mDb->NOW();
+		// last_update_date: same override convention as entry_date above.
+		$pParamHash['xref_store']['last_update_date'] = isset( $pParamHash['last_update_date'] )
+			? ( is_int( $pParamHash['last_update_date'] ) ? gmdate( 'Y-m-d H:i:s', $pParamHash['last_update_date'] ) : $pParamHash['last_update_date'] )
+			: $this->mDb->NOW();
 
 		$gBitSystem->mServerTimestamp->get_display_offset();
 
