@@ -2264,8 +2264,8 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * Resolve the Smarty group template for an xref group.
 	 *
 	 * Template resolution order (first match wins):
-	 *   1. `<package>/templates/<content_type_guid>/view_xref_<template>_group.tpl`
-	 *   2. `<package>/templates/view_xref_<template>_group.tpl`
+	 *   1. `<package>/templates/xref/<content_type_guid>/view_<template>_group.tpl`
+	 *   2. `<package>/templates/xref/view_<template>_group.tpl`
 	 *   3. `bitpackage:liberty/list_xref.tpl`  (generic fallback)
 	 *
 	 * The package is taken from `$this->mType['handler_package']`, defaulting to
@@ -2282,13 +2282,13 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			$package  = $this->mType['handler_package'] ?? 'liberty';
 			$pkgConst = strtoupper( $package ).'_PKG_PATH';
 			if( defined( $pkgConst ) ) {
-				$base = constant( $pkgConst ).'templates/';
-				$file = 'view_xref_'.$pTemplate.'_group.tpl';
+				$base = constant( $pkgConst ).'templates/xref/';
+				$file = 'view_'.$pTemplate.'_group.tpl';
 				if( $this->mContentTypeGuid && file_exists( $base.$this->mContentTypeGuid.'/'.$file ) ) {
-					return 'bitpackage:'.$package.'/'.$this->mContentTypeGuid.'/'.$file;
+					return 'bitpackage:'.$package.'/xref/'.$this->mContentTypeGuid.'/'.$file;
 				}
 				if( file_exists( $base.$file ) ) {
-					return 'bitpackage:'.$package.'/'.$file;
+					return 'bitpackage:'.$package.'/xref/'.$file;
 				}
 			}
 		}
@@ -2299,10 +2299,10 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * Resolve the Smarty item template for displaying a single xref row (view path).
 	 *
 	 * Template resolution order (first match wins):
-	 *   1. `<package>/templates/<content_type_guid>/view_xref_<template>_item.tpl`
-	 *   2. `<package>/templates/view_xref_<template>_item.tpl`
-	 *   3. `bitpackage:liberty/view_xref_<template>_item.tpl`
-	 *   4. `bitpackage:liberty/view_xref_text_item.tpl`  (hardcoded fallback)
+	 *   1. `<package>/templates/xref/<content_type_guid>/view_<template>_item.tpl`
+	 *   2. `<package>/templates/xref/view_<template>_item.tpl`
+	 *   3. `bitpackage:liberty/xref/view_<template>_item.tpl`
+	 *   4. `bitpackage:liberty/xref/view_text_item.tpl`  (hardcoded fallback)
 	 *
 	 * Defaults to 'text' if `$pTemplate` is null/empty.
 	 *
@@ -2314,29 +2314,29 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		$package  = $this->mType['handler_package'] ?? 'liberty';
 		$pkgConst = strtoupper( $package ).'_PKG_PATH';
 		if( defined( $pkgConst ) ) {
-			$base = constant( $pkgConst ).'templates/';
-			$file = 'view_xref_'.$pTemplate.'_item.tpl';
+			$base = constant( $pkgConst ).'templates/xref/';
+			$file = 'view_'.$pTemplate.'_item.tpl';
 			if( $this->mContentTypeGuid && file_exists( $base.$this->mContentTypeGuid.'/'.$file ) ) {
-				return 'bitpackage:'.$package.'/'.$this->mContentTypeGuid.'/'.$file;
+				return 'bitpackage:'.$package.'/xref/'.$this->mContentTypeGuid.'/'.$file;
 			}
 			if( file_exists( $base.$file ) ) {
-				return 'bitpackage:'.$package.'/'.$file;
+				return 'bitpackage:'.$package.'/xref/'.$file;
 			}
 		}
-		$libertyTpl = LIBERTY_PKG_PATH.'templates/view_xref_'.$pTemplate.'_item.tpl';
+		$libertyTpl = LIBERTY_PKG_PATH.'templates/xref/view_'.$pTemplate.'_item.tpl';
 		return file_exists( $libertyTpl )
-			? 'bitpackage:liberty/view_xref_'.$pTemplate.'_item.tpl'
-			: 'bitpackage:liberty/view_xref_text_item.tpl';
+			? 'bitpackage:liberty/xref/view_'.$pTemplate.'_item.tpl'
+			: 'bitpackage:liberty/xref/view_text_item.tpl';
 	}
 
 	/**
 	 * Resolve the Smarty item template for editing a single xref row (edit path).
 	 *
 	 * Template resolution order (first match wins):
-	 *   1. `<package>/templates/<content_type_guid>/edit_xref_<template>_item.tpl`
-	 *   2. `<package>/templates/edit_xref_<template>_item.tpl`
-	 *   3. `bitpackage:liberty/edit_xref_<template>_item.tpl`
-	 *   4. `bitpackage:liberty/edit_xref.tpl`  (hardcoded fallback)
+	 *   1. `<package>/templates/xref/<content_type_guid>/edit_<template>_item.tpl`
+	 *   2. `<package>/templates/xref/edit_<template>_item.tpl`
+	 *   3. `bitpackage:liberty/xref/edit_<template>_item.tpl`
+	 *   4. `bitpackage:liberty/edit_xref.tpl`  (hardcoded fallback, page-level, not in xref/)
 	 *
 	 * Defaults to 'text' if `$pTemplate` is null/empty.
 	 *
@@ -2348,17 +2348,17 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		$package  = $this->mType['handler_package'] ?? 'liberty';
 		$pkgConst = strtoupper( $package ).'_PKG_PATH';
 		if( defined( $pkgConst ) ) {
-			$base = constant( $pkgConst ).'templates/';
-			$file = 'edit_xref_'.$pTemplate.'_item.tpl';
+			$base = constant( $pkgConst ).'templates/xref/';
+			$file = 'edit_'.$pTemplate.'_item.tpl';
 			if( $this->mContentTypeGuid && file_exists( $base.$this->mContentTypeGuid.'/'.$file ) ) {
-				return 'bitpackage:'.$package.'/'.$this->mContentTypeGuid.'/'.$file;
+				return 'bitpackage:'.$package.'/xref/'.$this->mContentTypeGuid.'/'.$file;
 			}
 			if( file_exists( $base.$file ) ) {
-				return 'bitpackage:'.$package.'/'.$file;
+				return 'bitpackage:'.$package.'/xref/'.$file;
 			}
 		}
-		if( file_exists( LIBERTY_PKG_PATH.'templates/edit_xref_'.$pTemplate.'_item.tpl' ) ) {
-			return 'bitpackage:liberty/edit_xref_'.$pTemplate.'_item.tpl';
+		if( file_exists( LIBERTY_PKG_PATH.'templates/xref/edit_'.$pTemplate.'_item.tpl' ) ) {
+			return 'bitpackage:liberty/xref/edit_'.$pTemplate.'_item.tpl';
 		}
 		return 'bitpackage:liberty/edit_xref.tpl';
 	}
