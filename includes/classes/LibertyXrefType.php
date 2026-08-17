@@ -168,7 +168,7 @@ class LibertyXrefType {
 				"SELECT s.`cross_ref_title` AS `type_name`, s.`item`, s.`template`
 				 FROM `".BIT_DB_PREFIX."liberty_xref_item` s
 				 JOIN `".BIT_DB_PREFIX."liberty_xref_group` t
-				     ON t.`x_group` = s.`x_group` AND t.`content_type_guid` = s.`content_type_guid`
+				     ON t.`x_group` = s.`x_group` AND t.`content_type_guid` $guidFilter
 				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x
 				     ON x.`item` = s.`item` AND x.`content_id` = ? AND (x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP)
 				 WHERE s.`content_type_guid` $guidFilter AND t.`sort_order` = ?
@@ -181,7 +181,7 @@ class LibertyXrefType {
 				"SELECT s.`cross_ref_title` AS `type_name`, s.`item`, s.`template`
 				 FROM `".BIT_DB_PREFIX."liberty_xref_item` s
 				 JOIN `".BIT_DB_PREFIX."liberty_xref_group` t
-				     ON t.`x_group` = s.`x_group` AND t.`content_type_guid` = s.`content_type_guid`
+				     ON t.`x_group` = s.`x_group` AND t.`content_type_guid` $guidFilter
 				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x
 				     ON x.`item` = s.`item` AND x.`content_id` = ? AND (x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP)
 				 WHERE s.`content_type_guid` $guidFilter AND t.`sort_order` > 0
