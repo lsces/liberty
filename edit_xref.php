@@ -41,7 +41,13 @@ if( !empty( $_REQUEST['fSaveXref'] ) ) {
 			fn( $v ) => is_numeric( $v ) ? $v + 0 : $v,
 			$_REQUEST['json_field']
 		);
-		$_REQUEST['edit'] = json_encode( $jsonFields );
+		// Drop blank/zero entries rather than storing every possible field every time —
+		// the edit form shows the item's full known field list (liberty_xref_item.data)
+		// so a currently-missing field can be added, but most components only ever have
+		// a few real values (matches the sparse-write convention every importer already
+		// uses) — keeps the stored blob, and anything reading it later, tidy.
+		$jsonFields = array_filter( $jsonFields, fn( $v ) => $v !== '' && $v !== 0 && $v !== 0.0 );
+		$_REQUEST['edit'] = json_encode( (object)$jsonFields );
 	}
 	if( $gContent->storeXref( $_REQUEST ) ) {
 		header( 'Location: '.$gContent->getEditUrl() );

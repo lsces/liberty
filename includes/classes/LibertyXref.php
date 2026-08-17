@@ -126,7 +126,8 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 					AS source_title, s.`item`, s.`x_group`,
 					CASE WHEN x.`start_date` IS NULL THEN 'y' ELSE 'n' END AS `ignore_start_date`,
 					CASE WHEN x.`end_date` IS NULL THEN 'y' ELSE 'n' END AS `ignore_end_date`,
-					s.`cross_ref_title` AS `template_title`, s.`template`
+					s.`cross_ref_title` AS `template_title`, s.`template`,
+					s.`data` AS `item_data`
 					FROM `".BIT_DB_PREFIX."liberty_xref` x
 					JOIN `".BIT_DB_PREFIX."liberty_xref_item` s ON s.`item` = x.`item` $guidFilter
 					WHERE x.`xref_id` = ?
