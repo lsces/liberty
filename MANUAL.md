@@ -151,8 +151,8 @@ Same 3-tier resolution, separately for view and edit:
 | `text` | ✓ | ✓ | Any scalar `xkey`/`xkey_ext`/`data` field. Ultimate fallback. |
 | `value` | ✓ | ✓ | Same shape, different column emphasis (`xkey`+`xkey_ext` as two separate values rather than one combined). |
 | `link` | ✓ | ✓ (read-only target) | An item whose `xref` points at another piece of content — renders a real link via the linked title, generic across every package (added 2026-08-17, see below). |
-| `json-text` | ✓ | — (falls back to `text`) | `data` holds a JSON object — renders as one tidy `Key: value, Key: value` line (added 2026-08-17). |
-| `json-list` | ✓ | — (falls back to `text`) | Same JSON case, but each key on its own line — a nested table *inside* the cell, not separate outer rows (`list_xref.tpl` owns the one `<tr>` per xref row; an item template can't legitimately add more). Added 2026-08-17. |
+| `json-text` | ✓ | ✓ | `data` holds a JSON object — renders as one tidy `Key: value, Key: value` line. Edit shares `json-list`'s form (`{include}` forward) — editing doesn't need to differ by view style. Added 2026-08-17. |
+| `json-list` | ✓ | ✓ | Same JSON case, but view renders each key on its own line — a nested table *inside* the cell, not separate outer rows (`list_xref.tpl` owns the one `<tr>` per xref row; an item template can't legitimately add more). Edit renders one input per decoded key (`name="json_field[key]"`, PHP's array-POST convention) — `edit_xref.php` reassembles `$_REQUEST['json_field']` back into a JSON string (numeric strings cast back to int/float first, so editing a value doesn't quietly turn it into a JSON string type) before the normal `storeXref()` path runs. Only triggers when that field is actually present, so it can't affect any other item type's save. Added 2026-08-17. |
 
 `address`/`bank`/`date`/`locate`/`phone`/`sig` also exist as view-only files in `liberty/templates/`,
 but only `address`/`phone` are actually registered anywhere (both exclusively by Contact's own
