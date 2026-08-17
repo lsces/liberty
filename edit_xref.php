@@ -56,7 +56,15 @@ if( !empty( $_REQUEST['fSaveXref'] ) ) {
 	$xrefInfo = $_REQUEST;
 	$xrefInfo['data'] = $_REQUEST['edit'] ?? '';
 } elseif( isset( $_REQUEST['expunge'] ) ) {
-	$gContent->verifyExpungePermission();
+	// expunge=3 is a real hard delete (no history trace left) — gated behind the
+	// stricter expunge permission. Archive (1), restore (default/-1), and step (2)
+	// are all reversible/audit-trail operations, gated behind ordinary update
+	// permission like any other edit.
+	if( (int)$_REQUEST['expunge'] === 3 ) {
+		$gContent->verifyExpungePermission();
+	} else {
+		$gContent->verifyUpdatePermission();
+	}
 	if( $gContent->stepXref( $_REQUEST ) ) {
 		header( 'Location: '.$gContent->getEditUrl() );
 		die;

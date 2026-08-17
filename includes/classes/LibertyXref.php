@@ -300,11 +300,16 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 	 * Store an xref row using the audit-trail stepping pattern.
 	 *
 	 * The expunge value in $pParamHash controls the step behaviour:
+	 *   3  — hard delete: removes the row from liberty_xref outright, no history trace
+	 *        left behind. Caller must gate this behind expunge permission specifically
+	 *        (stricter than the update permission the other cases use) — see
+	 *        LibertyContent::stepXref()'s caller, edit_xref.php.
 	 *   2  — close the current row now (end_date = now) and immediately open a fresh
 	 *        continuation row (fStepXref), preserving the full history chain
 	 *   1  — close the current row (end_date = now) with no continuation; the xref
-	 *        is retired and will appear in the history group on next load
-	 *   0  — update in place (end_date cleared); standard non-stepping store
+	 *        is retired (archived) and will appear in the history group on next load —
+	 *        fully reversible, see the 0/default case
+	 *   0  — restore: update in place with end_date cleared; standard non-stepping store
 	 *
 	 * @param array &$pParamHash  must include 'expunge' and 'xref_id'
 	 * @return bool always true
@@ -312,6 +317,12 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 	public function stepXref( &$pParamHash = NULL ) {
 		if( isset( $pParamHash["expunge"] ) ) {
 			switch( $pParamHash["expunge"] ) {
+				case 3:
+					$this->mDb->query(
+						"DELETE FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `xref_id` = ?",
+						[ $this->mXrefId ]
+					);
+					return true;
 				case 2:
 					$pParamHash['end_date'] = time();
 					$this->store( $pParamHash );

@@ -4067,9 +4067,10 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * Write an xref row using the audit-trail stepping pattern.
 	 *
 	 * Delegates to LibertyXref::stepXref().  The expunge value in $pParamHash
-	 * controls whether the current row is closed and a new one opened (2),
-	 * just closed (1), or updated in place (0).  See LibertyXref::stepXref()
-	 * for the full semantics.  Reloads the content item on success.
+	 * controls whether the row is hard-deleted outright (3), closed and a new
+	 * one opened (2), just closed/archived (1), or restored/updated in place
+	 * (0).  See LibertyXref::stepXref() for the full semantics.  Reloads the
+	 * content item on success.
 	 *
 	 * @param array &$pParamHash  must include 'xref_id' and 'expunge'
 	 * @return bool true on success
