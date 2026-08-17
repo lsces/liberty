@@ -227,11 +227,17 @@ shares the same shape: resolve or create a target `content_id` (via typeahead se
 Food's small supplier list, a plain `<select>`), then call `storeXref()`/`LibertyXref::store()`
 directly with `xref` set, then redirect — exactly what `add_xref.php` structurally can't do.
 
-**Not yet generalized.** A generic `add_xref.php` extension (accept an optional `xref` field, plus
-a generic `liberty/includes/lookup_content.php?content_type_guid=X&q=...` parameterized by content
-type instead of hardcoded per package) would collapse this duplication, but nothing has been built
-— flagged here as a real, evidenced architecture gap for whenever it's worth tackling, not
-actioned.
+**Deliberately not generalized — considered and settled, not just deferred (2026-08-17).** A
+generic `add_xref.php` extension was designed in outline (template-aware dispatch, mirroring
+`getXrefEditTemplate()`'s resolution chain, so a `link`-templated item would get an `xref`-picker
+step the generic form doesn't show for every other item type) but not built. Reasoning for
+stopping there: whenever a package actually wants an `xref`-linking item, the *validation* is
+inherently package-specific — which content type, which subset (Food's suppliers filtered to
+`B04`, Stock's typeahead across every contact), what counts as a valid pick. A generic mechanism
+would still need that bespoke logic supplied per package underneath it; it would mostly just move
+where the special-casing lives, not remove it. So each package building its own small `add_X.php`
+when it genuinely needs one is treated as the *correct* shape here, not a duplication defect —
+don't re-propose generalizing this without a concrete reason the calculus has changed.
 
 ## Expunge and history — no real hard-delete exists
 
