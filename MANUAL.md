@@ -144,19 +144,44 @@ Same 3-tier resolution, separately for view and edit:
   hardcoded fallback `bitpackage:liberty/view_xref_text_item.tpl`.
 - `getXrefEditTemplate($template)` → same shape, `edit_xref_<t>_item.tpl`.
 
-Liberty ships generic `text`/`value` item templates (view+edit) as the ultimate fallback for
-simple scalar fields — these were the actual default for every Food item before custom templates
-existed, and still are for anything that doesn't need one.
+**Generic templates that exist today** (`liberty/templates/`), all fitting the 3-column contract:
 
-**`linked_title`/`linked_data` — view path only.** `LibertyXrefType::loadContent()` LEFT JOINs
+| `template` | View | Edit | Use |
+|---|---|---|---|
+| `text` | ✓ | ✓ | Any scalar `xkey`/`xkey_ext`/`data` field. Ultimate fallback. |
+| `value` | ✓ | ✓ | Same shape, different column emphasis (`xkey`+`xkey_ext` as two separate values rather than one combined). |
+| `link` | ✓ | ✓ (read-only target) | An item whose `xref` points at another piece of content — renders a real link via the linked title, generic across every package (added 2026-08-17, see below). |
+| `json-text` | ✓ | — (falls back to `text`) | `data` holds a JSON object — renders as one tidy `Key: value, Key: value` line (added 2026-08-17). |
+| `json-list` | ✓ | — (falls back to `text`) | Same JSON case, but each key on its own line — a nested table *inside* the cell, not separate outer rows (`list_xref.tpl` owns the one `<tr>` per xref row; an item template can't legitimately add more). Added 2026-08-17. |
+
+`address`/`bank`/`date`/`locate`/`phone`/`sig` also exist as view-only files in `liberty/templates/`,
+but only `address`/`phone` are actually registered anywhere (both exclusively by Contact's own
+items) — treat the rest as unconfirmed/likely-dead rather than assuming they're safe to reuse.
+(`contact`/`image`/`inc_report` **were** in this list too — removed 2026-08-17, confirmed dead:
+nothing registered them, and `contact` didn't even work, it printed a raw `xref` number instead of
+resolving a link. `link` replaces the *concept* `contact` was reaching for, under a proper generic
+name — Contact's *own* `templates/view_xref_contact_item.tpl` is a different, older, separate
+thing, part of Contact's own pre-`_item`-convention xref system, deliberately left untouched.)
+
+**Using a raw PHP function as a Smarty modifier** (needed for `json-text`/`json-list`'s
+`|json_decode:true`) **requires an explicit allowlist entry** —
+`themes/includes/classes/BitweaverExtension.php`'s `getModifierCallback()` has a `switch`
+statement of permitted native functions (`basename`, `strpos`, `ucwords`, `json_decode`, etc.);
+anything not listed there fails at Smarty compile time with "unknown modifier", not a runtime
+error. Add new entries there, not by trying to register a plugin file for something that's really
+just a bare PHP function call.
+
+**`linked_title`/`linked_data`**: `LibertyXrefType::loadContent()` LEFT JOINs
 `liberty_content lc_linked ON lc_linked.content_id = x.xref` and exposes `lc_linked.title AS
-linked_title` / `lc_linked.data AS linked_data` on every loaded xref row — this is how a view
-template shows the name of whatever `xref` points at, no extra query needed. **The edit path
-(`edit_xref.php`) does not go through this query** — it loads a single row via `loadXref()`, so
-`linked_title` is never populated there. If an edit template needs to show the linked object's
-name, override `enrichXrefDisplay(array &$pXrefInfo): void` on the content class (default
-implementation is a no-op) — `edit_xref.php` calls it right before assigning `$xrefInfo` to
-Smarty, and it receives the row by reference to enrich in place.
+linked_title` / `lc_linked.data AS linked_data` on every loaded xref row for the **view** path —
+no extra query needed there. **The edit path (`edit_xref.php`) doesn't go through that query** —
+it loads a single row via `loadXref()`. `LibertyContent::enrichXrefDisplay(array &$pXrefInfo): void`
+is the hook for this (called by `edit_xref.php` right before assigning `$xrefInfo` to Smarty,
+row passed by reference) — **its base implementation now has a real default** (added 2026-08-17,
+alongside `link`): populates `linked_title` generically via one lookup whenever `xref` is set, so
+`link`'s edit form works with zero package code. Override and call
+`parent::enrichXrefDisplay($pXrefInfo)` first to add further package-specific computed fields on
+top (e.g. a component's pack size) — the base behaviour isn't lost by overriding.
 
 ## Add and edit — the real gap
 
