@@ -2238,14 +2238,27 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	/**
 	 * Hook for packages to enrich a single xref row after it has been loaded.
 	 *
-	 * Called by edit_xref.php when displaying a single xref for editing.
-	 * Override in a package class to add computed fields (e.g. contact title from
-	 * an xref content_id, component pack size) directly into the row array before
-	 * it reaches the template.
+	 * Called by edit_xref.php when displaying a single xref for editing. The view path
+	 * (list_xref.tpl et al) gets `linked_title`/`linked_data` for free from
+	 * LibertyXrefType::loadContent()'s own JOIN — this edit path doesn't go through
+	 * that query (single-row `loadXref()` instead), so this base implementation fills
+	 * the same `linked_title` in generically whenever `xref` is a real content_id, for
+	 * the generic 'link' item template's edit form. Purely additive (a new key, never
+	 * removes/changes anything already on the row) — safe as a base-class default.
+	 * Override in a package class to add further computed fields (e.g. component pack
+	 * size) directly into the row array before it reaches the template; call
+	 * `parent::enrichXrefDisplay($pXrefInfo)` first to keep this default.
 	 *
 	 * @param array &$pXrefInfo  the raw xref row from liberty_xref (mutate in place)
 	 */
-	public function enrichXrefDisplay( array &$pXrefInfo ): void {}
+	public function enrichXrefDisplay( array &$pXrefInfo ): void {
+		if( !empty( $pXrefInfo['xref'] ) && BitBase::verifyId( $pXrefInfo['xref'] ) ) {
+			$pXrefInfo['linked_title'] = $this->mDb->getOne(
+				"SELECT `title` FROM `".BIT_DB_PREFIX."liberty_content` WHERE `content_id` = ?",
+				[ $pXrefInfo['xref'] ]
+			);
+		}
+	}
 
 	/**
 	 * Resolve the Smarty group template for an xref group.
