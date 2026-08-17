@@ -285,7 +285,10 @@ class LibertyXrefType {
 			$content->mGroups[$xGroup] = $group;
 		}
 
-		if( !empty( $allHistory ) ) {
+		// The synthetic history group is built here in PHP rather than fetched by the
+		// role-filtered query above, so it never goes through that query's role_id
+		// check — admin-only visibility has to be enforced explicitly instead.
+		if( !empty( $allHistory ) && $gBitUser->isAdmin() ) {
 			$historyGroup          = new LibertyXrefGroup(
 				[ 'x_group' => 'history', 'title' => 'History', 'sort_order' => 999, 'template' => null, 'role_id' => 0 ],
 				$this->contentTypeGuid,
