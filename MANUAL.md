@@ -152,7 +152,20 @@ Same 3-tier resolution, separately for view and edit:
 | `value` | ✓ | ✓ | Same shape, different column emphasis (`xkey`+`xkey_ext` as two separate values rather than one combined). |
 | `link` | ✓ | ✓ (read-only target) | An item whose `xref` points at another piece of content — renders a real link via the linked title, generic across every package (added 2026-08-17, see below). |
 | `json-text` | ✓ | ✓ | `data` holds a JSON object — renders as one tidy `Key: value, Key: value` line. Edit shares `json-list`'s form (`{include}` forward) — editing doesn't need to differ by view style. Added 2026-08-17. |
-| `json-list` | ✓ | ✓ | Same JSON case, but view renders each key on its own line — a nested table *inside* the cell, not separate outer rows (`list_xref.tpl` owns the one `<tr>` per xref row; an item template can't legitimately add more). Edit renders one input per decoded key (`name="json_field[key]"`, PHP's array-POST convention) — `edit_xref.php` reassembles `$_REQUEST['json_field']` back into a JSON string (numeric strings cast back to int/float first, so editing a value doesn't quietly turn it into a JSON string type) before the normal `storeXref()` path runs. Only triggers when that field is actually present, so it can't affect any other item type's save. Added 2026-08-17. |
+| `json-list` | ✓ | ✓ | Same JSON case, but view renders each key on its own line — a nested table *inside* the cell, not separate outer rows (`list_xref.tpl` owns the one `<tr>` per xref row; an item template can't legitimately add more). Edit renders one input per key (`name="json_field[key]"`, PHP's array-POST convention) — `edit_xref.php` reassembles `$_REQUEST['json_field']` back into a JSON string (numeric strings cast back to int/float; blank/zero entries dropped so the saved blob stays sparse, same convention every importer already uses) before the normal `storeXref()` path runs. Only triggers when that field is actually present, so it can't affect any other item type's save. Added 2026-08-17. |
+
+**Full field list for `json-list`/`json-text` editing** — a component's stored JSON blob is
+normally *sparse* (an importer only writes keys it had real values for), so the edit form can't
+know about a currently-missing key from the stored data alone; there'd be no way to add it.
+Fixed by repurposing `liberty_xref_item.data` (documented above as an unused "default/hint"
+column) to hold the item's **complete** set of possible keys as a JSON array — `LibertyXref::load()`
+now selects it (aliased `item_data`, distinct from the row's own `data`), and the edit template
+uses that as the authoritative field list, falling back to whatever's actually in the stored blob
+if no hint was registered (so any other package's `json-list` item works with zero extra setup,
+just without the "add a missing field" capability until it registers one). Food's `FAT`/`VIT`/`MIN`
+register theirs, e.g. `'["total_mg","saturated_mg","mono_mg","poly_mg","trans_mg","cholesterol_mg"]'`
+for `FAT`. Confirmed live: a component whose `FAT` blob genuinely only had 2 of 6 possible keys
+correctly offered all 6 for editing, added one, saved sparse.
 
 `address`/`bank`/`date`/`locate`/`phone`/`sig` also exist as view-only files in `liberty/templates/`,
 but only `address`/`phone` are actually registered anywhere (both exclusively by Contact's own
@@ -164,10 +177,11 @@ name — Contact's *own* `templates/view_xref_contact_item.tpl` is a different, 
 thing, part of Contact's own pre-`_item`-convention xref system, deliberately left untouched.)
 
 **Using a raw PHP function as a Smarty modifier** (needed for `json-text`/`json-list`'s
-`|json_decode:true`) **requires an explicit allowlist entry** —
-`themes/includes/classes/BitweaverExtension.php`'s `getModifierCallback()` has a `switch`
-statement of permitted native functions (`basename`, `strpos`, `ucwords`, `json_decode`, etc.);
-anything not listed there fails at Smarty compile time with "unknown modifier", not a runtime
+`|json_decode:true` and the edit form's `|array_keys` fallback) **requires an explicit allowlist
+entry** — `themes/includes/classes/BitweaverExtension.php`'s `getModifierCallback()` has a
+`switch` statement of permitted native functions (`basename`, `strpos`, `ucwords`, `json_decode`,
+`array_keys`, etc.); anything not listed there fails at Smarty compile time with "unknown
+modifier", not a runtime
 error. Add new entries there, not by trying to register a plugin file for something that's really
 just a bare PHP function call.
 
