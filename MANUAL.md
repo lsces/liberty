@@ -30,6 +30,24 @@ Three tables:
   (position within a `multiple=1` group), `entry_date`/`last_update_date`/`start_date`/`end_date`
   (see below).
 
+**Confirmed gap, not built (found 2026-08-18): no display-order column exists for items within a
+group.** `liberty_xref_group` has its own `sort_order` (tab position), but `liberty_xref_item` has
+nothing equivalent — `LibertyXrefType::loadContent()`'s row query is `ORDER BY x.item, x.xorder`,
+i.e. **alphabetically by item code**, not any deliberately curated sequence. `xorder` (on
+`liberty_xref`, the data table) is a different axis entirely — it orders the several *rows* of one
+`multiple=1` item type against each other, not the several *item types* within a group against
+each other. Symptom that surfaced this: Food's Nutrition tab renders `5AD`/`CAL`/`FAT`/`FIBR`/
+`PROT`/`SOD`/`SUGR` in that alphabetical order, not the UK front-of-pack sequence
+(`FoodComponent::NUTRITION_SUMMARY_FIELDS`' own PHP-array order gets this right in the day-report/
+component-summary views built the same day, precisely because those bypass this query and build
+their own ordered array instead — the generic xref tab has no equivalent). Proposed fix: a
+`sort_order`-style column on `liberty_xref_item`, used in this query in place of (or ahead of)
+`x.item`. **Not started** — unlike the `multiple` sign trick, this needs a genuine new column on a
+table every installed package already has live rows in (liberty itself, stock, food, contact,
+across every domain), so it's a real schema migration with an upgrade script, not a hand-push —
+bigger blast radius than anything else done this session, flagged for confirmation before starting
+rather than just built.
+
 **Negative `multiple` values, added 2026-08-18**: `multiple` is a plain `I2` (signed smallint, no
 `CHECK` constraint), so negative values need no schema change, and (confirmed before adopting) the
 numeric value has exactly one real runtime consumer anywhere in liberty/stock/food/contact —
@@ -70,30 +88,37 @@ separate flag:
   throughout ("the store would delete the other quantity records") used delete specifically: an
   archive-via-`stepXref` alternative was raised and not taken up.
 
-**Considered and deferred — group-level approach, noted per Lester's request, not built**: the
-first design floated a *group*-level flag instead of an item-level one — split SGL/WT/VOL into
-their own `x_group` (since `quantity` mixes them with non-exclusive `PCK`/`REM`), reusing
-`liberty_xref_group`'s own `multiple` column, which is completely dead (confirmed: zero PHP
-consumers, no package's `schema_inc.php` even sets it on any `INSERT`) — clean, unused space, same
-`-1`-style idiom, at the level where "these items are mutually exclusive" actually describes a
-relationship. Lester's own objection: reluctant to add another tab for one split-out group — noted
-that this is mitigatable (a custom `quantity`-group template can pull a sibling group's rows into
-the same `{jstab}`, since `list_xref.tpl` loads all groups together via one `loadXrefInfo()` call
-regardless of how they're split), but settled on the simpler item-scoped `-2` flag instead, which
-sidesteps the group-mixing problem entirely (exclusivity applies only to items actually flagged
-`-2`, so no split is needed at all). **Worth returning to if a future case needs group-wide
-exclusivity that can't be scoped to specific items** — the dead `liberty_xref_group.multiple`
-column is still there, untouched, for exactly that.
+**Considered and settled against — group-level approach, `liberty_xref_group.multiple` stays
+dead.** The first design floated a *group*-level flag instead of an item-level one — split
+SGL/WT/VOL into their own `x_group` (since `quantity` mixes them with non-exclusive `PCK`/`REM`),
+reusing `liberty_xref_group`'s own `multiple` column, which is completely dead (confirmed: zero
+PHP consumers, no package's `schema_inc.php` even sets it on any `INSERT`) — clean, unused space,
+same `-1`-style idiom, at the level where "these items are mutually exclusive" actually describes
+a relationship. Lester's own objection: reluctant to add another tab for one split-out group —
+noted that this is mitigatable (a custom `quantity`-group template can pull a sibling group's rows
+into the same `{jstab}`, since `list_xref.tpl` loads all groups together via one `loadXrefInfo()`
+call regardless of how they're split), but settled on the simpler item-scoped `-2` flag instead,
+which sidesteps the group-mixing problem entirely (exclusivity applies only to items actually
+flagged `-2`, so no split is needed at all). **Revisited and confirmed 2026-08-18 (later)**:
+Lester's own assessment, having now seen `-2` actually working across a real multi-item case
+(Stock's own BOM/multi-item groups already get handled with ad-hoc per-package template tricks
+rather than a generic mechanism) — `liberty_xref_group.multiple` probably isn't needed at all, not
+just deferred. Left dead deliberately, not removed, in case a genuine group-wide (not item-scoped)
+exclusivity case turns up later — but don't expect to reach for it; the item-scoped `-2` flag has
+covered every real case seen so far.
 
-**Still not built**: no per-row Edit/Delete icon suppression in whichever item template renders
-each xref row inside `list_xref.tpl` — a `-1` item's row would still show an Edit link today, it
-would just correctly bounce/error if clicked. Closing that cosmetic gap needs either a shared
-per-row check in the item templates themselves or the `add_<group>_group.tpl` redesign
-(`CLAUDE.md`'s 2026-08-18 session log) reaching far enough to own row rendering too — neither
-exists yet. Also not built: no `-1` or `-2` item exists anywhere yet to exercise any of this
-against a real request (Health's `series` template is still a sketch; Food's SGL/WT/VOL haven't
-been flagged `-2` in `schema_inc.php` yet either) — verified by code reading only, not a live
-round-trip.
+**Per-row Edit icon suppression — built 2026-08-18 (later), one file.** Turned out to need far
+less than the paragraph above once assumed: `action_icons.tpl` (see "Add and edit" below) is
+already the single shared render point for Edit/Archive/Delete across all 23 xref item view
+templates in liberty/stock/food/contact — no per-item-template work needed, no need to wait for
+the `add_<group>_group.tpl` redesign. Two changes: `LibertyXrefType::loadContent()`'s row query
+gained `s.multiple` (wasn't selected at all before, so `$xrefInfo.multiple` didn't exist for
+templates to check); `action_icons.tpl`'s Edit `{if}` gained `&& $xrefInfo.multiple neq -1`.
+**Scoped to exactly what was asked — Edit only, Archive/Delete deliberately untouched** (expunge/
+history semantics for a read-only item remain a separate, not-yet-made decision, same as the
+write-rejection work earlier the same day). Live-verified by temporarily flagging a real item
+(Food's `DUID`) `-1` on desktop rdmcloud — its row lost the Edit icon, an unaffected sibling row
+kept all three — then reverted.
 
 **`xref` vs `xkey`/`xkey_ext`**: easy to conflate. `xkey`/`xkey_ext`/`data` hold this row's own
 scalar value(s) — a number, a UUID, a note. `xref` holds a *foreign key* to a different content
@@ -163,11 +188,33 @@ the same content type, not just a style nit (hit for real on Food's `external` g
 mis-scoped at package level and colliding with `nutrition`'s `sort_order`).
 
 Pass `$packageGuid` when constructing `LibertyXrefType`/`LibertyXrefInfo` to enable dual-guid
-matching; `LibertyContent::$mPackageGuid` is set automatically by `registerContentType()`. When
-writing a manual xref JOIN spanning both levels, join item↔group on
-`t.content_type_guid = s.content_type_guid` and apply the guid filter only in `WHERE` — filtering
-inside the JOIN condition causes cross-matching when two different guids happen to share an
-`x_group` name.
+matching; `LibertyContent::$mPackageGuid` is set automatically by `registerContentType()` from
+whatever `handler_package` was passed in the type registration hash (Stock's three classes each
+pass `'handler_package' => 'stock'`, for example — no per-class manual wiring needed, it's a base
+`LibertyContent` behaviour). When writing a manual xref JOIN spanning both levels, join item↔group
+on `t.content_type_guid = s.content_type_guid` and apply the guid filter only in `WHERE` —
+filtering inside the JOIN condition causes cross-matching when two different guids happen to share
+an `x_group` name.
+
+**Two known gaps where a query method doesn't consistently use the guid filter**:
+`getAvailableItems()`'s group JOIN was fixed 2026-08-17 (was a bare exact-match instead of the
+filter, silently hiding a type-specific item whose group lived at package level — Contact's `CON`
+item was the real trigger). `getTemplateFormats()` still isn't fixed — flat single-guid `WHERE`,
+no package-level fallback — but it's low-impact: its only consumer is Contact's own legacy
+`add_xref.tpl`/`_fields.tpl` Add flow (the one earmarked for retirement once the
+`add_<group>_group.tpl` redesign lands, see `CLAUDE.md`), so nothing outside Contact can even
+reach it. Not worth fixing pre-emptively — would surface more formats needing dead `_fields.tpl`
+partials for no concrete live need.
+
+**Checked 2026-08-18 whether Stock's `supplier` group (shared across StockComponent/StockAssembly/
+StockMovement) is exposed to either gap — it isn't.** Both the `supplier` group *and* its `#SUP`
+item are registered at the same package-level guid (`'stock'`), so every query that resolves them
+does a plain exact match, no cross-level fallback ever needed for this pair specifically. The
+dual-guid gap only bites when a group and its item are registered at *different* levels (group
+package-level, item type-specific, or vice versa) — Stock's supplier group doesn't do that, so
+there's nothing live to fix here. Worth checking this same way (which level is the group at, which
+level is the item at, do they match) for any future case, rather than assuming "shared across
+several classes" automatically means it's at risk.
 
 ## Type-marker convention (`sort_order = 0`)
 
