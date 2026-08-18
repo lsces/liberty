@@ -8,6 +8,7 @@ namespace Bitweaver\Liberty;
 
 use Bitweaver\BitBase;
 use Bitweaver\BitDate;
+use Bitweaver\KernelTools;
 
 /**
  * Represents a single row in liberty_xref.
@@ -127,7 +128,7 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 					CASE WHEN x.`start_date` IS NULL THEN 'y' ELSE 'n' END AS `ignore_start_date`,
 					CASE WHEN x.`end_date` IS NULL THEN 'y' ELSE 'n' END AS `ignore_end_date`,
 					s.`cross_ref_title` AS `template_title`, s.`template`,
-					s.`data` AS `item_data`
+					s.`data` AS `item_data`, s.`multiple`
 					FROM `".BIT_DB_PREFIX."liberty_xref` x
 					JOIN `".BIT_DB_PREFIX."liberty_xref_item` s ON s.`item` = x.`item` $guidFilter
 					WHERE x.`xref_id` = ?
@@ -191,12 +192,25 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 				$guidBind  = [ $pParamHash['xref_store']['item'] ];
 			}
 			$sql  = "SELECT x.`multiple` FROM `".BIT_DB_PREFIX."liberty_xref_item` x WHERE x.`item` = ? $guidWhere";
-			$next = $this->mDb->getOne( $sql, $guidBind );
-			if( $next > 0 ) {
+			$itemMultiple = (int)$this->mDb->getOne( $sql, $guidBind );
+			// multiple < 0 = read-only (see liberty/MANUAL.md's Data model section) — the
+			// item picker already excludes these (LibertyXrefType::getAvailableItems()),
+			// this is defense-in-depth against a direct POST bypassing that.
+			if( $itemMultiple < 0 ) {
+				$this->mErrors[] = KernelTools::tra( 'This item is read-only and cannot be added to.' );
+				$next = 0;
+			} elseif( $itemMultiple > 0 ) {
 				$sql  = "SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x WHERE x.`content_id` = ? AND x.`item` = ?";
 				$next = $this->mDb->getOne( $sql, [ $pParamHash['xref_store']['content_id'], $pParamHash['xref_store']['item'] ] );
+			} else {
+				$next = 0;
 			}
 			$pParamHash['xref_store']['xorder'] = (int)$next;
+		} elseif( !isset( $pParamHash['fStepXref'] ) && (int)( $this->mRow['multiple'] ?? 0 ) < 0 ) {
+			// Editing an existing row in place (not adding, not audit-trail stepping) whose
+			// item is flagged read-only — $this->mRow is only populated when load() has run,
+			// i.e. LibertyContent::storeXref() pre-loaded this row for an edit.
+			$this->mErrors[] = KernelTools::tra( 'This item is read-only and cannot be edited.' );
 		}
 
 		if( isset( $pParamHash['fStepXref'] ) ) {

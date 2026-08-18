@@ -43,12 +43,31 @@ gate (auto-increments `xorder` on `fAddXref`) — which a negative value simply 
 false, i.e. behaves like `multiple=0` there (correct, since a read-only item should never hit the
 interactive add-a-row path at all). No template or other PHP anywhere branches on `multiple` by
 truthiness or equality, so `-1`/`-2` can't be misread as `1`-like by any existing code path.
-**Not yet enforced anywhere** — this is the column contract only. Real enforcement still needed
-wherever it eventually matters: `add_xref.php`'s item-picker dropdown should exclude
-`multiple < 0` items, `edit_xref.php`'s save path should refuse writes to one server-side (not
-just hide the UI), and whichever item template renders each row needs to suppress its own
-Edit/Delete affordance when the item is read-only. None of this is built — no read-only item type
-exists yet to exercise it (Health's `series` template is still a sketch, see `health/MANUAL.md`).
+**Enforced as of 2026-08-18, three layers, no add-template redesign needed**:
+- `LibertyXrefType::getAvailableItems()` — the query behind `add_xref.php`'s item-type dropdown
+  (and every other "what items can this content type have" caller) — excludes `multiple < 0` items
+  outright (`AND s.multiple >= 0` in all three query branches). A read-only item is simply never
+  offered as something to add.
+- `LibertyXref::verify()` — defense-in-depth for any caller that reaches `store()`/`storeXref()`
+  directly rather than through the dropdown (a raw POST, or a package's own bespoke add page):
+  rejects with an error (`This item is read-only and cannot be added to.` /
+  `...cannot be edited.`) for both the `fAddXref` case (checks the target item's `multiple` before
+  allowing the write) and the plain in-place-edit case (checks `$this->mRow['multiple']`, populated
+  whenever `load()` pre-loaded the row being edited — i.e. every `edit_xref.php` save). Doesn't
+  touch `fStepXref` (archive/restore/hard-delete via `stepXref()`) — expunge/history semantics for
+  a read-only item weren't asked for and are a separate decision, not assumed here.
+- `edit_xref.php` — refuses to even render the edit form for a read-only row (redirects back to
+  `getEditUrl()`), not just reject the save — checked right after `loadXref()`, before any
+  `fSaveXref` handling.
+
+**Still not built, and deliberately didn't need to be for this**: no per-row Edit/Delete icon
+suppression in whichever item template renders each xref row inside `list_xref.tpl` — a read-only
+item's row would still show an Edit link today, it would just correctly bounce/error if clicked.
+Closing that cosmetic gap needs either a shared per-row check in the item templates themselves or
+the `add_<group>_group.tpl` redesign (`CLAUDE.md`'s 2026-08-18 session log) reaching far enough to
+own row rendering too — neither exists yet. Also not built: no read-only item type exists anywhere
+yet to exercise any of this against a real request (Health's `series` template is still a sketch,
+see `health/MANUAL.md`) — verified by code reading only, not a live round-trip.
 
 **`xref` vs `xkey`/`xkey_ext`**: easy to conflate. `xkey`/`xkey_ext`/`data` hold this row's own
 scalar value(s) — a number, a UUID, a note. `xref` holds a *foreign key* to a different content

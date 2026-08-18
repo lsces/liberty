@@ -187,3 +187,25 @@ build. Whenever it is picked up: `add_person.php`/`add_business.php` (Contact's 
 precedent, already noted in `food/CLAUDE.md`'s framework-notes section) is worth checking again as
 a second real-world precedent for "same content type, different add experience depending on what's
 being added."
+
+**Where Contact's `_fields.tpl` system fits into this — Lester's own follow-up question, answered
+by re-reading [[project_xref_template_reorg]] rather than designing fresh**: `_fields.tpl`
+(`contact/templates/edit_xref_*_fields.tpl`, still live, driven by `contact/add_xref.tpl`'s
+per-format `{include}` loop) is Contact's own older, separate Add-flow solution to the *same*
+problem the `_item.tpl` convention already solves generically for View/Edit — this was identified
+2026-08-17 during the reorg, not new today. That session already named the cleaner shape and
+deliberately parked it ("leave it for now, we can revisit later"): Add should dynamically render
+the same `edit_<template>_item.tpl` used for editing, with a blank/default `xrefInfo` instead of a
+loaded one, rather than maintaining a second `_fields.tpl` per template.
+
+**The `add_<group>_group.tpl` idea above is exactly where that parked plan would actually land**:
+once a group template dispatches per-item-type instead of `add_xref.php` showing one flat form,
+`add_generic_group`'s per-item-type step (point 1 above) *is* "render `edit_<template>_item.tpl`
+in new-row mode" — at that point `_fields.tpl` has nothing left to do and gets deleted outright,
+not migrated forward as a parallel system. Read-only items need zero special handling here beyond
+what's already built (see the read-only entry above) — an item excluded from
+`getAvailableItems()` never reaches either the generic dropdown or a `_fields.tpl`/`_item.tpl`
+render in the first place, so there's no third place to teach about `multiple < 0` once this
+lands. Still not scoped or built — same "captured for later" status as the rest of this section,
+now with its last open sub-question (what happens to `_fields.tpl`) answered rather than left
+dangling.

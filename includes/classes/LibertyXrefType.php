@@ -155,11 +155,13 @@ class LibertyXrefType {
 		$guidFilter = $this->packageGuid
 			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
 			: "= '$this->contentTypeGuid'";
+		// s.multiple < 0 = read-only (see liberty/MANUAL.md's Data model section) — never
+		// offer a read-only item as something to add.
 		if( $xrefTemplate ) {
 			$result = $db->query(
 				"SELECT s.`cross_ref_title` AS `type_name`, s.`item`, s.`template`
 				 FROM `".BIT_DB_PREFIX."liberty_xref_item` s
-				 WHERE s.`content_type_guid` $guidFilter AND s.`template` = ?
+				 WHERE s.`content_type_guid` $guidFilter AND s.`template` = ? AND s.`multiple` >= 0
 				 ORDER BY s.`cross_ref_title`",
 				[ $xrefTemplate ]
 			);
@@ -172,7 +174,7 @@ class LibertyXrefType {
 				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x
 				     ON x.`item` = s.`item` AND x.`content_id` = ? AND (x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP)
 				 WHERE s.`content_type_guid` $guidFilter AND t.`sort_order` = ?
-				   AND (x.`xref_id` IS NULL OR x.`xorder` > 0)
+				   AND (x.`xref_id` IS NULL OR x.`xorder` > 0) AND s.`multiple` >= 0
 				 ORDER BY s.`cross_ref_title`",
 				[ $contentId, $xrefGroup ]
 			);
@@ -185,7 +187,7 @@ class LibertyXrefType {
 				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x
 				     ON x.`item` = s.`item` AND x.`content_id` = ? AND (x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP)
 				 WHERE s.`content_type_guid` $guidFilter AND t.`sort_order` > 0
-				   AND (x.`xref_id` IS NULL OR x.`xorder` > 0)
+				   AND (x.`xref_id` IS NULL OR x.`xorder` > 0) AND s.`multiple` >= 0
 				 ORDER BY s.`cross_ref_title`",
 				[ $contentId ]
 			);
