@@ -254,7 +254,7 @@ class LibertyXrefType {
 			$rowResult = $db->query(
 				"SELECT x.`xref_id`, x.`item`, x.`xref`, x.`xkey`, x.`xkey_ext`,
 				        x.`xorder`, x.`data`, x.`start_date`, x.`end_date`, x.`last_update_date`, x.`entry_date`,
-				        s.`template`, s.`cross_ref_href`,
+				        s.`template`, s.`cross_ref_href`, s.`multiple`,
 				        CASE WHEN x.`xorder` = 0 THEN s.`cross_ref_title`
 				             ELSE s.`cross_ref_title` || '-' || x.`xorder` END AS xref_title,
 				        CASE WHEN x.`end_date` IS NOT NULL AND x.`end_date` < ? THEN 'history'

@@ -2,7 +2,7 @@
 {if $xrefAllowEdit|default:true}
 <td>
 	<span class="actionicon">
-		{if $gContent->hasUpdatePermission() && !$isHistory}
+		{if $gContent->hasUpdatePermission() && !$isHistory && $xrefInfo.multiple neq -1}
 			{smartlink ititle="Edit" ipackage="liberty" ifile="edit_xref.php" biticon="edit" content_id=$gContent->mInfo.content_id xref_id=$xrefInfo.xref_id}
 		{/if}
 		{if $gContent->hasUpdatePermission() && !$xrefProtected|default:false}
