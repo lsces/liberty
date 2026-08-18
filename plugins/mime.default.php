@@ -346,8 +346,14 @@ if( !function_exists( '\Bitweaver\Liberty\mime_default_download' )) {
 			header( "Content-type: ".$pFileHash['mime_type'] );
 
 			if( $gBitSystem->isFeatureActive( 'site_nginx' )) {
-				// Nginx - most efficient
-				header( 'X-Accel-Redirect: '.$pFileHash['source_file'] );
+				// Nginx - most efficient. X-Accel-Redirect needs a URI path matching
+				// an internal-serving location block (see e.g. nginx/vhosts.d/*
+				// "location ^~ /storage/attachments/"), NOT a filesystem path —
+				// source_file is STORAGE_PKG_PATH-rooted (a filesystem path, correct
+				// as-is for X-Sendfile below), so it must be translated to its
+				// STORAGE_PKG_URL equivalent first, same way $pFileHash['source_file']
+				// was itself built (see LibertyMime.php's liberty_mime_get_source_file()).
+				header( 'X-Accel-Redirect: '.str_replace( STORAGE_PKG_PATH, STORAGE_PKG_URL, $pFileHash['source_file'] ) );
 			} elseif( $gBitSystem->isFeatureActive( 'site_apache_xsendfile' )) {
 				// Apache with mod_xsendfile installed
 				header( 'X-Sendfile: '.$pFileHash['source_file'] );
