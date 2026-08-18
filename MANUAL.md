@@ -331,12 +331,16 @@ marker without any prompt to remove the old one. Found live 2026-08-17 (a compon
 both `WT` and `VOL` simultaneously after a manual correction), fixed the next day via the
 `multiple = -2` mutually-exclusive convention above — see that section for the mechanism
 (`LibertyXref::store()` hard-deletes the sibling automatically now, same `expunge=3`-style
-`DELETE`, just triggered by the store rather than a manual expunge click). **Two pre-existing
-violations found on desktop's rdmcloud when the flag was actually applied to Food (2026-08-18,
-content_ids 7420 "Tea with Milk" and 7446 "Skimmed Milk", both carrying `WT` and `VOL`
-simultaneously)** — not auto-resolved, the new mechanism only fires on a future store of one of
-the three, not retroactively; left for Lester to pick a value and re-save when convenient, flagged
-here rather than silently picked for him.
+`DELETE`, just triggered by the store rather than a manual expunge click).
+
+**Live-verified 2026-08-18 against the two pre-existing violations this surfaced** (content_ids
+7420 "Tea with Milk", 7446 "Skimmed Milk", both had carried `WT` and `VOL` simultaneously since
+before this mechanism existed) — Lester resolved both through the real UI, not isql: resaving
+`VOL` on Tea correctly auto-deleted the sibling `WT` row via the new mechanism, no manual step
+needed. Milk needed one extra manual step — using the `expunge=3` hard-delete ("dustbin") icon on
+a leftover history entry — confirming that icon (built 2026-08-17, see the `expunge` table above)
+and the new `-2` eviction compose cleanly rather than conflicting. Both components confirmed clean
+afterward (one active `VOL` row each, no `WT`/`SGL` remnant, active or archived).
 
 ## Known by-reference footguns
 
