@@ -235,6 +235,7 @@ $tables = [
 	x_group C(32),
 	cross_ref_title C(64),
 	multiple I2,
+	sort_order I2 NOTNULL DEFAULT(0),
 	role_id I4,
 	cross_ref_href C(256),
 	template C(32),
