@@ -24,10 +24,11 @@ if( !empty( $_REQUEST['xref_id'] ) ) {
 	$gContent->loadXref( $_REQUEST['xref_id'] );
 }
 
-// multiple < 0 = read-only (see liberty/MANUAL.md's Data model section) — refuse to even
+// multiple = -1 = read-only (see liberty/MANUAL.md's Data model section) — refuse to even
 // render the edit form, not just reject a save; LibertyXref::verify() rejects the write
-// too (defense-in-depth for any caller that bypasses this controller).
-if( (int)( $gContent->mInfo['xref_store']['data']['multiple'] ?? 0 ) < 0 ) {
+// too (defense-in-depth for any caller that bypasses this controller). multiple = -2
+// (mutually exclusive) is freely editable in place, only -1 is blocked here.
+if( (int)( $gContent->mInfo['xref_store']['data']['multiple'] ?? 0 ) === -1 ) {
 	header( 'Location: '.$gContent->getEditUrl() );
 	die;
 }

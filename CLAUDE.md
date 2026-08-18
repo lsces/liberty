@@ -209,3 +209,39 @@ render in the first place, so there's no third place to teach about `multiple < 
 lands. Still not scoped or built — same "captured for later" status as the rest of this section,
 now with its last open sub-question (what happens to `_fields.tpl`) answered rather than left
 dangling.
+
+## 2026-08-18 (same session) — `multiple = -2`: mutually exclusive items, built
+
+Grew directly out of the read-only work above, prompted by Lester connecting it to
+[[project_food_package_scoping]]'s long-standing, previously-unresolved WT/VOL/SGL gap
+(`foodcomponent`'s `quantity` group has three "which unit does this component use" items that
+should be one-at-a-time, nothing ever enforced it).
+
+**First idea, floated and dropped**: a group-level flag — split SGL/WT/VOL into their own
+`x_group`, reuse `liberty_xref_group`'s own `multiple` column (confirmed completely dead, zero
+consumers anywhere, no package's `schema_inc.php` even sets it). Lester's objection: didn't want
+another tab. I confirmed that's mitigatable (a custom group template can pull a sibling group's
+rows into the same `{jstab}`, since all groups load together in one `loadXrefInfo()` call
+regardless of split) — but then Lester settled on the simpler path instead: keep it item-level,
+reuse `multiple = -2` (which the read-only work above had provisionally reserved for "read-only,
+multiple-cardinality") and redefine it as a completely distinct flag, "mutually exclusive within
+the same group." This is actually cleaner than the group-split idea, not just simpler — exclusivity
+scopes to *only the items actually flagged `-2`*, so `PCK`/`REM` (staying ordinary `0`/`1`) are
+naturally unaffected without needing a split at all. One garbled message on the way there ("no
+write :(" — autocorrect casualty) needed a direct re-ask rather than guessing.
+
+**Built**: `LibertyXref::store()` now hard-deletes, inside the same transaction as the store
+itself, any other item in the same `x_group` (dual-guid scoped) that's also flagged `-2`, whenever
+a `-2` item is successfully stored — add or in-place edit, both trigger it, making it self-healing
+against stale data. Hard delete was Lester's own explicit framing throughout ("the store would
+delete the other quantity records") — raised the `stepXref`-archive alternative once, not taken
+up, went with delete. `getAvailableItems()`/`verify()`/`edit_xref.php`'s read-only guards from
+earlier today all narrowed from `multiple < 0` to `multiple === -1` specifically, since `-2` items
+need to stay fully addable/editable (only the store-time eviction is special about them). Full
+spec in `MANUAL.md`'s Data model section, including the deferred group-level idea, kept as a note
+for if group-wide (not item-scoped) exclusivity is ever needed.
+
+**Not yet applied to Food itself** — `-2` isn't set on `SGL`/`WT`/`VOL` in `food/schema_inc.php`
+yet, so this mechanism has zero live effect until that happens. Next step whenever picked up:
+flag those three, hand-push via isql per Food's existing pre-production schema workflow, verify a
+real round-trip on rdmcloud.

@@ -193,10 +193,12 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 			}
 			$sql  = "SELECT x.`multiple` FROM `".BIT_DB_PREFIX."liberty_xref_item` x WHERE x.`item` = ? $guidWhere";
 			$itemMultiple = (int)$this->mDb->getOne( $sql, $guidBind );
-			// multiple < 0 = read-only (see liberty/MANUAL.md's Data model section) — the
+			// multiple = -1 = read-only (see liberty/MANUAL.md's Data model section) — the
 			// item picker already excludes these (LibertyXrefType::getAvailableItems()),
-			// this is defense-in-depth against a direct POST bypassing that.
-			if( $itemMultiple < 0 ) {
+			// this is defense-in-depth against a direct POST bypassing that. multiple = -2
+			// (mutually exclusive) is NOT rejected here — it's a normal single-cardinality
+			// add, store() evicts any sibling -2 item afterward (see there).
+			if( $itemMultiple === -1 ) {
 				$this->mErrors[] = KernelTools::tra( 'This item is read-only and cannot be added to.' );
 				$next = 0;
 			} elseif( $itemMultiple > 0 ) {
@@ -206,10 +208,11 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 				$next = 0;
 			}
 			$pParamHash['xref_store']['xorder'] = (int)$next;
-		} elseif( !isset( $pParamHash['fStepXref'] ) && (int)( $this->mRow['multiple'] ?? 0 ) < 0 ) {
+		} elseif( !isset( $pParamHash['fStepXref'] ) && (int)( $this->mRow['multiple'] ?? 0 ) === -1 ) {
 			// Editing an existing row in place (not adding, not audit-trail stepping) whose
 			// item is flagged read-only — $this->mRow is only populated when load() has run,
-			// i.e. LibertyContent::storeXref() pre-loaded this row for an edit.
+			// i.e. LibertyContent::storeXref() pre-loaded this row for an edit. multiple = -2
+			// items are freely editable in place, only -1 is rejected.
 			$this->mErrors[] = KernelTools::tra( 'This item is read-only and cannot be edited.' );
 		}
 
@@ -304,6 +307,32 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 				$this->mDb->associateInsert( $table, $pParamHash['xref_store'] );
 			}
 			$this->load( $this->mXrefId );
+			// multiple = -2 = mutually exclusive within the same group (see liberty/MANUAL.md's
+			// Data model section) — a successful store of one such item evicts any *other*
+			// item in the same x_group that's also flagged -2, for this content_id. Hard
+			// delete, not stepXref's archive path — mirrors stepXref's own expunge=3 case,
+			// no history trace kept for the choice that lost out. Runs on every store (add or
+			// in-place edit) of a -2 item, not just fAddXref, so it's self-healing against any
+			// stale sibling left over from before this item was flagged -2.
+			if( (int)( $this->mRow['multiple'] ?? 0 ) === -2 ) {
+				if( !empty( $this->mContentTypeGuid ) && !empty( $this->mPackageGuid ) ) {
+					$guidWhere = "AND s.`content_type_guid` IN(?,?)";
+					$guidBind  = [ $this->mContentTypeGuid, $this->mPackageGuid ];
+				} elseif( !empty( $this->mContentTypeGuid ) ) {
+					$guidWhere = "AND s.`content_type_guid` = ?";
+					$guidBind  = [ $this->mContentTypeGuid ];
+				} else {
+					$guidWhere = '';
+					$guidBind  = [];
+				}
+				$this->mDb->query(
+					"DELETE FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` IN (
+						SELECT s.`item` FROM `".BIT_DB_PREFIX."liberty_xref_item` s
+						WHERE s.`x_group` = ? $guidWhere AND s.`multiple` = -2 AND s.`item` != ?
+					)",
+					array_merge( [ $this->mContentId, $this->mType ], $guidBind, [ $this->mItem ] )
+				);
+			}
 			$this->mDb->CompleteTrans();
 			return true;
 		}

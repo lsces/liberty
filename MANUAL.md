@@ -30,44 +30,70 @@ Three tables:
   (position within a `multiple=1` group), `entry_date`/`last_update_date`/`start_date`/`end_date`
   (see below).
 
-**Read-only items (`multiple < 0`), added 2026-08-18**: `multiple` is a plain `I2` (signed
-smallint, no `CHECK` constraint), so negative values need no schema change. Convention: `-1` =
-read-only + single-value (mirrors `0`), `-2` reserved for read-only + multiple-value (mirrors `1`)
-for whenever that's needed — recover cardinality via `abs(multiple)`, read-only-ness via
-`multiple < 0`, independently. Added for Health package data (device-reported sensor/time-series
-readings — see `health/MANUAL.md`), where editing genuinely doesn't make sense, unlike every
-existing consumer (Stock/Contact/Food), whose xref data is all human-curated. **Confirmed safe
-against the live codebase before adopting**: the numeric value of `multiple` has exactly one real
-runtime consumer anywhere in liberty/stock/food/contact — `LibertyXref::verify()`'s `$next > 0`
-gate (auto-increments `xorder` on `fAddXref`) — which a negative value simply falls through as
-false, i.e. behaves like `multiple=0` there (correct, since a read-only item should never hit the
-interactive add-a-row path at all). No template or other PHP anywhere branches on `multiple` by
-truthiness or equality, so `-1`/`-2` can't be misread as `1`-like by any existing code path.
-**Enforced as of 2026-08-18, three layers, no add-template redesign needed**:
-- `LibertyXrefType::getAvailableItems()` — the query behind `add_xref.php`'s item-type dropdown
-  (and every other "what items can this content type have" caller) — excludes `multiple < 0` items
-  outright (`AND s.multiple >= 0` in all three query branches). A read-only item is simply never
-  offered as something to add.
-- `LibertyXref::verify()` — defense-in-depth for any caller that reaches `store()`/`storeXref()`
-  directly rather than through the dropdown (a raw POST, or a package's own bespoke add page):
-  rejects with an error (`This item is read-only and cannot be added to.` /
-  `...cannot be edited.`) for both the `fAddXref` case (checks the target item's `multiple` before
-  allowing the write) and the plain in-place-edit case (checks `$this->mRow['multiple']`, populated
-  whenever `load()` pre-loaded the row being edited — i.e. every `edit_xref.php` save). Doesn't
-  touch `fStepXref` (archive/restore/hard-delete via `stepXref()`) — expunge/history semantics for
-  a read-only item weren't asked for and are a separate decision, not assumed here.
-- `edit_xref.php` — refuses to even render the edit form for a read-only row (redirects back to
-  `getEditUrl()`), not just reject the save — checked right after `loadXref()`, before any
-  `fSaveXref` handling.
+**Negative `multiple` values, added 2026-08-18**: `multiple` is a plain `I2` (signed smallint, no
+`CHECK` constraint), so negative values need no schema change, and (confirmed before adopting) the
+numeric value has exactly one real runtime consumer anywhere in liberty/stock/food/contact —
+`LibertyXref::verify()`'s xorder-auto-increment gate — and no template or PHP anywhere branches on
+`multiple` by truthiness, so negative values can't be misread as `1`-like by any existing code
+path. Two distinct meanings, not a sign+magnitude cardinality scheme — each value below is a flat,
+separate flag:
 
-**Still not built, and deliberately didn't need to be for this**: no per-row Edit/Delete icon
-suppression in whichever item template renders each xref row inside `list_xref.tpl` — a read-only
-item's row would still show an Edit link today, it would just correctly bounce/error if clicked.
-Closing that cosmetic gap needs either a shared per-row check in the item templates themselves or
-the `add_<group>_group.tpl` redesign (`CLAUDE.md`'s 2026-08-18 session log) reaching far enough to
-own row rendering too — neither exists yet. Also not built: no read-only item type exists anywhere
-yet to exercise any of this against a real request (Health's `series` template is still a sketch,
-see `health/MANUAL.md`) — verified by code reading only, not a live round-trip.
+- **`-1` = read-only.** Added for Health package data (device-reported sensor/time-series
+  readings — see `health/MANUAL.md`), where editing genuinely doesn't make sense, unlike every
+  existing consumer (Stock/Contact/Food), whose xref data is all human-curated.
+- **`-2` = mutually exclusive within the same `x_group`.** Added same day for
+  [[project_food_package_scoping]]'s long-standing WT/VOL/SGL gap (`foodcomponent`'s `quantity`
+  group has three different "which unit does this component use" items that should be
+  one-at-a-time, but nothing enforced it). Scoped to the *items actually flagged `-2`*, not the
+  whole group — `PCK`/`REM` stay ordinary `0`/`1` items in the same group unaffected, so this
+  needed no group split (see "Considered and deferred" below for why a split was the first idea
+  and got dropped).
+
+**Enforced as of 2026-08-18, no add-template redesign needed for either flag**:
+- `LibertyXrefType::getAvailableItems()` (the query behind `add_xref.php`'s item-type dropdown,
+  and every other "what items can this content type have" caller) excludes only `multiple = -1` —
+  a `-2` item is a completely normal, still-addable choice, it just has a side effect on store.
+- `LibertyXref::verify()` rejects a write only for `multiple = -1` (both the `fAddXref` case and a
+  plain in-place edit) — `-2` items are freely addable/editable. Doesn't touch `fStepXref`
+  (archive/restore/hard-delete via `stepXref()`) for either flag — expunge/history semantics
+  weren't asked for and are a separate decision, not assumed here.
+- `edit_xref.php` refuses to even render the edit form for a `multiple = -1` row (redirects back
+  to `getEditUrl()`), not just reject the save.
+- `LibertyXref::store()` — the `-2` mechanism's actual point: after a successful store of an item
+  whose own `multiple = -2`, hard-deletes any *other* item in the same `x_group` (respecting the
+  usual dual-guid scoping) that's also flagged `-2`, for that `content_id`. Runs inside the same
+  transaction as the store itself (atomic — a failed eviction rolls back the store too), and on
+  every store of a `-2` item (add or in-place edit), not just `fAddXref`, so it's self-healing
+  against any stale sibling left over from before an item was flagged `-2`. **Hard delete, not
+  `stepXref`'s archive path** — mirrors `stepXref`'s own `expunge=3` case, no history trace kept
+  for the choice that lost out. This was an explicit choice, not a default: Lester's own framing
+  throughout ("the store would delete the other quantity records") used delete specifically: an
+  archive-via-`stepXref` alternative was raised and not taken up.
+
+**Considered and deferred — group-level approach, noted per Lester's request, not built**: the
+first design floated a *group*-level flag instead of an item-level one — split SGL/WT/VOL into
+their own `x_group` (since `quantity` mixes them with non-exclusive `PCK`/`REM`), reusing
+`liberty_xref_group`'s own `multiple` column, which is completely dead (confirmed: zero PHP
+consumers, no package's `schema_inc.php` even sets it on any `INSERT`) — clean, unused space, same
+`-1`-style idiom, at the level where "these items are mutually exclusive" actually describes a
+relationship. Lester's own objection: reluctant to add another tab for one split-out group — noted
+that this is mitigatable (a custom `quantity`-group template can pull a sibling group's rows into
+the same `{jstab}`, since `list_xref.tpl` loads all groups together via one `loadXrefInfo()` call
+regardless of how they're split), but settled on the simpler item-scoped `-2` flag instead, which
+sidesteps the group-mixing problem entirely (exclusivity applies only to items actually flagged
+`-2`, so no split is needed at all). **Worth returning to if a future case needs group-wide
+exclusivity that can't be scoped to specific items** — the dead `liberty_xref_group.multiple`
+column is still there, untouched, for exactly that.
+
+**Still not built**: no per-row Edit/Delete icon suppression in whichever item template renders
+each xref row inside `list_xref.tpl` — a `-1` item's row would still show an Edit link today, it
+would just correctly bounce/error if clicked. Closing that cosmetic gap needs either a shared
+per-row check in the item templates themselves or the `add_<group>_group.tpl` redesign
+(`CLAUDE.md`'s 2026-08-18 session log) reaching far enough to own row rendering too — neither
+exists yet. Also not built: no `-1` or `-2` item exists anywhere yet to exercise any of this
+against a real request (Health's `series` template is still a sketch; Food's SGL/WT/VOL haven't
+been flagged `-2` in `schema_inc.php` yet either) — verified by code reading only, not a live
+round-trip.
 
 **`xref` vs `xkey`/`xkey_ext`**: easy to conflate. `xkey`/`xkey_ext`/`data` hold this row's own
 scalar value(s) — a number, a UUID, a note. `xref` holds a *foreign key* to a different content
