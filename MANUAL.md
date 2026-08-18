@@ -320,24 +320,23 @@ parameter controls what "delete" actually does:
 | `expunge` value | Effect |
 |---|---|
 | *(unset/default)* | Restore — sets `ignore_end_date='on'` |
-| `1` | Soft-close — sets `end_date = now()`. Row stays in the table, moves to the "history" view (`isHistory` in templates checks `end_date IS NOT NULL`). This is what every "Delete" icon in every xref template actually does. |
+| `1` | Soft-close (Archive) — sets `end_date = now()`. Row stays in the table, moves to the "history" view (`isHistory` in templates checks `end_date IS NOT NULL`). Gated behind ordinary update permission. |
 | `2` | Step — closes the current row (`end_date = now()`) *and* opens a new one (`fStepXref`), preserving the old value in history while starting a fresh one. Used for e.g. a rename that should keep the old value visible in history. |
+| `3` | **Real hard delete** — a genuine `DELETE FROM liberty_xref`, no history trace left. Gated behind the stricter expunge permission (`verifyExpungePermission()`), not the update permission the other three use. Added 2026-08-17 — see `project_liberty_hard_delete_xref` memory; all 22 affected item view templates across liberty/stock/food/contact updated in lockstep (Archive/Restore icons under update permission, a separate always-available Delete icon under expunge permission). |
 
-**There is no case that issues a real `DELETE FROM liberty_xref`, anywhere in the class** —
-confirmed by grep across `LibertyXref.php`/`LibertyXrefContent.php` (2026-08-17). Every "Delete"
-in the UI is actually "soft-close to history." For most content this is exactly right (audit
-trail matters); it's the wrong behaviour for a genuine data-entry duplicate (e.g. a component
-accidentally carrying both `WT` and `VOL` type markers after a manual correction added the second
-without removing the first) — see `project_liberty_hard_delete_xref` memory for the open,
-undecided design question (a real `expunge=3` hard-delete case, permission-gated more strictly
-than normal expunge, vs. some other approach) — not built yet.
-
-**Related gap, same root cause**: nothing enforces mutual exclusivity between xref items that are
-conceptually "pick one of these" (e.g. Food's `SGL`/`WT`/`VOL` — a component's meant to declare
-only one). The generic "Add record" flow lets a human add a second, competing marker without any
-prompt to remove the old one. Found live 2026-08-17 (a component ended up with both `WT` and `VOL`
-simultaneously after a manual correction) — not fixed, same open thread as the hard-delete
-question above.
+**Related gap, same root cause, fixed 2026-08-18**: nothing enforced mutual exclusivity between
+xref items that are conceptually "pick one of these" (e.g. Food's `SGL`/`WT`/`VOL` — a component's
+meant to declare only one) — the generic "Add record" flow let a human add a second, competing
+marker without any prompt to remove the old one. Found live 2026-08-17 (a component ended up with
+both `WT` and `VOL` simultaneously after a manual correction), fixed the next day via the
+`multiple = -2` mutually-exclusive convention above — see that section for the mechanism
+(`LibertyXref::store()` hard-deletes the sibling automatically now, same `expunge=3`-style
+`DELETE`, just triggered by the store rather than a manual expunge click). **Two pre-existing
+violations found on desktop's rdmcloud when the flag was actually applied to Food (2026-08-18,
+content_ids 7420 "Tea with Milk" and 7446 "Skimmed Milk", both carrying `WT` and `VOL`
+simultaneously)** — not auto-resolved, the new mechanism only fires on a future store of one of
+the three, not retroactively; left for Lester to pick a value and re-save when convenient, flagged
+here rather than silently picked for him.
 
 ## Known by-reference footguns
 
