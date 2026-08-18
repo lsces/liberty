@@ -132,3 +132,58 @@ across packages (confirmed `food`/`stock`'s `lookup_component.php` are byte-iden
 `expunge`'s three cases and the missing fourth (real hard-delete), the double-`store()` version
 bug. This file trimmed down to session-log-only content per the same split already validated on
 `mapper` (`CLAUDE.md`=history, `MANUAL.md`=current-state reference).
+
+## 2026-08-18 — read-only xref items: `multiple < 0` convention adopted
+
+Came out of scoping the `health` package (see `health/CLAUDE.md`/`MANUAL.md`) — device-reported
+sensor/time-series data has no business being user-editable, and nothing in the xref system
+currently has a concept of "this item is read-only." Decided to put it straight on
+`liberty_xref_item` rather than build it package-local first (the precedent the JSON templates set
+in the 2026-08-17 review) — reasoning: read-only-ness is about the generic *dispatch* path itself
+(`list_xref.tpl`'s per-row Edit/Delete icons, `edit_xref.php`'s write path), which lives in
+liberty, not in any package; a package-local workaround would mean duplicating that dispatch code,
+exactly what the shared mechanism exists to avoid.
+
+**Encoding**: reuse `multiple`'s sign rather than add a column — `multiple < 0` = read-only,
+`abs(multiple)` recovers the existing cardinality meaning (`-1`=single, `-2`=multiple, reserved).
+Checked the live codebase before adopting this (not assumed safe): `multiple`'s numeric value has
+exactly one real consumer anywhere across liberty/stock/food/contact —
+`LibertyXref::verify()`'s `$next > 0` xorder-auto-increment gate — and no template or PHP code
+anywhere branches on `multiple` by truthiness/equality, so a negative value can't be silently
+misread as `1`-like. Column is `I2` with no `CHECK` constraint, so this needed zero schema
+migration. Full writeup (including what's *not* yet enforced — item-picker exclusion, server-side
+write refusal, per-row icon suppression, none of which are built) is in `MANUAL.md`'s Data model
+section now, not just here — this is a settled contract, not an open question.
+
+## 2026-08-18 (same session) — group-level add dispatch, captured brainstorm, not built
+
+Lester's own framing, worth keeping verbatim in shape: the existing group-level "Add record" link
+(`list_xref.tpl`, see `MANUAL.md`'s "Add and edit" section) is one flat link to `add_xref.php`'s
+generic item picker for the whole group. Idea, prompted by thinking through where the read-only
+flag should actually suppress a button: turn this into a real per-group template
+(`add_<group>_group.tpl`, mirroring the per-item `getXrefRecordTemplate()`/
+`getXrefEditTemplate()`override convention Stock/Food/Contact already use) with three behaviours,
+not one:
+
+1. **`add_generic_group`** (the fallback, what today's flat `add_xref.php` link effectively is) —
+   becomes a dropdown selector over the group's *available* item types (mirrors
+   `LibertyXrefType::getAvailableItems()`, already used elsewhere for exactly this kind of
+   per-group item-type enumeration) rather than a single undifferentiated form.
+2. **Per-item-type dispatch to a package's own bespoke add page** for anything that's really an
+   xref-link (Food's `SUP`, Stock's `#SUP`) — the button morphs into "Add Supplier" and goes
+   straight to `add_supplier.php`/`add_component.php`/etc, the already-established
+   bespoke-add-page pattern (`MANUAL.md`'s "Add and edit" table). **Doesn't reopen the settled
+   2026-08-17 decision** not to teach `add_xref.php` itself about `xref` targets — the dispatch
+   lives at the group-template layer, one level up, choosing *which* add mechanism to send the
+   user to (generic vs package-specific), not trying to make the generic one handle every case
+   itself.
+3. **Read-only awareness** — an item (or a whole group, if every item in it is read-only) flagged
+   via the `multiple < 0` convention above simply doesn't get an Add affordance offered at all,
+   in either of the two paths above.
+
+Explicitly not scoped or built this session — Lester's own words, "will probably link in with my
+next nighttime brainstorm." Captured here so it isn't lost, not because it's the next thing to
+build. Whenever it is picked up: `add_person.php`/`add_business.php` (Contact's page-per-role
+precedent, already noted in `food/CLAUDE.md`'s framework-notes section) is worth checking again as
+a second real-world precedent for "same content type, different add experience depending on what's
+being added."

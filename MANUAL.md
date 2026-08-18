@@ -18,7 +18,8 @@ Three tables:
   case, see "Type-marker convention" below) + `template` (optional — see "Group templates" below).
 - **`liberty_xref_item`** — a field definition within a group. `item` (short code, e.g. `SUP`,
   `WT`, `CAL`) + `x_group` + `content_type_guid` + `cross_ref_title` (field label) + `multiple`
-  (`0` = at most one row per content_id, `1` = many) + `template` (which item template to render
+  (`0` = at most one row per content_id, `1` = many; **negative = read-only**, see below) +
+  `template` (which item template to render
   — see "Item templates" below) + `cross_ref_href` (link prefix, used by some templates) + `data`
   (rarely used — a default/hint, not the row's actual value).
 - **`liberty_xref`** — the actual data, one row per (content_id, item) pair (or several if
@@ -28,6 +29,26 @@ Three tables:
   makes an xref a real link to another piece of content, not just a text field), `xorder`
   (position within a `multiple=1` group), `entry_date`/`last_update_date`/`start_date`/`end_date`
   (see below).
+
+**Read-only items (`multiple < 0`), added 2026-08-18**: `multiple` is a plain `I2` (signed
+smallint, no `CHECK` constraint), so negative values need no schema change. Convention: `-1` =
+read-only + single-value (mirrors `0`), `-2` reserved for read-only + multiple-value (mirrors `1`)
+for whenever that's needed — recover cardinality via `abs(multiple)`, read-only-ness via
+`multiple < 0`, independently. Added for Health package data (device-reported sensor/time-series
+readings — see `health/MANUAL.md`), where editing genuinely doesn't make sense, unlike every
+existing consumer (Stock/Contact/Food), whose xref data is all human-curated. **Confirmed safe
+against the live codebase before adopting**: the numeric value of `multiple` has exactly one real
+runtime consumer anywhere in liberty/stock/food/contact — `LibertyXref::verify()`'s `$next > 0`
+gate (auto-increments `xorder` on `fAddXref`) — which a negative value simply falls through as
+false, i.e. behaves like `multiple=0` there (correct, since a read-only item should never hit the
+interactive add-a-row path at all). No template or other PHP anywhere branches on `multiple` by
+truthiness or equality, so `-1`/`-2` can't be misread as `1`-like by any existing code path.
+**Not yet enforced anywhere** — this is the column contract only. Real enforcement still needed
+wherever it eventually matters: `add_xref.php`'s item-picker dropdown should exclude
+`multiple < 0` items, `edit_xref.php`'s save path should refuse writes to one server-side (not
+just hide the UI), and whichever item template renders each row needs to suppress its own
+Edit/Delete affordance when the item is read-only. None of this is built — no read-only item type
+exists yet to exercise it (Health's `series` template is still a sketch, see `health/MANUAL.md`).
 
 **`xref` vs `xkey`/`xkey_ext`**: easy to conflate. `xkey`/`xkey_ext`/`data` hold this row's own
 scalar value(s) — a number, a UUID, a note. `xref` holds a *foreign key* to a different content
@@ -199,6 +220,13 @@ top (e.g. a component's pack size) — the base behaviour isn't lost by overridi
 
 ## Add and edit — the real gap
 
+- **`list_xref.tpl`'s "Add record" link** (`{smartlink ... ifile="add_xref.php" ... group=
+  $xrefGroup->mSortOrder}`, gated on `$allow_add && $gContent->hasUpdatePermission() &&
+  !$isHistory`) — one link per *group* (tab), not per item, sending the user to `add_xref.php`'s
+  flat item picker for that whole group. This is the only add entry point the generic display
+  offers today — see the next bullet for what that destination can't actually do, and the
+  "Group-level add dispatch" idea in `CLAUDE.md`'s session log for a captured-but-not-built
+  redesign of this link.
 - **`edit_xref.php`** (generic) — edits *one existing row*, addressed by `xref_id`. Handles save
   (`fSaveXref` → `storeXref($_REQUEST)`), cancel, and expunge (see below). Renders via
   `getXrefEditTemplate()`.
