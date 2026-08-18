@@ -58,6 +58,19 @@ if( !empty( $_REQUEST['fSaveXref'] ) ) {
 		$jsonFields = array_filter( $jsonFields, fn( $v ) => $v !== '' && $v !== 0 && $v !== 0.0 );
 		$_REQUEST['edit'] = json_encode( (object)$jsonFields );
 	}
+	if( isset( $_REQUEST['sod_salt'] ) || isset( $_REQUEST['sod_sodium'] ) ) {
+		// Food-specific: SOD's edit form (food/templates/xref/foodcomponent/edit_sod_item.tpl)
+		// lets a human enter either the UK-label salt figure or sodium directly — salt takes
+		// priority when given (sodium_mg = salt_g / 2.5 * 1000, the standard conversion).
+		// Only triggers when one of these fields is actually present, so it can't affect any
+		// other item type's save.
+		$salt = trim( (string)( $_REQUEST['sod_salt'] ?? '' ) );
+		if( $salt !== '' && is_numeric( $salt ) ) {
+			$_REQUEST['xkey'] = (string)(int)round( (float)$salt / 2.5 * 1000 );
+		} else {
+			$_REQUEST['xkey'] = trim( (string)( $_REQUEST['sod_sodium'] ?? '' ) );
+		}
+	}
 	if( $gContent->storeXref( $_REQUEST ) ) {
 		header( 'Location: '.$gContent->getEditUrl() );
 		die;
