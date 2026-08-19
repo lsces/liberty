@@ -182,8 +182,7 @@ $tables = [
 	process_status C(64),
 	log_message XL,
 	processor C(250),
-	processor_parameters XL,
-	server C(250)
+	processor_parameters XL
 ",
 	//	CONSTRAINT ' , CONSTRAINT `liberty_process_queue` FOREIGN KEY (`content_id`) REFERENCES `".BIT_DB_PREFIX."liberty_content`( `content_id` ) '
 
