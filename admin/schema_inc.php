@@ -332,7 +332,7 @@ $gBitInstaller->registerPreferences( LIBERTY_PKG_NAME, [
 	[ LIBERTY_PKG_NAME, 'liberty_auto_display_attachment_thumbs', 'small' ],
 	// enable action logging by default
 	[ LIBERTY_PKG_NAME, 'liberty_action_log', 'y' ],
-	[ LIBERTY_PKG_NAME, 'liberty_originalize_file_names', 'y' ],
+	[ LIBERTY_PKG_NAME, 'liberty_originalize_file_names', 'n' ],
 //	array(LIBERTY_PKG_NAME, 'liberty_attachment_link_format', 'wiki') not needed anymore since we use js in the edit page now (depends on format of content)
 //	array(LIBERTY_PKG_NAME, 'liberty_attachment_style', 'standard'),
 	// The default for new installs is htmlpurifier old stays simple
