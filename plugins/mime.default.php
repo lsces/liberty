@@ -55,7 +55,7 @@ $pluginParams = [
 	// This needs to be specified by plugins that are included by other plugins
 	'file_name'          => 'mime.default.php',
 	// Set this to true if you want the plugin active right after installation
-	'auto_activate'      => true,
+	'auto_activate'      => false,
 	// Help page on bitweaver.org
 	//'help_page'          => 'MimeHelpPage',
 
