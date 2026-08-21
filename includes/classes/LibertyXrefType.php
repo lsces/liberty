@@ -218,6 +218,15 @@ class LibertyXrefType {
 	 * should override loadXrefInfo() in their class, call the parent, then walk
 	 * $this->mXrefInfo->mGroups and mutate as needed.
 	 *
+	 * Rows within a group are ordered by liberty_xref_item.sort_order first (added
+	 * 2026-08-21 — previously the query ignored that column entirely and rows fell
+	 * back to alphabetical-by-item-code, which is why an item-level sort_order was
+	 * effectively dead everywhere despite the column existing and several packages
+	 * already populating it). Ties (the common case — most items still default to
+	 * sort_order=0) fall back to item code, then xorder, matching prior behaviour
+	 * exactly, so this is backward compatible for every group that hasn't set it.
+	 *
+
 	 * @param int $contentId  liberty_content.content_id to load rows for
 	 * @return LibertyXrefContent
 	 */
@@ -273,7 +282,7 @@ class LibertyXrefType {
 				     ON purm.`user_id` = $userId AND purm.`role_id` = s.`role_id`
 				 WHERE x.`content_id` = ?
 				   AND (s.`role_id` IN($rolePlaceholders) OR purm.`user_id` = ?)
-				 ORDER BY x.`item`, x.`xorder`",
+				 ORDER BY s.`sort_order`, x.`item`, x.`xorder`",
 				array_merge( [ $db->NOW(), $contentId ], $roles, [ $userId ] )
 			);
 			if( $rowResult ) {
