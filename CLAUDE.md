@@ -245,3 +245,30 @@ for if group-wide (not item-scoped) exclusivity is ever needed.
 yet, so this mechanism has zero live effect until that happens. Next step whenever picked up:
 flag those three, hand-push via isql per Food's existing pre-production schema workflow, verify a
 real round-trip on rdmcloud.
+
+## 2026-08-22 — `format.simpletext.php` never active on any site, silently discarded notes since build
+
+Found via a Food report ("Notes field isn't saving"), traced live rather than assumed (faked-session
+save on a real `FoodComponent`, checked `liberty_content.data` before/after via isql). Root cause:
+`format.simpletext.php`'s `$pluginParams` never set `'auto_activate' => true`, unlike every other
+default plugin. `LibertySystem::loadActivePlugins()` — the normal per-request loader — only
+`include_once`s plugin files already marked active in `kernel_config`; it doesn't scan the plugins
+directory itself (only `liberty/admin/plugins.php`'s `scanAllPlugins()` does, an admin-only page
+nobody had reason to visit). So the plugin never even got loaded, `getPluginFunction('simpletext',
+'verify_function')` silently returned `null` on every save, and `LibertyContent::verify()`'s
+"someone deleted the data entirely" fallback quietly absorbed every typed note instead — no error
+anywhere. `SELECT COUNT(*) ... WHERE data IS NOT NULL` = 0 confirmed this had never worked once
+since Food's Notes field was built (2026-08-16), not a regression.
+
+**Fix**: `'auto_activate' => true` added (`liberty` commit `f6e2773`) — self-corrects any future
+fresh install or `scanAllPlugins()` run. Already-live desktop + srv9 additionally needed a direct
+one-row `kernel_config` unblock (`liberty_plugin_status_simpletext = 'y'`), hand-pushed via isql
+and live-verified; srv10 picked up both the code and an already-active config row as a side effect
+of routine `liberty`/DB sync later the same session — confirmed active, not separately hand-pushed.
+Full writeup in `project_liberty_simpletext_plugin_bug` memory.
+
+Worth checking any *other* liberty format/data plugin this stack relies on for the same missing-
+`auto_activate` gap before assuming a "registered" plugin is actually live — same shape of bug as
+the sitemap XML-escape issue and the `auth_config.php` permission-decay incident: structurally
+correct code, silently no-opped by an inactive dependency, nothing surfaces until a human tries to
+use the feature for real.
