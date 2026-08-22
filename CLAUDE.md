@@ -272,3 +272,30 @@ Worth checking any *other* liberty format/data plugin this stack relies on for t
 the sitemap XML-escape issue and the `auth_config.php` permission-decay incident: structurally
 correct code, silently no-opped by an inactive dependency, nothing surfaces until a human tries to
 use the feature for real.
+
+## 2026-08-22 — generic `getDayCellHtml()` calendar-grid hook added
+
+Grew out of a Health/Food calendar-front-page design conversation (see `health/CLAUDE.md`'s
+same-dated entry). `calendar` package's month/week/day grid turned out to already be genuine
+shared infrastructure — content-type filtering, date-range math — but only ever rendered a plain
+title/link per item, no way for a package to supply a richer per-day summary tile.
+
+**Added to `LibertyContent::getContentList()`** (not `calendar` — this dispatch is shared by every
+content-listing consumer, calendar included): right next to the existing `title`/`display_link`/
+`display_url` per-content-type dispatch, an optional `getDayCellHtml()` static method check —
+present → call it, stash result as `$aux['cell_html']`; absent → nothing changes for that type.
+Full spec in this file's own `MANUAL.md`, new section "Optional per-content-type calendar/grid
+rendering". `calendar/templates/calendar.tpl`'s three item-rendering blocks updated to prefer
+`cell_html` when present, falling back to the original markup otherwise.
+
+**Found and fixed two unrelated live bugs while wiring the first real implementation**
+(`HealthDay::getDayCellHtml()`) — neither anticipated, both real gaps in Health's own install, not
+anything to do with this new mechanism itself: `p_health_*` permissions were registered as types
+but never granted to any role (`users_role_permissions` had zero rows for any of them — nothing
+gated on `p_health_view` could ever have worked, for anyone), and `HealthDay` rows never had
+`event_time` set (so no `HealthDay` could ever appear in *any* date-ranged listing, calendar or
+otherwise). Both fixed, see `health/CLAUDE.md` for the full detail and the isql commands used.
+
+Also fixed in passing, found live-testing the base `calendar` page before any of the above:
+`calendar/includes/classes/Calendar.php`'s constructor was still the old PHP4 same-name-as-class
+style (`function Calendar()`), never actually invoked under PHP 8 — renamed to `__construct()`.

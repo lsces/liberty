@@ -413,6 +413,25 @@ memory for the full writeup (found in Food's importer, general risk for any pack
 call `->store()` more than once on one loaded object per request if either call might have a real
 field change — merge into one `$pParamHash` and one call, or reload the object between calls.
 
+## Optional per-content-type calendar/grid rendering — `getDayCellHtml()`
+
+`LibertyContent::getContentList()` — the single generic content-listing method used by search,
+Calendar, and anywhere else a list of mixed content types gets built — already dispatches per
+content type for `title`/`display_link`/`display_url` (calls that type's own static
+`getTitleFromHash()`/`getDisplayLinkFromHash()`/`getDisplayUrlFromHash()`). Added 2026-08-22,
+same spot: if the content type's handler class also defines a static `getDayCellHtml( array
+$pHash ): string`, it gets called and the result stashed as `$aux['cell_html']`. Purely additive —
+a content type that doesn't implement it is completely unaffected, `cell_html` just never gets set.
+
+Built for Calendar specifically (`calendar/templates/calendar.tpl`'s three "Cell Content" blocks —
+day/weeklist/month views — each check `{if $item.cell_html}{$item.cell_html}{else}` before falling
+back to the plain title/link markup every type got before), but the hook itself lives here, not in
+`calendar`, since `getContentList()` is what every consumer shares — any future content-list
+consumer gets the same override capability for free. First real implementation:
+`Health\HealthDay::getDayCellHtml()` (health package) — see its own `CLAUDE.md`/`MANUAL.md` for
+what it actually renders and the two real bugs (missing role-permission grants, missing
+`event_time`) found live-testing it.
+
 ## Package registration
 
 Every package needs its own `includes/bit_setup_inc.php` — see this file's own `CLAUDE.md` for the

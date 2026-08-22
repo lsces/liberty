@@ -2909,6 +2909,18 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 							// $aux['display_url']  = $type['content_object']->getDisplayUrl( null, $aux );
 							$aux['display_url'] = BIT_ROOT_URL."index.php?content_id=".$aux['content_id'];
 						}
+
+						// Optional per-content-type override for calendar-style day-grid
+						// rendering: a content type can supply a whole rendered summary
+						// (e.g. Health's WT/BP/PULSE day tile) instead of the plain
+						// title/link every other consumer of getContentList() still gets.
+						// Purely additive — nothing is set here unless a type opts in by
+						// implementing the method, so every existing caller (search,
+						// wiki lists, calendar itself for types that don't implement it)
+						// is unaffected.
+						if( method_exists( $type['handler_class'], 'getDayCellHtml' ) ) {
+							$aux['cell_html'] = $type['handler_class']::getDayCellHtml( $aux );
+						}
 					}
 
 					if( !empty( $pListHash['thumbnail_size'] ) ) {
