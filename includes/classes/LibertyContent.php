@@ -2902,12 +2902,18 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 							$aux['title']        = $type['handler_class']::getTitleFromHash( $aux );
 							$aux['display_link'] = $type['handler_class']::getDisplayLinkFromHash( $aux, $aux['title'] );
 							/**
-							 * @TODO standardize getDisplayUrl params
-							 * nice try, but you can't do this because individual classes have gone off the reservation changing the params they accept
-							 * for distributed packages we need to enforce that method overrides all take the same basic params.
+							 * The *instance* getDisplayUrl($pContentId, $pMixed) can't be called
+							 * generically here — individual classes have gone off the reservation
+							 * changing the params they accept, so a distributed package could break
+							 * on a signature nobody enforced (@TODO standardize that, still true).
+							 * getDisplayUrlFromHash($aux) is a different, narrower contract every
+							 * class already follows (just the one row hash, same as
+							 * getTitleFromHash()/getDisplayLinkFromHash() right above) — used safely
+							 * for BitUser a few lines up, and LibertyContent's own base
+							 * implementation IS this exact index.php?content_id= fallback, so any
+							 * class that hasn't overridden it behaves identically to before.
 							 **/
-							// $aux['display_url']  = $type['content_object']->getDisplayUrl( null, $aux );
-							$aux['display_url'] = BIT_ROOT_URL."index.php?content_id=".$aux['content_id'];
+							$aux['display_url'] = $type['handler_class']::getDisplayUrlFromHash( $aux );
 						}
 
 						// Optional per-content-type override for calendar-style day-grid
