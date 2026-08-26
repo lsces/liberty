@@ -2482,6 +2482,16 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			'ip',
 			'last_modified',
 			'created',
+			// Missing entirely until 2026-08-26 - any caller passing an event_time-based
+			// sort_mode (Calendar::getList() hardcodes 'event_time_asc' for every day/
+			// week/month/weeklist view) silently fell through convertSortMode()'s
+			// whitelist check to its last_modified_desc default instead, so calendar
+			// day-cell item order was never actually chronological - it only looked
+			// right when a day's records also happened to have been last-edited in
+			// event_time order. Confirmed against real data: last_modified DESC exactly
+			// matched the reversed render order for an unfixed day, event_time ASC
+			// exactly matched the correct order.
+			'event_time',
 		];
 	}
 
