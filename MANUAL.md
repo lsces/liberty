@@ -84,7 +84,7 @@ separate flag:
   every store of a `-2` item (add or in-place edit), not just `fAddXref`, so it's self-healing
   against any stale sibling left over from before an item was flagged `-2`. **Hard delete, not
   `stepXref`'s archive path** — mirrors `stepXref`'s own `expunge=3` case, no history trace kept
-  for the choice that lost out. This was an explicit choice, not a default: Lester's own framing
+  for the choice that lost out. This was an explicit choice, not a default: the author's own framing
   throughout ("the store would delete the other quantity records") used delete specifically: an
   archive-via-`stepXref` alternative was raised and not taken up.
 
@@ -94,13 +94,13 @@ SGL/WT/VOL into their own `x_group` (since `quantity` mixes them with non-exclus
 reusing `liberty_xref_group`'s own `multiple` column, which is completely dead (confirmed: zero
 PHP consumers, no package's `schema_inc.php` even sets it on any `INSERT`) — clean, unused space,
 same `-1`-style idiom, at the level where "these items are mutually exclusive" actually describes
-a relationship. Lester's own objection: reluctant to add another tab for one split-out group —
+a relationship. the author's own objection: reluctant to add another tab for one split-out group —
 noted that this is mitigatable (a custom `quantity`-group template can pull a sibling group's rows
 into the same `{jstab}`, since `list_xref.tpl` loads all groups together via one `loadXrefInfo()`
 call regardless of how they're split), but settled on the simpler item-scoped `-2` flag instead,
 which sidesteps the group-mixing problem entirely (exclusivity applies only to items actually
 flagged `-2`, so no split is needed at all). **Revisited and confirmed 2026-08-18 (later)**:
-Lester's own assessment, having now seen `-2` actually working across a real multi-item case
+the author's own assessment, having now seen `-2` actually working across a real multi-item case
 (Stock's own BOM/multi-item groups already get handled with ad-hoc per-package template tricks
 rather than a generic mechanism) — `liberty_xref_group.multiple` probably isn't needed at all, not
 just deferred. Left dead deliberately, not removed, in case a genuine group-wide (not item-scoped)
@@ -395,7 +395,7 @@ both `WT` and `VOL` simultaneously after a manual correction), fixed the next da
 
 **Live-verified 2026-08-18 against the two pre-existing violations this surfaced** (content_ids
 7420 "Tea with Milk", 7446 "Skimmed Milk", both had carried `WT` and `VOL` simultaneously since
-before this mechanism existed) — Lester resolved both through the real UI, not isql: resaving
+before this mechanism existed) — the author resolved both through the real UI, not isql: resaving
 `VOL` on Tea correctly auto-deleted the sibling `WT` row via the new mechanism, no manual step
 needed. Milk needed one extra manual step — using the `expunge=3` hard-delete ("dustbin") icon on
 a leftover history entry — confirming that icon (built 2026-08-17, see the `expunge` table above)

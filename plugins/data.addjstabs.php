@@ -19,7 +19,7 @@ use Bitweaver\KernelTools;
  * | -> see http://phpdocu.sourceforge.net/
  * +----------------------------------------------------------------------+
  * | Author: StarRider <starrrider@users.sourceforge.net>
- * | port to jstabs <lester@lsces.co.uk>
+ * | port to jstabs <name@example.com>
  * +----------------------------------------------------------------------+
  */
 
