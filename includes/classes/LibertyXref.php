@@ -208,11 +208,24 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 				$next = 0;
 			}
 			$pParamHash['xref_store']['xorder'] = (int)$next;
-		} elseif( !isset( $pParamHash['fStepXref'] ) && (int)( $this->mRow['multiple'] ?? 0 ) === -1 ) {
+		} elseif( !isset( $pParamHash['fStepXref'] ) && (int)( $this->mRow['multiple'] ?? 0 ) === -1
+			&& ( !isset( $pParamHash['expunge'] ) || isset( $pParamHash['xkey'] ) || isset( $pParamHash['xkey_ext'] ) || isset( $pParamHash['edit'] ) ) ) {
 			// Editing an existing row in place (not adding, not audit-trail stepping) whose
 			// item is flagged read-only — $this->mRow is only populated when load() has run,
 			// i.e. LibertyContent::storeXref() pre-loaded this row for an edit. multiple = -2
 			// items are freely editable in place, only -1 is rejected.
+			//
+			// The read-only flag is specifically about the stored VALUE (xkey/xkey_ext/data) -
+			// stepXref()'s expunge family (1=archive, 2=step, default=restore) never touches
+			// those, only end_date/lifecycle state, so a *pure* expunge call (isset(expunge),
+			// none of xkey/xkey_ext/edit present) is exempted, the same way fStepXref already
+			// exempts case 2 specifically. Still rejected if expunge is set but xkey/xkey_ext/
+			// edit are ALSO present - edit_xref.php's own expunge branch passes the whole
+			// $_REQUEST straight into stepXref(), so without this a crafted request could sneak
+			// a real value edit through under an expunge=1 archive call on a read-only item.
+			// Confirmed 2026-08-28: without any of this, archiving a read-only item's row (every
+			// health xref item is multiple=-1) silently failed verify() and end_date never got
+			// set, with no error surfaced to the caller.
 			$this->mErrors[] = KernelTools::tra( 'This item is read-only and cannot be edited.' );
 		}
 
