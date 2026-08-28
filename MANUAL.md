@@ -372,6 +372,18 @@ parameter controls what "delete" actually does:
 | `2` | Step — closes the current row (`end_date = now()`) *and* opens a new one (`fStepXref`), preserving the old value in history while starting a fresh one. Used for e.g. a rename that should keep the old value visible in history. |
 | `3` | **Real hard delete** — a genuine `DELETE FROM liberty_xref`, no history trace left. Gated behind the stricter expunge permission (`verifyExpungePermission()`), not the update permission the other three use. Added 2026-08-17 — see `project_liberty_hard_delete_xref` memory; all 22 affected item view templates across liberty/stock/food/contact updated in lockstep (Archive/Restore icons under update permission, a separate always-available Delete icon under expunge permission). |
 
+**`multiple=-1` (read-only) items could never actually be archived/restored until fixed
+2026-08-28.** `LibertyXref::verify()`'s read-only rejection only ever exempted `fStepXref`
+(`expunge=2`'s own flag) — `expunge=1` (archive) and the default (restore) case both fall through
+to the same `store()`/`verify()` call as a normal value edit, so the read-only guard blocked the
+*entire* write, `end_date` included, with no error surfaced anywhere (`stepXref()`'s return value
+wasn't even checked by its caller). Every Health xref item is `multiple=-1`, so this silently
+broke exactly the case `-1` was added for. Fix is narrow: `verify()` now also exempts a call where
+`expunge` is set **and** none of `xkey`/`xkey_ext`/`edit` are present — a genuinely pure lifecycle
+op. Not looser than that, because `edit_xref.php`'s own `expunge` branch passes the whole
+`$_REQUEST` into `stepXref()`, so a blanket "any expunge call" exemption would let a crafted
+request sneak a real value edit through the read-only guard on a `-1` item.
+
 **Related gap, same root cause, fixed 2026-08-18**: nothing enforced mutual exclusivity between
 xref items that are conceptually "pick one of these" (e.g. Food's `SGL`/`WT`/`VOL` — a component's
 meant to declare only one) — the generic "Add record" flow let a human add a second, competing
