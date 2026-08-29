@@ -131,6 +131,39 @@ class LibertyXrefType {
 	}
 
 	/**
+	 * Return the xref_id actually stored for each of this content item's own
+	 * type-marker rows, keyed by item code — the "what's actually set" counterpart
+	 * to getTypeMarkers() above (which returns what's *possible*, from schema
+	 * metadata only, not what's stored for any particular content item).
+	 *
+	 * Type-marker items live in a sort_order=0 group, which loadContent() only
+	 * loads groups with sort_order > 0 for — so they never appear in a loaded
+	 * LibertyXrefContent (mXrefInfo), by design, not an omission. Callers
+	 * managing a content item's own type markers (e.g. Contact's P01/P02/
+	 * B01-B04 checkboxes) need this instead of reading mXrefInfo, and should use
+	 * this rather than querying `liberty_xref` directly.
+	 *
+	 * @param  int $pContentId
+	 * @return array<string,int>  item code => xref_id
+	 */
+	public function getTypeMarkerXrefs( int $pContentId ): array {
+		global $gBitSystem;
+		$result = $gBitSystem->mDb->query(
+			"SELECT x.`item`, x.`xref_id`
+			 FROM `".BIT_DB_PREFIX."liberty_xref` x
+			 JOIN `".BIT_DB_PREFIX."liberty_xref_item` i ON i.`item` = x.`item` AND i.`content_type_guid` = '$this->contentTypeGuid'
+			 JOIN `".BIT_DB_PREFIX."liberty_xref_group` g ON g.`x_group` = i.`x_group` AND g.`content_type_guid` = '$this->contentTypeGuid'
+			 WHERE x.`content_id` = ? AND g.`sort_order` = 0",
+			[ $pContentId ]
+		);
+		$ret = [];
+		while( $row = $result->fetchRow() ) {
+			$ret[$row['item']] = (int)$row['xref_id'];
+		}
+		return $ret;
+	}
+
+	/**
 	 * Return available item slots for the add-xref type selector.
 	 *
 	 * Three modes controlled by the arguments:

@@ -45,4 +45,27 @@ class LibertyXrefContent {
 		}
 		return $ret;
 	}
+
+	/**
+	 * Every loaded xref_id keyed by its item code — scanning already-loaded
+	 * groups, no fresh query, same spirit as findByItem() but for callers that
+	 * need to see the whole set at once (e.g. diffing a caller-submitted item
+	 * list against what's currently stored) rather than one item at a time.
+	 *
+	 * Single-cardinality assumption: for a multiple=1 item (several rows can
+	 * share one item code) only the last-loaded row's xref_id survives here —
+	 * use findByItem() instead for those, this is for type-marker-style
+	 * single-value item sets.
+	 *
+	 * @return array<string,int>  item code => xref_id
+	 */
+	public function allItems(): array {
+		$ret = [];
+		foreach( $this->mGroups as $group ) {
+			foreach( $group->mXrefs as $xref ) {
+				$ret[$xref['item']] = (int)$xref['xref_id'];
+			}
+		}
+		return $ret;
+	}
 }
