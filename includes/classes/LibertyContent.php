@@ -2119,6 +2119,57 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Insert a new xref row for one timestamped reading, unless a row already
+	 * exists for this exact content_id + item + start_date — the "safe to
+	 * re-run against an overlapping/refreshed import" dedupe check, found
+	 * hand-rolled identically (differing only by item code and value fields)
+	 * across 14+ of health's own healthStoreXxx() import functions
+	 * (health/import/Import*.php). Computes its own xorder (next in sequence
+	 * for this content_id+item) rather than relying on LibertyXref's own
+	 * fAddXref auto-increment path, which a multiple=-1 (read-only) item — as
+	 * most reading types are — rejects outright.
+	 *
+	 * No content_type_guid scoping (unlike lookupXrefByItem()): content_id
+	 * already scopes to one specific content item, which only ever has its own
+	 * package's items on it, so there's no cross-package item-code collision
+	 * risk here the way there is for a lookup keyed by item code alone.
+	 *
+	 * @param  int    $pContentId
+	 * @param  string $pItem       xref item code
+	 * @param  int    $pStartDate  unix timestamp of the reading (UTC)
+	 * @param  array  $pValues     xkey/xkey_ext/data('edit')/etc. — anything
+	 *                             LibertyXref::store()'s own $pParamHash
+	 *                             accepts, other than content_id/item/xorder/
+	 *                             start_date (set here)
+	 * @return bool  true if a new row was inserted, false if one already
+	 *               existed for this timestamp (skipped)
+	 */
+	public static function insertXrefReadingIfNew( int $pContentId, string $pItem, int $pStartDate, array $pValues ): bool {
+		global $gBitDb;
+		$startDateSql = gmdate( 'Y-m-d H:i:s', $pStartDate );
+		$existing = $gBitDb->getOne(
+			"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` = ? AND `start_date` = ?",
+			[ $pContentId, $pItem, $startDateSql ]
+		);
+		if( $existing ) {
+			return false;
+		}
+		$nextXorder = (int)$gBitDb->getOne(
+			"SELECT COALESCE( MAX(`xorder`) + 1, 0 ) FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` = ?",
+			[ $pContentId, $pItem ]
+		);
+		$xrefHash = array_merge( $pValues, [
+			'content_id' => $pContentId,
+			'item'       => $pItem,
+			'xorder'     => $nextXorder,
+			'start_date' => $pStartDate,
+		] );
+		$xref = new LibertyXref();
+		$xref->store( $xrefHash );
+		return true;
+	}
+
+	/**
 	 * Count this content item's "real" xref rows — excluding type markers (any
 	 * item whose group has sort_order=0), not by item-code prefix. A prefix-based
 	 * exclusion silently breaks the moment items get renamed (found live: contact's
