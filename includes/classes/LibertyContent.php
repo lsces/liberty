@@ -4242,6 +4242,40 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Upsert one xref item's value(s) for this content item — the "does a live
+	 * row for this item already exist? update it in place; otherwise create
+	 * one" shape that keeps recurring per-package (found hand-rolled twice in
+	 * contact's own Contact::store() alone: the NAME item's single-row lookup,
+	 * and, per-item inside, the P01/P02/B01+ type-tag diffing loop's own add
+	 * case). Looks up the existing row via lookupXrefByItem(); everything else
+	 * is delegated straight to storeXref().
+	 *
+	 * Only handles the single-item add-or-update half — a *set* of items
+	 * (add some, remove others, per a caller-supplied "wanted" list, as the
+	 * type-tag checkboxes need) still needs its own diff loop against
+	 * getTypeMarkerXrefs() or similar; this isn't a replacement for that,
+	 * just the one-item primitive it (and simpler single-value cases) can
+	 * both build on.
+	 *
+	 * @param int    $pContentId
+	 * @param string $pItem     xref item code
+	 * @param array  $pValues   xkey/xkey_ext/data('edit')/etc. — anything
+	 *                          storeXref()'s own $pParamHash accepts, other
+	 *                          than content_id/item/xref_id/fAddXref (set here)
+	 * @return bool  true on success
+	 */
+	public function upsertXref( int $pContentId, string $pItem, array $pValues ): bool {
+		$existing = self::lookupXrefByItem( $pContentId, $pItem, $this->mContentTypeGuid, $this->mPackageGuid );
+		$xrefHash = array_merge( $pValues, [ 'content_id' => $pContentId, 'item' => $pItem ] );
+		if ( $existing ) {
+			$xrefHash['xref_id'] = $existing['xref_id'];
+		} else {
+			$xrefHash['fAddXref'] = 1;
+		}
+		return $this->storeXref( $xrefHash );
+	}
+
+	/**
 	 * Write an xref row using the audit-trail stepping pattern.
 	 *
 	 * Delegates to LibertyXref::stepXref().  The expunge value in $pParamHash
