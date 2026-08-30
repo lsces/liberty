@@ -2127,25 +2127,40 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
-	 * Return one content item's first live xref row for a specific item code -
-	 * "one content_id, one item, give me the row" (xref_id/xkey/xkey_ext/data),
-	 * the gap between lookupXrefByTemplate() (one item by template, not code)
-	 * and lookupXrefValues() (one item's xkey, across many content_ids). Content-
-	 * type-scoped per [[feedback_liberty_xref_item_collision]] - item codes are
-	 * reused with different meaning by different content classes.
+	 * Return one content item's first live xref row for a specific item code,
+	 * or the first live row matching any of several - "one content_id, one
+	 * item (or one of a mutually-exclusive set), give me the row"
+	 * (item/xref_id/xkey/xkey_ext/data), the gap between lookupXrefByTemplate()
+	 * (one item by template, not code) and lookupXrefValues() (one item's
+	 * xkey, across many content_ids). Content-type-scoped per
+	 * [[feedback_liberty_xref_item_collision]] - item codes are reused with
+	 * different meaning by different content classes.
 	 *
-	 * @return array{xref_id: int, xkey: ?string, xkey_ext: ?string, data: ?string}|null
+	 * @param string|string[] $pItem  a single item code, or an array of
+	 *                                mutually-exclusive alternatives (e.g. WT/VOL)
+	 * @return array{item: string, xref_id: int, xkey: ?string, xkey_ext: ?string, data: ?string}|null
 	 */
-	public static function lookupXrefByItem( int $pContentId, string $pItem, string $pContentTypeGuid, ?string $pPackageGuid = null ): ?array {
+	public static function lookupXrefByItem( int $pContentId, $pItem, string $pContentTypeGuid, ?string $pPackageGuid = null ): ?array {
 		global $gBitDb;
 		$guidFilter = $pPackageGuid
 			? "IN ('$pContentTypeGuid', '$pPackageGuid')"
 			: "= '$pContentTypeGuid'";
+		// $pItem as an array: for a mutually-exclusive item set (multiple=-2,
+		// e.g. food's WT/VOL quantity-mode pair) where a caller wants "whichever
+		// one is actually set", not one specific code - at most one row can
+		// exist across the set, same FIRST 1 semantics either way.
+		if( is_array( $pItem ) ) {
+			$itemSql = 'IN (' . implode( ',', array_fill( 0, count( $pItem ), '?' ) ) . ')';
+			$bindVars = array_merge( [ $pContentId ], $pItem );
+		} else {
+			$itemSql = '= ?';
+			$bindVars = [ $pContentId, $pItem ];
+		}
 		return $gBitDb->getRow(
-			"SELECT FIRST 1 x.xref_id, x.xkey, x.xkey_ext, x.data FROM `".BIT_DB_PREFIX."liberty_xref` x
+			"SELECT FIRST 1 x.item, x.xref_id, x.xkey, x.xkey_ext, x.data FROM `".BIT_DB_PREFIX."liberty_xref` x
 			 JOIN `".BIT_DB_PREFIX."liberty_xref_item` i ON i.item = x.item AND i.content_type_guid $guidFilter
-			 WHERE x.content_id = ? AND x.item = ? AND ( x.end_date IS NULL OR x.end_date > CURRENT_TIMESTAMP )",
-			[ $pContentId, $pItem ]
+			 WHERE x.content_id = ? AND x.item $itemSql AND ( x.end_date IS NULL OR x.end_date > CURRENT_TIMESTAMP )",
+			$bindVars
 		) ?: null;
 	}
 
