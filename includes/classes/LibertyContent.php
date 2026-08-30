@@ -2057,6 +2057,32 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * List content of a given type that has a live (non-archived) xref row for
+	 * a specific item — "which contactbusiness rows are tagged B04/Supplier",
+	 * existence only, not a value match like lookupByXref() (the item's own
+	 * xkey/xkey_ext is irrelevant here, a pure type-tag has none worth
+	 * matching). Found hand-rolled identically across 4 of food's own files
+	 * (add_supplier.php, list_components.php, list_pantry.php,
+	 * edit_movement.php) for its B04 shop/supplier picker — none of the four
+	 * filtered out archived rows, this does.
+	 *
+	 * @param string $pItem
+	 * @param string $pContentTypeGuid
+	 * @return array[]  {content_id, title} rows, ordered by title
+	 */
+	public static function listContentByXrefItem( string $pItem, string $pContentTypeGuid ): array {
+		global $gBitDb;
+		return $gBitDb->getAll(
+			"SELECT lc.`content_id`, lc.`title` FROM `".BIT_DB_PREFIX."liberty_content` lc
+			 JOIN `".BIT_DB_PREFIX."liberty_xref` lx ON ( lx.`content_id` = lc.`content_id` AND lx.`item` = ?
+			     AND ( lx.`end_date` IS NULL OR lx.`end_date` > CURRENT_TIMESTAMP ) )
+			 WHERE lc.`content_type_guid` = ?
+			 ORDER BY lc.`title`",
+			[ $pItem, $pContentTypeGuid ]
+		) ?: [];
+	}
+
+	/**
 	 * Batch-fetch one item's xkey for several content_ids at once — the reverse
 	 * direction of lookupByXref(), for a bulk listing that needs to merge in one
 	 * extra xref column per row without an N+1 query per row.
