@@ -552,4 +552,31 @@ class LibertyXrefType {
 		}
 		return $ret;
 	}
+
+	/**
+	 * Return every liberty_xref_item row registered for a content type, across
+	 * every group - not just the 'type' group (see getTypeMarkers()), and with
+	 * no role/permission filtering or per-content-item exclusion (see
+	 * getAvailableItems()) - a plain content-type-wide item catalog, for a
+	 * picker/summary that wants to know about every registered item regardless
+	 * of who's asking or what's already set on any one content item. Found
+	 * hand-rolled identically in health's list_item.php and
+	 * HealthIndexSummary.php.
+	 *
+	 * @param string $pContentTypeGuid
+	 * @return array[]  Full liberty_xref_item rows, ordered by sort_order then item.
+	 */
+	public static function getItemList( string $pContentTypeGuid ): array {
+		global $gBitSystem;
+		$result = $gBitSystem->mDb->query(
+			"SELECT * FROM `".BIT_DB_PREFIX."liberty_xref_item`
+			 WHERE `content_type_guid` = ? ORDER BY `sort_order`, `item`",
+			[ $pContentTypeGuid ]
+		);
+		$ret = [];
+		while ( $res = $result->fetchRow() ) {
+			$ret[] = $res;
+		}
+		return $ret;
+	}
 }
