@@ -2170,6 +2170,29 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Delete every xref row for this content_id + item — bulk, no audit trail
+	 * (a genuine DELETE, not stepXref()'s expunge=3 single-row archive/hard-
+	 * delete, which needs one specific xref_id, not "every row of this item").
+	 * For rebuild-style callers that regenerate a content item's own item-code
+	 * rows from scratch each run rather than diffing against what's already
+	 * there — re-running with unchanged source data just reproduces the same
+	 * rows, so losing history here isn't a real loss. Found hand-rolled
+	 * identically in health's RebuildHRDerived.php and food's
+	 * FoodAssembly::clearItems().
+	 *
+	 * @param int    $pContentId
+	 * @param string $pItem
+	 * @return void
+	 */
+	public static function deleteXrefByItem( int $pContentId, string $pItem ): void {
+		global $gBitDb;
+		$gBitDb->query(
+			"DELETE FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` = ?",
+			[ $pContentId, $pItem ]
+		);
+	}
+
+	/**
 	 * Count this content item's "real" xref rows — excluding type markers (any
 	 * item whose group has sort_order=0), not by item-code prefix. A prefix-based
 	 * exclusion silently breaks the moment items get renamed (found live: contact's
