@@ -4376,6 +4376,41 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Static counterpart to upsertXref() for callers with no loaded content
+	 * object at hand (import scripts, mostly) — same existing-or-add shape for
+	 * a single-cardinality item (one row per content_id+item; for a
+	 * timestamped reading series instead, see insertXrefReadingIfNew()). No
+	 * content_type_guid scoping, same reasoning as insertXrefReadingIfNew():
+	 * content_id already scopes to one specific content item, so there's no
+	 * cross-package item-code collision risk here the way there is for a
+	 * lookup keyed by item code alone. Found hand-rolled in food's
+	 * ImportFoodInfo.php (foodStoreXref()).
+	 *
+	 * @param int    $pContentId
+	 * @param string $pItem
+	 * @param array  $pValues  xkey/xkey_ext/data('edit')/xref/entry_date/
+	 *                         last_update_date/etc — anything LibertyXref::
+	 *                         store()'s own $pParamHash accepts, other than
+	 *                         content_id/item/xref_id/fAddXref (set here)
+	 * @return bool  true on success
+	 */
+	public static function upsertXrefByContentId( int $pContentId, string $pItem, array $pValues ): bool {
+		global $gBitDb;
+		$existingId = $gBitDb->getOne(
+			"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` = ?",
+			[ $pContentId, $pItem ]
+		);
+		$xrefHash = array_merge( $pValues, [ 'content_id' => $pContentId, 'item' => $pItem ] );
+		if( $existingId ) {
+			$xrefHash['xref_id'] = (int)$existingId;
+		} else {
+			$xrefHash['fAddXref'] = 1;
+		}
+		$xref = new LibertyXref();
+		return $xref->store( $xrefHash );
+	}
+
+	/**
 	 * Write an xref row using the audit-trail stepping pattern.
 	 *
 	 * Delegates to LibertyXref::stepXref().  The expunge value in $pParamHash
