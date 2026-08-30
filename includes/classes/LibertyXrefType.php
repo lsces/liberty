@@ -119,9 +119,8 @@ class LibertyXrefType {
 	 * group - sort_order=0 alone only means "hidden from the general xref grid"
 	 * (see loadContent()'s own sort_order>0 filter), a property some other,
 	 * non-toggleable items also want (e.g. contact's own NAME item, x_group=
-	 * 'name') without being swept into this picker too. Confirmed live
-	 * 2026-08-30: registering NAME under 'type' leaked it into this list as a
-	 * bogus toggle option before this scoping was added.
+	 * 'name') without being swept into this picker too — sharing 'type'
+	 * instead would leak such an item into this list as a bogus toggle option.
 	 *
 	 * @return array[]  [{item: string, name: string}, ...] ordered by item key
 	 */
