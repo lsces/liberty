@@ -2096,6 +2096,29 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Return one content item's first live xref row for a specific item code -
+	 * "one content_id, one item, give me the row" (xref_id/xkey/xkey_ext/data),
+	 * the gap between lookupXrefByTemplate() (one item by template, not code)
+	 * and lookupXrefValues() (one item's xkey, across many content_ids). Content-
+	 * type-scoped per [[feedback_liberty_xref_item_collision]] - item codes are
+	 * reused with different meaning by different content classes.
+	 *
+	 * @return array{xref_id: int, xkey: ?string, xkey_ext: ?string, data: ?string}|null
+	 */
+	public static function lookupXrefByItem( int $pContentId, string $pItem, string $pContentTypeGuid, ?string $pPackageGuid = null ): ?array {
+		global $gBitDb;
+		$guidFilter = $pPackageGuid
+			? "IN ('$pContentTypeGuid', '$pPackageGuid')"
+			: "= '$pContentTypeGuid'";
+		return $gBitDb->getRow(
+			"SELECT FIRST 1 x.xref_id, x.xkey, x.xkey_ext, x.data FROM `".BIT_DB_PREFIX."liberty_xref` x
+			 JOIN `".BIT_DB_PREFIX."liberty_xref_item` i ON i.item = x.item AND i.content_type_guid $guidFilter
+			 WHERE x.content_id = ? AND x.item = ? AND ( x.end_date IS NULL OR x.end_date > CURRENT_TIMESTAMP )",
+			[ $pContentId, $pItem ]
+		) ?: null;
+	}
+
+	/**
 	 * Count this content item's "real" xref rows — excluding type markers (any
 	 * item whose group has sort_order=0), not by item-code prefix. A prefix-based
 	 * exclusion silently breaks the moment items get renamed (found live: contact's

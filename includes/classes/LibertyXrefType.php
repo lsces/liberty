@@ -110,12 +110,18 @@ class LibertyXrefType {
 	}
 
 	/**
-	 * Return sort_order=0 item slots for this content type, filtered to the current
-	 * user's roles.
+	 * Return item slots in the x_group='type' group (sort_order=0) for this
+	 * content type, filtered to the current user's roles.
 	 *
-	 * These are top-level type/category markers (e.g. contact's $00/$02+ person/
-	 * business subtypes).  Used by type-selector forms in add_business.php, edit.php
-	 * and similar.
+	 * These are top-level type/category markers (e.g. contact's P01/P02 person
+	 * subtypes). Used by type-selector forms in add_business.php, edit.php and
+	 * similar. Scoped to x_group='type' specifically, not just any sort_order=0
+	 * group - sort_order=0 alone only means "hidden from the general xref grid"
+	 * (see loadContent()'s own sort_order>0 filter), a property some other,
+	 * non-toggleable items also want (e.g. contact's own NAME item, x_group=
+	 * 'name') without being swept into this picker too. Confirmed live
+	 * 2026-08-30: registering NAME under 'type' leaked it into this list as a
+	 * bogus toggle option before this scoping was added.
 	 *
 	 * @return array[]  [{item: string, name: string}, ...] ordered by item key
 	 */
@@ -134,7 +140,7 @@ class LibertyXrefType {
 			     ON t.`x_group` = g.`x_group` AND t.`content_type_guid` $guidFilter
 			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
 			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = g.`role_id`
-			 WHERE g.`content_type_guid` = '$this->contentTypeGuid' AND t.`sort_order` = 0
+			 WHERE g.`content_type_guid` = '$this->contentTypeGuid' AND t.`x_group` = 'type' AND t.`sort_order` = 0
 			   AND (g.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
 			 ORDER BY g.`sort_order`, g.`item`",
 			$bindVars
@@ -154,12 +160,14 @@ class LibertyXrefType {
 	 * to getTypeMarkers() above (which returns what's *possible*, from schema
 	 * metadata only, not what's stored for any particular content item).
 	 *
-	 * Type-marker items live in a sort_order=0 group, which loadContent() only
-	 * loads groups with sort_order > 0 for — so they never appear in a loaded
-	 * LibertyXrefContent (mXrefInfo), by design, not an omission. Callers
-	 * managing a content item's own type markers (e.g. Contact's P01/P02/
-	 * B01-B04 checkboxes) need this instead of reading mXrefInfo, and should use
-	 * this rather than querying `liberty_xref` directly.
+	 * Type-marker items live in the x_group='type' group (sort_order=0), which
+	 * loadContent() only loads groups with sort_order > 0 for — so they never
+	 * appear in a loaded LibertyXrefContent (mXrefInfo), by design, not an
+	 * omission. Callers managing a content item's own type markers (e.g.
+	 * Contact's P01/P02/B01-B04 checkboxes) need this instead of reading
+	 * mXrefInfo, and should use this rather than querying `liberty_xref`
+	 * directly. Scoped to x_group='type' specifically (not just any
+	 * sort_order=0 group) — see getTypeMarkers()'s own docblock for why.
 	 *
 	 * @param  int $pContentId
 	 * @return array<string,int>  item code => xref_id
@@ -176,7 +184,7 @@ class LibertyXrefType {
 			 FROM `".BIT_DB_PREFIX."liberty_xref` x
 			 JOIN `".BIT_DB_PREFIX."liberty_xref_item` i ON i.`item` = x.`item` AND i.`content_type_guid` $guidFilter
 			 JOIN `".BIT_DB_PREFIX."liberty_xref_group` g ON g.`x_group` = i.`x_group` AND g.`content_type_guid` $guidFilter
-			 WHERE x.`content_id` = ? AND g.`sort_order` = 0",
+			 WHERE x.`content_id` = ? AND g.`x_group` = 'type' AND g.`sort_order` = 0",
 			[ $pContentId ]
 		);
 		$ret = [];
@@ -401,11 +409,14 @@ class LibertyXrefType {
 	}
 
 	/**
-	 * Return sort_order=0 type markers for a content item, showing which apply.
+	 * Return x_group='type' markers (sort_order=0) for a content item, showing
+	 * which apply.
 	 *
-	 * Queries all item slots at sort_order=0 for this content type and left-joins
-	 * liberty_xref to show which ones have an active row for the given content item.
-	 * Each row includes 'content_id' (non-null when the marker is set on the item).
+	 * Queries all item slots in the 'type' group for this content type and
+	 * left-joins liberty_xref to show which ones have an active row for the
+	 * given content item. Each row includes 'content_id' (non-null when the
+	 * marker is set on the item). Scoped to x_group='type' specifically — see
+	 * getTypeMarkers()'s own docblock for why.
 	 *
 	 * @param int $contentId  liberty_content.content_id of the item to check
 	 * @return array[]
@@ -426,7 +437,7 @@ class LibertyXrefType {
 			 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` d ON d.`content_id` = ? AND d.`item` = r.`item`
 			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
 			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = r.`role_id`
-			 WHERE r.`content_type_guid` = '$this->contentTypeGuid' AND t.`sort_order` = 0
+			 WHERE r.`content_type_guid` = '$this->contentTypeGuid' AND t.`x_group` = 'type' AND t.`sort_order` = 0
 			   AND (r.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
 			 ORDER BY r.`sort_order`, r.`item`",
 			$bindVars
