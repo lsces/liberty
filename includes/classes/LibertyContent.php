@@ -576,6 +576,11 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 
 			$this->CompleteTrans();
 			parent::expunge();
+			// After parent::expunge() specifically - clearFromCache() there still
+			// needs the real mContentId. Marks this object as no longer pointing at
+			// a valid content_id, so it can't be mistaken for still-live after a
+			// successful delete.
+			$this->mContentId = null;
 		}
 		return true;
 	}
