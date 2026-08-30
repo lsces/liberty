@@ -1995,6 +1995,114 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Generic title/item search across one or more content types, for JSON
+	 * autocomplete endpoints (e.g. contact/includes/lookup_contact.php,
+	 * stock/includes/lookup_component.php). No permission check — callers gate
+	 * access themselves before calling this.
+	 *
+	 * @param string[]    $pTypes  content_type_guid values to search within
+	 * @param string      $pLike   search substring (matched case-insensitively)
+	 * @param string|null $pItem   also OR-match against this xref item's xkey,
+	 *                             and return it as 'xkey' on each row
+	 * @param int         $pLimit  max rows returned
+	 * @return array[]  {content_id, title[, xkey]}
+	 */
+	public static function lookupTitles( array $pTypes, string $pLike, ?string $pItem = null, int $pLimit = 30 ): array {
+		global $gBitDb;
+		$like = '%'.strtolower( $pLike ).'%';
+		$typePlaceholders = implode( ',', array_fill( 0, count( $pTypes ), '?' ) );
+
+		if( $pItem ) {
+			$rows = $gBitDb->getArray(
+				"SELECT FIRST $pLimit lc.content_id, lc.title,
+					(SELECT FIRST 1 x.xkey FROM `".BIT_DB_PREFIX."liberty_xref` x
+					 WHERE x.content_id = lc.content_id AND x.item = ?) AS xkey
+				 FROM `".BIT_DB_PREFIX."liberty_content` lc
+				 WHERE lc.content_type_guid IN ($typePlaceholders)
+				   AND (LOWER(lc.title) LIKE ? OR EXISTS (
+					SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` x
+					WHERE x.content_id = lc.content_id AND x.item = ? AND LOWER(x.xkey) LIKE ?
+				   ))
+				 ORDER BY lc.title",
+				[ $pItem, ...$pTypes, $like, $pItem, $like ]
+			);
+		} else {
+			$rows = $gBitDb->getArray(
+				"SELECT FIRST $pLimit lc.content_id, lc.title
+				 FROM `".BIT_DB_PREFIX."liberty_content` lc
+				 WHERE lc.content_type_guid IN ($typePlaceholders) AND LOWER(lc.title) LIKE ?
+				 ORDER BY lc.title",
+				[ ...$pTypes, $like ]
+			);
+		}
+		return array_values( $rows ?? [] );
+	}
+
+	/**
+	 * Find content_id(s) whose xref for $pItem matches $pValue exactly, checking
+	 * both xkey and xkey_ext. The exact-match counterpart to lookupTitles()'s
+	 * substring search — for callers that have a known value (an email address,
+	 * a code) and need to know which content item(s) it belongs to.
+	 *
+	 * @param string $pItem   xref item code (e.g. '#E' for email)
+	 * @param string $pValue  exact value to match
+	 * @return int[]  matching content_id values
+	 */
+	public static function lookupByXref( string $pItem, string $pValue ): array {
+		global $gBitDb;
+		return $gBitDb->getCol(
+			"SELECT content_id FROM `".BIT_DB_PREFIX."liberty_xref` WHERE item = ? AND (xkey = ? OR xkey_ext = ?)",
+			[ $pItem, $pValue, $pValue ]
+		) ?: [];
+	}
+
+	/**
+	 * Return one content item's first live xref row for whichever item has the
+	 * given template (e.g. 'address') — for callers that want "the address" (or
+	 * similar) without knowing which specific item code holds it.
+	 *
+	 * @return array{xkey: ?string, xkey_ext: ?string}|null
+	 */
+	public static function lookupXrefByTemplate( int $pContentId, string $pTemplate, string $pContentTypeGuid, ?string $pPackageGuid = null ): ?array {
+		global $gBitDb;
+		$guidFilter = $pPackageGuid
+			? "IN ('$pContentTypeGuid', '$pPackageGuid')"
+			: "= '$pContentTypeGuid'";
+		return $gBitDb->getRow(
+			"SELECT FIRST 1 x.xkey, x.xkey_ext FROM `".BIT_DB_PREFIX."liberty_xref` x
+			 JOIN `".BIT_DB_PREFIX."liberty_xref_item` i ON i.item = x.item AND i.content_type_guid $guidFilter
+			 WHERE x.content_id = ? AND i.template = ? AND ( x.end_date IS NULL OR x.end_date > CURRENT_TIMESTAMP )",
+			[ $pContentId, $pTemplate ]
+		) ?: null;
+	}
+
+	/**
+	 * Count this content item's "real" xref rows — excluding type markers (any
+	 * item whose group has sort_order=0), not by item-code prefix. A prefix-based
+	 * exclusion silently breaks the moment items get renamed (found live: contact's
+	 * type markers moved from a '$'-prefixed convention to P01/P02/B01-B04, and a
+	 * caller still excluding by '$' started counting them as real entries).
+	 *
+	 * Dual-guid join (see LibertyXrefType's class docblock) — needs $pContentTypeGuid
+	 * and, where applicable, $pPackageGuid: an exact-match join silently drops any
+	 * item whose group lives at the package level rather than the content type's own
+	 * guid, undercounting rather than erroring.
+	 */
+	public static function countXrefEntries( int $pContentId, string $pContentTypeGuid, ?string $pPackageGuid = null ): int {
+		global $gBitDb;
+		$guidFilter = $pPackageGuid
+			? "IN ('$pContentTypeGuid', '$pPackageGuid')"
+			: "= '$pContentTypeGuid'";
+		return (int)$gBitDb->getOne(
+			"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` x
+			 JOIN `".BIT_DB_PREFIX."liberty_xref_item` i ON i.item = x.item AND i.content_type_guid $guidFilter
+			 JOIN `".BIT_DB_PREFIX."liberty_xref_group` g ON g.x_group = i.x_group AND g.content_type_guid $guidFilter
+			 WHERE x.content_id = ? AND g.sort_order > 0",
+			[ $pContentId ]
+		);
+	}
+
+	/**
 	 * Get the time this object was created
 	 *
 	 * @return int Unix epoch of time object was created

@@ -44,9 +44,8 @@ namespace Bitweaver\Liberty;
  *     filter on both sides of the item↔group JOIN — safe because that admits only this
  *     one content type's own two guid levels, never a sibling type's guid (a
  *     stockcomponent instance's filter can never match a stockassembly-only group).
- *     A site whose groups were never split per content type (item rows split, but
- *     their shared group still sits at the package level) is handled transparently
- *     either way — confirmed 2026-08-30 against a real site in exactly that state.
+ *     Handles a site whose groups were never split per content type (item rows
+ *     split, but their shared group still sits at the package level) transparently.
  *   - loadContent() loads groups first (via the same IN-filter), then joins each
  *     group's own items using that specific row's own real content_type_guid —
  *     exact-match there is what prevents two guids sharing an x_group name (e.g.
@@ -90,9 +89,7 @@ class LibertyXrefType {
 		global $gBitSystem, $gBitUser;
 		$roles      = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
 		$bindVars   = array_merge( $roles, [ $gBitUser->mUserId ] );
-		// Dual-guid: a package-level group (e.g. contact's shared 'contact'/'links'/
-		// 'account' groups) has content_type_guid = the package guid, not this content
-		// type's own guid - same gap as getTypeMarkers()/getContentTypeMarkers() above.
+		// Dual-guid join — see class docblock.
 		$guidFilter = $this->packageGuid
 			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
 			: "= '$this->contentTypeGuid'";
@@ -126,11 +123,7 @@ class LibertyXrefType {
 		global $gBitSystem, $gBitUser;
 		$roles      = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
 		$bindVars   = array_merge( $roles, [ $gBitUser->mUserId ] );
-		// Dual-guid: the group can live at either this content type's own guid or the
-		// package guid (e.g. a site whose 'type' group was never split per content type
-		// - merg's contactperson/contactbusiness items still share one 'type' group at
-		// the 'contact' package level, confirmed 2026-08-30) - matches
-		// getAvailableItems()'s already-correct join, which this one had drifted from.
+		// Dual-guid join — see class docblock.
 		$guidFilter = $this->packageGuid
 			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
 			: "= '$this->contentTypeGuid'";
@@ -173,11 +166,8 @@ class LibertyXrefType {
 	 */
 	public function getTypeMarkerXrefs( int $pContentId ): array {
 		global $gBitSystem;
-		// Dual-guid, same fix and reasoning as getTypeMarkers()/getContentTypeMarkers()
-		// above — this one was missed in the 2026-08-30 pass and stayed broken: a false
-		// negative here (existing marker not found) makes Contact::store()'s diff logic
-		// think nothing is set yet and re-insert an already-set item as new, creating a
-		// genuine duplicate liberty_xref row - confirmed live on merg content_id 1606.
+		// Dual-guid join — see class docblock. A false negative here makes a caller's
+		// diff logic think nothing is set yet and re-insert an existing item as new.
 		$guidFilter = $this->packageGuid
 			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
 			: "= '$this->contentTypeGuid'";
@@ -424,7 +414,7 @@ class LibertyXrefType {
 		global $gBitSystem, $gBitUser;
 		$roles      = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
 		$bindVars   = array_merge( [ $contentId ], $roles, [ $gBitUser->mUserId ] );
-		// Dual-guid group join, same fix and reasoning as getTypeMarkers() above.
+		// Dual-guid join — see class docblock.
 		$guidFilter = $this->packageGuid
 			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
 			: "= '$this->contentTypeGuid'";
