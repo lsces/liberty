@@ -62,23 +62,27 @@ Three tables:
   (position within a `multiple=1` group), `entry_date`/`last_update_date`/`start_date`/`end_date`
   (see below).
 
-**Confirmed gap, not built (found 2026-08-18): no display-order column exists for items within a
-group.** `liberty_xref_group` has its own `sort_order` (tab position), but `liberty_xref_item` has
-nothing equivalent — `LibertyXrefType::loadContent()`'s row query is `ORDER BY x.item, x.xorder`,
-i.e. **alphabetically by item code**, not any deliberately curated sequence. `xorder` (on
-`liberty_xref`, the data table) is a different axis entirely — it orders the several *rows* of one
-`multiple=1` item type against each other, not the several *item types* within a group against
-each other. Symptom that surfaced this: Food's Nutrition tab renders `5AD`/`CAL`/`FAT`/`FIBR`/
-`PROT`/`SOD`/`SUGR` in that alphabetical order, not the UK front-of-pack sequence
-(`FoodComponent::NUTRITION_SUMMARY_FIELDS`' own PHP-array order gets this right in the day-report/
-component-summary views built the same day, precisely because those bypass this query and build
-their own ordered array instead — the generic xref tab has no equivalent). Proposed fix: a
-`sort_order`-style column on `liberty_xref_item`, used in this query in place of (or ahead of)
-`x.item`. **Not started** — unlike the `multiple` sign trick, this needs a genuine new column on a
-table every installed package already has live rows in (liberty itself, stock, food, contact,
-across every domain), so it's a real schema migration with an upgrade script, not a hand-push —
-bigger blast radius than anything else done this session, flagged for confirmation before starting
-rather than just built.
+**Gap found 2026-08-18, closed in two stages — `liberty_xref_item.sort_order`.** Originally:
+`liberty_xref_group` had its own `sort_order` (tab position), but `liberty_xref_item` had nothing
+equivalent, so both the row query and every type-listing query fell back to alphabetical-by-title
+or alphabetical-by-item-code ordering. `xorder` (on `liberty_xref`, the data table) is a different
+axis entirely — it orders the several *rows* of one `multiple=1` item against each other, not the
+several *item types* within a group against each other. Symptom that surfaced this: Food's
+Nutrition tab rendered `5AD`/`CAL`/`FAT`/`FIBR`/`PROT`/`SOD`/`SUGR` in alphabetical order, not the
+UK front-of-pack sequence.
+
+- **2026-08-21**: the column was added and `LibertyXrefType::loadContent()`'s row query changed to
+  `ORDER BY s.sort_order, x.item, x.xorder` — fixes display order *within an already-loaded xref
+  group* (e.g. a content item's own tab of stored rows).
+- **2026-08-30**: extended to the schema-listing queries that build type/item *pickers* —
+  `getTypeMarkers()`, `getAvailableItems()`, `getContentTypeMarkers()` — which had continued to
+  order by `cross_ref_title`/`item` alphabetically even after the column existed. Contact's
+  `contactperson`/`contactbusiness` type items are the first real users: `P01`=1, `P02`=2,
+  `B01`-`B04`=1-4, so "Personal" and "Service" sort first rather than falling out alphabetically by
+  title (which would have put "Distributor" before "Service"). Populate a new item's `sort_order`
+  explicitly if display order matters — it defaults to `0`, which sorts first per these queries'
+  own tie-break (`sort_order, then title/item`), so a run of unset items among set ones will jump
+  to the front, not the back.
 
 **Negative `multiple` values, added 2026-08-18**: `multiple` is a plain `I2` (signed smallint, no
 `CHECK` constraint), so negative values need no schema change, and (confirmed before adopting) the
@@ -223,20 +227,36 @@ Pass `$packageGuid` when constructing `LibertyXrefType`/`LibertyXrefInfo` to ena
 matching; `LibertyContent::$mPackageGuid` is set automatically by `registerContentType()` from
 whatever `handler_package` was passed in the type registration hash (Stock's three classes each
 pass `'handler_package' => 'stock'`, for example — no per-class manual wiring needed, it's a base
-`LibertyContent` behaviour). When writing a manual xref JOIN spanning both levels, join item↔group
-on `t.content_type_guid = s.content_type_guid` and apply the guid filter only in `WHERE` —
-filtering inside the JOIN condition causes cross-matching when two different guids happen to share
-an `x_group` name.
+`LibertyContent` behaviour).
 
-**Two known gaps where a query method doesn't consistently use the guid filter**:
-`getAvailableItems()`'s group JOIN was fixed 2026-08-17 (was a bare exact-match instead of the
-filter, silently hiding a type-specific item whose group lived at package level — Contact's `CON`
-item was the real trigger). `getTemplateFormats()` still isn't fixed — flat single-guid `WHERE`,
-no package-level fallback — but it's low-impact: its only consumer is Contact's own legacy
-`add_xref.tpl`/`_fields.tpl` Add flow (the one earmarked for retirement once the
-`add_<group>_group.tpl` redesign lands, see `CLAUDE.md`), so nothing outside Contact can even
-reach it. Not worth fixing pre-emptively — would surface more formats needing dead `_fields.tpl`
-partials for no concrete live need.
+**Two different join styles, for two different situations — don't apply one where the other
+belongs (corrected 2026-08-30; the guidance here previously had this backwards):**
+
+- **Resolving items/groups generically for one content type** (`getTypeMarkers()`,
+  `getAvailableItems()`, `getContentTypeMarkers()`, `getDisplayGroups()`) — put the guid filter
+  (`IN(contentTypeGuid, packageGuid)`) directly in the item↔group JOIN condition, not just `WHERE`.
+  Safe here because the filter only ever admits this one content type's own two guid levels, never
+  a sibling type's guid — a `contactperson` instance's filter can't accidentally match a
+  `contactbusiness`-only group.
+- **`loadContent()`** loads several groups first (via that same IN-filter), then joins each
+  group's own items using that specific row's own real `content_type_guid` — exact-match there is
+  what stops two different guids sharing an `x_group` name (e.g. `quantity` on both
+  `stockcomponent` and `stockassembly`) from cross-attributing rows once multiple groups are loaded
+  side by side. This is the situation "filter only in WHERE, exact-match the JOIN" actually applies
+  to, not the single-type generic queries above.
+
+**Known gaps where a query method didn't consistently use the guid filter**: `getAvailableItems()`
+was fixed 2026-08-17 (was a bare exact-match instead of the filter, silently hiding a type-specific
+item whose group lived at package level — Contact's `CON` item was the real trigger).
+`getTypeMarkers()`, `getContentTypeMarkers()`, and `getDisplayGroups()` had the exact same bug and
+were fixed 2026-08-30 — found live on a real site (contact's `contactperson`/`contactbusiness`
+item rows split per type, but their shared `type` group never split off the `contact` package
+level, so the edit form's type-tag picker silently showed nothing at all). `getTemplateFormats()`
+still isn't fixed — flat single-guid `WHERE`, no package-level fallback — but it's low-impact: its
+only consumer is Contact's own legacy `add_xref.tpl`/`_fields.tpl` Add flow (the one earmarked for
+retirement once the `add_<group>_group.tpl` redesign lands, see `CLAUDE.md`), so nothing outside
+Contact can even reach it. Not worth fixing pre-emptively — would surface more formats needing dead
+`_fields.tpl` partials for no concrete live need.
 
 **Checked 2026-08-18 whether Stock's `supplier` group (shared across StockComponent/StockAssembly/
 StockMovement) is exposed to either gap — it isn't.** Both the `supplier` group *and* its `#SUP`

@@ -36,11 +36,22 @@ namespace Bitweaver\Liberty;
  *                        (e.g. 'stockcomponent', 'stockassembly').
  *                        Example: 'quantity', 'values' for stockcomponent.
  *
- * To cover both levels, supply $packageGuid to the constructor.  The runtime
- * queries will then filter on IN(contentTypeGuid, packageGuid) in WHERE, while
- * the item↔group JOIN always uses t.content_type_guid = s.content_type_guid so
- * each item only matches its own group — preventing cross-matching when two guids
- * share an x_group name (e.g. 'quantity' on both stockcomponent and stockassembly).
+ * To cover both levels, supply $packageGuid to the constructor. Two different join
+ * strategies are used, depending on what the method already knows:
+ *
+ *   - getTypeMarkers()/getAvailableItems()/getContentTypeMarkers()/getDisplayGroups()
+ *     query items/groups generically and use the same IN(contentTypeGuid, packageGuid)
+ *     filter on both sides of the item↔group JOIN — safe because that admits only this
+ *     one content type's own two guid levels, never a sibling type's guid (a
+ *     stockcomponent instance's filter can never match a stockassembly-only group).
+ *     A site whose groups were never split per content type (item rows split, but
+ *     their shared group still sits at the package level) is handled transparently
+ *     either way — confirmed 2026-08-30 against a real site in exactly that state.
+ *   - loadContent() loads groups first (via the same IN-filter), then joins each
+ *     group's own items using that specific row's own real content_type_guid —
+ *     exact-match there is what prevents two guids sharing an x_group name (e.g.
+ *     'quantity' on both stockcomponent and stockassembly) from cross-attributing
+ *     rows to the wrong loaded group once several groups are loaded side by side.
  *
  * The stock package is the reference implementation of this pattern.
  *
@@ -77,13 +88,19 @@ class LibertyXrefType {
 	 */
 	public function getDisplayGroups(): array {
 		global $gBitSystem, $gBitUser;
-		$roles    = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-		$bindVars = array_merge( $roles, [ $gBitUser->mUserId ] );
+		$roles      = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
+		$bindVars   = array_merge( $roles, [ $gBitUser->mUserId ] );
+		// Dual-guid: a package-level group (e.g. contact's shared 'contact'/'links'/
+		// 'account' groups) has content_type_guid = the package guid, not this content
+		// type's own guid - same gap as getTypeMarkers()/getContentTypeMarkers() above.
+		$guidFilter = $this->packageGuid
+			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
+			: "= '$this->contentTypeGuid'";
 		$result = $gBitSystem->mDb->query(
 			"SELECT g.* FROM `".BIT_DB_PREFIX."liberty_xref_group` g
 			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
 			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = g.`role_id`
-			 WHERE g.`content_type_guid` = '$this->contentTypeGuid' AND g.`sort_order` > 0
+			 WHERE g.`content_type_guid` $guidFilter AND g.`sort_order` > 0
 			   AND (g.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
 			 ORDER BY g.`sort_order`",
 			$bindVars
@@ -107,18 +124,26 @@ class LibertyXrefType {
 	 */
 	public function getTypeMarkers(): array {
 		global $gBitSystem, $gBitUser;
-		$roles    = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-		$bindVars = array_merge( $roles, [ $gBitUser->mUserId ] );
+		$roles      = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
+		$bindVars   = array_merge( $roles, [ $gBitUser->mUserId ] );
+		// Dual-guid: the group can live at either this content type's own guid or the
+		// package guid (e.g. a site whose 'type' group was never split per content type
+		// - merg's contactperson/contactbusiness items still share one 'type' group at
+		// the 'contact' package level, confirmed 2026-08-30) - matches
+		// getAvailableItems()'s already-correct join, which this one had drifted from.
+		$guidFilter = $this->packageGuid
+			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
+			: "= '$this->contentTypeGuid'";
 		$result = $gBitSystem->mDb->query(
 			"SELECT g.`cross_ref_title` AS `type_name`, g.`item`
 			 FROM `".BIT_DB_PREFIX."liberty_xref_item` g
 			 JOIN `".BIT_DB_PREFIX."liberty_xref_group` t
-			     ON t.`x_group` = g.`x_group` AND t.`content_type_guid` = '$this->contentTypeGuid'
+			     ON t.`x_group` = g.`x_group` AND t.`content_type_guid` $guidFilter
 			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
 			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = g.`role_id`
 			 WHERE g.`content_type_guid` = '$this->contentTypeGuid' AND t.`sort_order` = 0
 			   AND (g.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
-			 ORDER BY g.`item`",
+			 ORDER BY g.`sort_order`, g.`item`",
 			$bindVars
 		);
 		$ret = [];
@@ -148,11 +173,19 @@ class LibertyXrefType {
 	 */
 	public function getTypeMarkerXrefs( int $pContentId ): array {
 		global $gBitSystem;
+		// Dual-guid, same fix and reasoning as getTypeMarkers()/getContentTypeMarkers()
+		// above — this one was missed in the 2026-08-30 pass and stayed broken: a false
+		// negative here (existing marker not found) makes Contact::store()'s diff logic
+		// think nothing is set yet and re-insert an already-set item as new, creating a
+		// genuine duplicate liberty_xref row - confirmed live on merg content_id 1606.
+		$guidFilter = $this->packageGuid
+			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
+			: "= '$this->contentTypeGuid'";
 		$result = $gBitSystem->mDb->query(
 			"SELECT x.`item`, x.`xref_id`
 			 FROM `".BIT_DB_PREFIX."liberty_xref` x
-			 JOIN `".BIT_DB_PREFIX."liberty_xref_item` i ON i.`item` = x.`item` AND i.`content_type_guid` = '$this->contentTypeGuid'
-			 JOIN `".BIT_DB_PREFIX."liberty_xref_group` g ON g.`x_group` = i.`x_group` AND g.`content_type_guid` = '$this->contentTypeGuid'
+			 JOIN `".BIT_DB_PREFIX."liberty_xref_item` i ON i.`item` = x.`item` AND i.`content_type_guid` $guidFilter
+			 JOIN `".BIT_DB_PREFIX."liberty_xref_group` g ON g.`x_group` = i.`x_group` AND g.`content_type_guid` $guidFilter
 			 WHERE x.`content_id` = ? AND g.`sort_order` = 0",
 			[ $pContentId ]
 		);
@@ -197,7 +230,7 @@ class LibertyXrefType {
 				"SELECT s.`cross_ref_title` AS `type_name`, s.`item`, s.`template`
 				 FROM `".BIT_DB_PREFIX."liberty_xref_item` s
 				 WHERE s.`content_type_guid` $guidFilter AND s.`template` = ? AND s.`multiple` <> -1
-				 ORDER BY s.`cross_ref_title`",
+				 ORDER BY s.`sort_order`, s.`cross_ref_title`",
 				[ $xrefTemplate ]
 			);
 		} elseif( $xrefGroup > -1 ) {
@@ -210,7 +243,7 @@ class LibertyXrefType {
 				     ON x.`item` = s.`item` AND x.`content_id` = ? AND (x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP)
 				 WHERE s.`content_type_guid` $guidFilter AND t.`sort_order` = ?
 				   AND (x.`xref_id` IS NULL OR x.`xorder` > 0) AND s.`multiple` <> -1
-				 ORDER BY s.`cross_ref_title`",
+				 ORDER BY s.`sort_order`, s.`cross_ref_title`",
 				[ $contentId, $xrefGroup ]
 			);
 		} else {
@@ -223,7 +256,7 @@ class LibertyXrefType {
 				     ON x.`item` = s.`item` AND x.`content_id` = ? AND (x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP)
 				 WHERE s.`content_type_guid` $guidFilter AND t.`sort_order` > 0
 				   AND (x.`xref_id` IS NULL OR x.`xorder` > 0) AND s.`multiple` <> -1
-				 ORDER BY s.`cross_ref_title`",
+				 ORDER BY s.`sort_order`, s.`cross_ref_title`",
 				[ $contentId ]
 			);
 		}
@@ -389,19 +422,23 @@ class LibertyXrefType {
 	 */
 	public function getContentTypeMarkers( int $contentId ): array {
 		global $gBitSystem, $gBitUser;
-		$roles    = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-		$bindVars = array_merge( [ $contentId ], $roles, [ $gBitUser->mUserId ] );
+		$roles      = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
+		$bindVars   = array_merge( [ $contentId ], $roles, [ $gBitUser->mUserId ] );
+		// Dual-guid group join, same fix and reasoning as getTypeMarkers() above.
+		$guidFilter = $this->packageGuid
+			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
+			: "= '$this->contentTypeGuid'";
 		$result = $gBitSystem->mDb->query(
 			"SELECT r.`item`, r.`cross_ref_title`, d.`content_id`
 			 FROM `".BIT_DB_PREFIX."liberty_xref_item` r
 			 JOIN `".BIT_DB_PREFIX."liberty_xref_group` t
-			     ON t.`x_group` = r.`x_group` AND t.`content_type_guid` = '$this->contentTypeGuid'
+			     ON t.`x_group` = r.`x_group` AND t.`content_type_guid` $guidFilter
 			 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` d ON d.`content_id` = ? AND d.`item` = r.`item`
 			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
 			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = r.`role_id`
 			 WHERE r.`content_type_guid` = '$this->contentTypeGuid' AND t.`sort_order` = 0
 			   AND (r.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
-			 ORDER BY r.`item`",
+			 ORDER BY r.`sort_order`, r.`item`",
 			$bindVars
 		);
 		$ret = [];

@@ -47,6 +47,26 @@ class LibertyXrefContent {
 	}
 
 	/**
+	 * The first loaded row for a given item tag, scanning already-loaded groups —
+	 * no fresh query, same spirit as findByItem() but returning the row itself
+	 * (for reading xkey/xkey_ext/data/xref) rather than just its xref_id. For a
+	 * single-cardinality item (multiple=0) this is unambiguous; for a multiple=1
+	 * item this is only the first row, same single-row assumption as allItems().
+	 *
+	 * @return LibertyXref|null
+	 */
+	public function findRowByItem( string $pItem ): ?LibertyXref {
+		foreach( $this->mGroups as $group ) {
+			foreach( $group->mXrefs as $xref ) {
+				if( $xref['item'] === $pItem ) {
+					return $xref;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Every loaded xref_id keyed by its item code — scanning already-loaded
 	 * groups, no fresh query, same spirit as findByItem() but for callers that
 	 * need to see the whole set at once (e.g. diffing a caller-submitted item
