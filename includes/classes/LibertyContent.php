@@ -4312,6 +4312,30 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Fetch one xref row by xref_id, but only if it actually belongs to this
+	 * content item — the "confirm ownership, then read the values I need for
+	 * follow-up logic" check that recurs wherever a caller-supplied xref_id
+	 * (from a form/URL) needs verifying before being acted on, not just
+	 * trusted. Since xref_id is the primary key (one content_id per xref_id),
+	 * the content_id condition isn't a lookup filter, it's the ownership
+	 * check itself. Returns null if the xref_id doesn't exist or belongs to a
+	 * different content_id — either way, "no such line exists on this content
+	 * item" is the right response, not distinguishing the two. Found
+	 * hand-rolled identically (differing only in which columns each caller
+	 * went on to use) in food's FoodMovement::removeComponentLine()/
+	 * updateComponentLine() and FoodAssembly::removeItem()/updateItem().
+	 *
+	 * @param int $pXrefId
+	 * @return array|null  Full liberty_xref row, or null if not owned by this content item.
+	 */
+	public function getOwnedXrefRow( int $pXrefId ): ?array {
+		return $this->mDb->getRow(
+			"SELECT * FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `xref_id` = ? AND `content_id` = ?",
+			[ $pXrefId, $this->mContentId ]
+		) ?: null;
+	}
+
+	/**
 	 * Write one xref row for this content item (insert or update).
 	 *
 	 * Delegates to LibertyXref::store().  On success, reloads the content item
