@@ -9,6 +9,38 @@ attribute/relationship system every content-heavy package (Stock, Contact, Food,
 builds its own custom data onto rather than adding schema columns. The rest of Liberty (content
 versioning/history, caching, permissions) isn't covered here.
 
+## Access boundaries — where each layer lives
+
+Never write raw SQL against any of the three tables below from outside
+`liberty/includes/classes/` — every access goes through one of these:
+
+- **Structure** (`liberty_xref_group`, `liberty_xref_item`) — only `LibertyXrefType` queries these.
+  Other code calls the current content object's cached instance via
+  `LibertyContent::xrefType()->method()`; almost never construct `LibertyXrefType` directly (see
+  below).
+- **Live data, single row** (`liberty_xref`) — load/verify/store/stepXref for one row lives in
+  `LibertyXref` only.
+- **Live data, bulk-loaded for a content item** — `LibertyXrefType::loadContent()` builds the
+  in-memory `LibertyXrefContent` (one `LibertyXrefGroup` per tab, each holding `LibertyXref` rows),
+  cached on the content object as `$this->mXrefInfo` by `loadXrefInfo()`. Once loaded, read via
+  `findByItem()`/`allItems()` or a `foreach` over `mGroups` — never re-query `liberty_xref` for
+  data already loaded this request. **`LibertyXrefContent` is the read-side cache, not a write
+  path** — easy to guess wrong from the name alone.
+- **`LibertyContent`'s own xref methods** (`xrefType()`, `loadXrefInfo()`, `loadXref()`,
+  `storeXref()`, `stepXref()`, `enrichXrefDisplay()`, `getXrefListTemplate()`/
+  `getXrefRecordTemplate()`/`getXrefEditTemplate()`) are the sanctioned facade every other
+  package's content class calls through — thin delegation to `LibertyXrefType`/`LibertyXref` only,
+  no table SQL of their own. The one exception is `expunge()`'s own
+  `DELETE FROM liberty_xref WHERE content_id = ?`, alongside its sibling `liberty_content_*`
+  deletes in the same method — a content-lifecycle cascade, not a query against the xref system,
+  and correctly stays as raw SQL.
+
+Other packages (Stock, Contact, Food, Health, Mapper, ...) must never contain raw SQL against
+`liberty_xref`/`liberty_xref_group`/`liberty_xref_item` — go through the content object's
+`xrefType()`/`mXrefInfo`/`storeXref()`/`stepXref()` instead. Confirmed 2026-08-30: none currently
+do — this section exists to keep it that way and to give prose/comments elsewhere in other
+packages a correct term (`Xref` / `$gContent->mXrefInfo`) to use instead of naming the raw table.
+
 ## Data model
 
 Three tables:
