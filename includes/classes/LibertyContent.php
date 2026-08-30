@@ -2057,6 +2057,25 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Batch-fetch one item's xkey for several content_ids at once — the reverse
+	 * direction of lookupByXref(), for a bulk listing that needs to merge in one
+	 * extra xref column per row without an N+1 query per row.
+	 *
+	 * @param int[]  $pContentIds
+	 * @param string $pItem  xref item code
+	 * @return array<int,string>  content_id => xkey, only for content_ids with a match
+	 */
+	public static function lookupXrefValues( array $pContentIds, string $pItem ): array {
+		global $gBitDb;
+		if( empty( $pContentIds ) ) return [];
+		$placeholders = implode( ',', array_fill( 0, count( $pContentIds ), '?' ) );
+		return $gBitDb->getAssoc(
+			"SELECT content_id, xkey FROM `".BIT_DB_PREFIX."liberty_xref` WHERE item = ? AND content_id IN ($placeholders)",
+			[ $pItem, ...$pContentIds ]
+		) ?: [];
+	}
+
+	/**
 	 * Return one content item's first live xref row for whichever item has the
 	 * given template (e.g. 'address') — for callers that want "the address" (or
 	 * similar) without knowing which specific item code holds it.
