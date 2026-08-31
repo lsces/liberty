@@ -2226,16 +2226,27 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * identically in health's RebuildHRDerived.php and food's
 	 * FoodAssembly::clearItems().
 	 *
-	 * @param int    $pContentId
-	 * @param string $pItem
-	 * @return void
+	 * @param int             $pContentId
+	 * @param string|string[] $pItem  a single item code, or an array of item
+	 *                                codes to bulk-delete together in one
+	 *                                statement (same convention as
+	 *                                lookupXrefByItem()/upsertXrefByContentId())
+	 * @return int  rows deleted
 	 */
-	public static function deleteXrefByItem( int $pContentId, string $pItem ): void {
+	public static function deleteXrefByItem( int $pContentId, $pItem ): int {
 		global $gBitDb;
+		if( is_array( $pItem ) ) {
+			$itemSql  = 'IN (' . implode( ',', array_fill( 0, count( $pItem ), '?' ) ) . ')';
+			$bindVars = array_merge( [ $pContentId ], $pItem );
+		} else {
+			$itemSql  = '= ?';
+			$bindVars = [ $pContentId, $pItem ];
+		}
 		$gBitDb->query(
-			"DELETE FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` = ?",
-			[ $pContentId, $pItem ]
+			"DELETE FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` $itemSql",
+			$bindVars
 		);
+		return (int)$gBitDb->Affected_Rows();
 	}
 
 	/**
@@ -4430,23 +4441,52 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * lookup keyed by item code alone. Found hand-rolled in food's
 	 * ImportFoodInfo.php (foodStoreXref()).
 	 *
-	 * @param int    $pContentId
-	 * @param string $pItem
+	 * @param int             $pContentId
+	 * @param string|string[] $pItem     a single item code, or an array of
+	 *                                   mutually-exclusive alternatives (same
+	 *                                   convention as lookupXrefByItem()) —
+	 *                                   "update whichever of these is
+	 *                                   actually set". With an array and no
+	 *                                   existing row under any of them, there's
+	 *                                   no single item code to create under, so
+	 *                                   this is a no-op (returns false) rather
+	 *                                   than guessing one.
 	 * @param array  $pValues  xkey/xkey_ext/data('edit')/xref/entry_date/
 	 *                         last_update_date/etc — anything LibertyXref::
 	 *                         store()'s own $pParamHash accepts, other than
-	 *                         content_id/item/xref_id/fAddXref (set here)
-	 * @return bool  true on success
+	 *                         content_id/item/xref_id/fAddXref (set here).
+	 *                         Any field NOT included is left alone on an
+	 *                         update — EXCEPT xorder, which LibertyXref::
+	 *                         verify() always defaults to 0 unless it's
+	 *                         explicitly present; this method preserves the
+	 *                         row's existing xorder on update in that case,
+	 *                         so a caller doing a genuinely partial update
+	 *                         (e.g. just start_date) doesn't silently reset
+	 *                         it. Pass 'xorder' explicitly to really change it.
+	 * @return bool  true on success, false on failure or the no-op case above
 	 */
-	public static function upsertXrefByContentId( int $pContentId, string $pItem, array $pValues ): bool {
+	public static function upsertXrefByContentId( int $pContentId, $pItem, array $pValues ): bool {
 		global $gBitDb;
-		$existingId = $gBitDb->getOne(
-			"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` = ?",
-			[ $pContentId, $pItem ]
+		if( is_array( $pItem ) ) {
+			$itemSql  = 'IN (' . implode( ',', array_fill( 0, count( $pItem ), '?' ) ) . ')';
+			$bindVars = array_merge( [ $pContentId ], $pItem );
+		} else {
+			$itemSql  = '= ?';
+			$bindVars = [ $pContentId, $pItem ];
+		}
+		$existing = $gBitDb->getRow(
+			"SELECT `xref_id`, `item`, `xorder` FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` $itemSql",
+			$bindVars
 		);
-		$xrefHash = array_merge( $pValues, [ 'content_id' => $pContentId, 'item' => $pItem ] );
-		if( $existingId ) {
-			$xrefHash['xref_id'] = (int)$existingId;
+		if( !$existing && is_array( $pItem ) ) {
+			return false;
+		}
+		$xrefHash = array_merge( $pValues, [ 'content_id' => $pContentId, 'item' => $existing['item'] ?? $pItem ] );
+		if( $existing ) {
+			$xrefHash['xref_id'] = (int)$existing['xref_id'];
+			if( !isset( $xrefHash['xorder'] ) ) {
+				$xrefHash['xorder'] = (int)$existing['xorder'];
+			}
 		} else {
 			$xrefHash['fAddXref'] = 1;
 		}
