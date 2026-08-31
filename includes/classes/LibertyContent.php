@@ -2165,6 +2165,40 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Does this content_id have any row under this item — a plain existence
+	 * check, no content_type_guid scoping (same reasoning as
+	 * insertXrefReadingIfNew(): content_id already scopes to one specific
+	 * content item, no cross-package item-code collision risk here). Unlike
+	 * lookupXrefByItem() above, deliberately does NOT filter out archived/
+	 * expired rows (end_date) — matches the exact behaviour of the hand-
+	 * rolled query this replaces, found identically in stock's
+	 * view_component.php/edit_component.php (`(bool)$gBitDb->getOne("SELECT
+	 * COUNT(*) FROM liberty_xref WHERE content_id=? AND item=?", ...)`); add
+	 * an end_date filter here only if a real caller actually needs it.
+	 *
+	 * @param int             $pContentId
+	 * @param string|string[] $pItem  a single item code, or an array of
+	 *                                alternatives (same convention as
+	 *                                lookupXrefByItem()) — "does any of these
+	 *                                exist"
+	 * @return bool
+	 */
+	public static function hasXrefItem( int $pContentId, $pItem ): bool {
+		global $gBitDb;
+		if( is_array( $pItem ) ) {
+			$itemSql  = 'IN (' . implode( ',', array_fill( 0, count( $pItem ), '?' ) ) . ')';
+			$bindVars = array_merge( [ $pContentId ], $pItem );
+		} else {
+			$itemSql  = '= ?';
+			$bindVars = [ $pContentId, $pItem ];
+		}
+		return (bool)$gBitDb->getOne(
+			"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` $itemSql",
+			$bindVars
+		);
+	}
+
+	/**
 	 * Insert a new xref row for one timestamped reading, unless a row already
 	 * exists for this exact content_id + item + start_date — the "safe to
 	 * re-run against an overlapping/refreshed import" dedupe check, found
