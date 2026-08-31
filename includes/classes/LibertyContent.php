@@ -2199,6 +2199,41 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Reverse lookup: which content_id carries this exact item+xkey value —
+	 * e.g. "which stock component has KLID='36A'", "which contact has
+	 * SCREF='rapid'". The other direction from every other helper in this
+	 * family (those all take content_id in; this takes item+xkey in, gives
+	 * content_id out). Found hand-rolled identically in stock's
+	 * ImportKitlockerStockPredict.php (case-sensitive) and
+	 * ImportSimpleComponent.php's stockImportFindSupplier() (case-
+	 * insensitive, wrapped in its own request-scoped cache — that caching
+	 * layer is caller-specific, kept there, not duplicated here).
+	 *
+	 * No content_type_guid scoping, same as hasXrefItem()/
+	 * insertXrefReadingIfNew() — but unlike those, item+xkey together (not
+	 * content_id) is the whole search key here, so a genuinely colliding
+	 * item code reused with the same value across two packages *would*
+	 * silently return the wrong package's row. Only safe for item codes a
+	 * caller knows are effectively unique enough for this (e.g. Kitlocker's
+	 * KLID, a contact SCREF) — not a general-purpose substitute for a real
+	 * content_type_guid-scoped query.
+	 *
+	 * @param string $pItem
+	 * @param string $pXkey
+	 * @param bool   $pCaseInsensitive
+	 * @return int|null
+	 */
+	public static function lookupContentIdByXrefValue( string $pItem, string $pXkey, bool $pCaseInsensitive = false ): ?int {
+		global $gBitDb;
+		$xkeySql = $pCaseInsensitive ? 'UPPER(`xkey`) = UPPER(?)' : '`xkey` = ?';
+		$contentId = $gBitDb->getOne(
+			"SELECT `content_id` FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `item` = ? AND $xkeySql",
+			[ $pItem, $pXkey ]
+		);
+		return $contentId ? (int)$contentId : null;
+	}
+
+	/**
 	 * Insert a new xref row for one timestamped reading, unless a row already
 	 * exists for this exact content_id + item + start_date — the "safe to
 	 * re-run against an overlapping/refreshed import" dedupe check, found
