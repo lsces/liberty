@@ -331,7 +331,6 @@ class LibertyXrefType {
 				             ELSE s.`cross_ref_title` || '-' || x.`xorder` END AS xref_title,
 				        CASE WHEN x.`end_date` IS NOT NULL AND x.`end_date` < ? THEN 'history'
 				             ELSE s.`x_group` END AS type_source,
-				        pc.`add1` || ',' || pc.`add2` || ',' || pc.`add4` || ',' || pc.`town` AS address,
 				        lc_linked.`title` AS linked_title,
 				        lc_linked.`data` AS linked_data
 				 FROM `".BIT_DB_PREFIX."liberty_xref` x
@@ -339,7 +338,6 @@ class LibertyXrefType {
 				     ON s.`item` = x.`item`
 				     AND s.`content_type_guid` = '$groupGuid'
 				     AND s.`x_group` = '$xGroup'
-				 LEFT JOIN `".BIT_DB_PREFIX."address_postcode` pc ON pc.`postcode` = x.`xkey`
 				 LEFT JOIN `".BIT_DB_PREFIX."liberty_content` lc_linked ON lc_linked.`content_id` = x.`xref`
 				 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
 				     ON purm.`user_id` = $userId AND purm.`role_id` = s.`role_id`
