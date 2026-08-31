@@ -237,11 +237,11 @@ class LibertyXrefType {
 				 JOIN `".BIT_DB_PREFIX."liberty_xref_group` t
 				     ON t.`x_group` = s.`x_group` AND t.`content_type_guid` $guidFilter
 				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x
-				     ON x.`item` = s.`item` AND x.`content_id` = ? AND (x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP)
+				     ON x.`item` = s.`item` AND x.`content_id` = ? AND (x.`end_date` IS NULL OR x.`end_date` > ?)
 				 WHERE s.`content_type_guid` $guidFilter AND t.`sort_order` = ?
 				   AND (x.`xref_id` IS NULL OR x.`xorder` > 0) AND s.`multiple` <> -1
 				 ORDER BY s.`sort_order`, s.`cross_ref_title`",
-				[ $contentId, $xrefGroup ]
+				[ $contentId, $gBitSystem->getUTCTime(), $xrefGroup ]
 			);
 		} else {
 			$result = $db->query(
@@ -250,11 +250,11 @@ class LibertyXrefType {
 				 JOIN `".BIT_DB_PREFIX."liberty_xref_group` t
 				     ON t.`x_group` = s.`x_group` AND t.`content_type_guid` $guidFilter
 				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x
-				     ON x.`item` = s.`item` AND x.`content_id` = ? AND (x.`end_date` IS NULL OR x.`end_date` > CURRENT_TIMESTAMP)
+				     ON x.`item` = s.`item` AND x.`content_id` = ? AND (x.`end_date` IS NULL OR x.`end_date` > ?)
 				 WHERE s.`content_type_guid` $guidFilter AND t.`sort_order` > 0
 				   AND (x.`xref_id` IS NULL OR x.`xorder` > 0) AND s.`multiple` <> -1
 				 ORDER BY s.`sort_order`, s.`cross_ref_title`",
-				[ $contentId ]
+				[ $contentId, $gBitSystem->getUTCTime() ]
 			);
 		}
 		$ret = [];
@@ -344,7 +344,7 @@ class LibertyXrefType {
 				 WHERE x.`content_id` = ?
 				   AND (s.`role_id` IN($rolePlaceholders) OR purm.`user_id` = ?)
 				 ORDER BY s.`sort_order`, x.`item`, x.`xorder`",
-				array_merge( [ $db->NOW(), $contentId ], $roles, [ $userId ] )
+				array_merge( [ $gBitSystem->getUTCTime(), $contentId ], $roles, [ $userId ] )
 			);
 			if( $rowResult ) {
 				while( $row = $rowResult->fetchRow() ) {

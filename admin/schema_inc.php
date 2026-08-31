@@ -250,10 +250,10 @@ $tables = [
 	xkey C(32),
 	xkey_ext C(250),
 	data X,
-	start_date T,
-	last_update_date T,
-	entry_date T,
-	end_date T
+	start_date I8,
+	last_update_date I8,
+	entry_date I8,
+	end_date I8
 ",
 
 ];

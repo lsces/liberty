@@ -27,8 +27,9 @@ use Bitweaver\KernelTools;
  *   end_date     — when this xref expired (NULL = still active)
  *   entry_date   — when this row was first created; set once on insert, never touched by
  *                  updates thereafter. Pass 'entry_date' in $pParamHash to override the
- *                  default (NOW()) — e.g. to stamp a batch of related xrefs (inserted across
- *                  several store() calls) with one shared value for later grouping.
+ *                  default (current UTC time) — e.g. to stamp a batch of related xrefs
+ *                  (inserted across several store() calls) with one shared value for later
+ *                  grouping.
  *   last_update_date — last write timestamp
  *
  * This class handles load/verify/store for a single row.  For bulk loading of all
@@ -249,29 +250,34 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 
 		// entry_date: stamped once at insert time, left untouched on update — unless the
 		// caller explicitly overrides it (e.g. to align a batch of related xrefs, or an
-		// importer backdating to the source record's own timestamp).
+		// importer backdating to the source record's own timestamp). Epoch int throughout,
+		// matching liberty_content's created/last_modified convention — a non-int override is
+		// assumed to be a plain UTC-formatted "Y-m-d H:i:s" string (the pre-migration column's
+		// own shape), not a display-timezone-aware value.
 		if( isset( $pParamHash['entry_date'] ) ) {
 			$pParamHash['xref_store']['entry_date'] = is_int( $pParamHash['entry_date'] )
-				? gmdate( 'Y-m-d H:i:s', $pParamHash['entry_date'] ) : $pParamHash['entry_date'];
+				? $pParamHash['entry_date'] : strtotime( $pParamHash['entry_date'].' UTC' );
 		} elseif( empty( $pParamHash['xref_id'] ) ) {
-			$pParamHash['xref_store']['entry_date'] = $this->mDb->NOW();
+			$pParamHash['xref_store']['entry_date'] = $gBitSystem->getUTCTime();
 		}
 
 		// last_update_date: same override convention as entry_date above.
 		$pParamHash['xref_store']['last_update_date'] = isset( $pParamHash['last_update_date'] )
-			? ( is_int( $pParamHash['last_update_date'] ) ? gmdate( 'Y-m-d H:i:s', $pParamHash['last_update_date'] ) : $pParamHash['last_update_date'] )
-			: $this->mDb->NOW();
+			? ( is_int( $pParamHash['last_update_date'] ) ? $pParamHash['last_update_date'] : strtotime( $pParamHash['last_update_date'].' UTC' ) )
+			: $gBitSystem->getUTCTime();
 
 		$gBitSystem->mServerTimestamp->get_display_offset();
 
+		// start_date/end_date: dual semantics preserved (see this method's own history in
+		// kernel/DATETIME.md) — an int is already epoch UTC, a string is assumed to come from
+		// display-timezone-aware form input and goes through getUTCFromDisplayDate(), which
+		// already returns an epoch int on its own; no further conversion needed either way now.
 		if( !empty( $pParamHash['start_date'] ) ) {
 			$d = $pParamHash['start_date'];
-			if( is_int( $d ) ) {
-				$d = gmdate( 'Y-m-d H:i:s', $d );
-			} else {
+			if( !is_int( $d ) ) {
 				$d = str_replace( 'T', ' ', trim( (string)$d ) );
 				if( strlen( $d ) === 16 ) { $d .= ':00'; }
-				$d = gmdate( 'Y-m-d H:i:s', $gBitSystem->mServerTimestamp->getUTCFromDisplayDate( $d ) );
+				$d = $gBitSystem->mServerTimestamp->getUTCFromDisplayDate( $d );
 			}
 			$pParamHash['xref_store']['start_date'] = $d;
 		}
@@ -279,12 +285,10 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 
 		if( !empty( $pParamHash['end_date'] ) ) {
 			$d = $pParamHash['end_date'];
-			if( is_int( $d ) ) {
-				$d = gmdate( 'Y-m-d H:i:s', $d );
-			} else {
+			if( !is_int( $d ) ) {
 				$d = str_replace( 'T', ' ', trim( (string)$d ) );
 				if( strlen( $d ) === 16 ) { $d .= ':00'; }
-				$d = gmdate( 'Y-m-d H:i:s', $gBitSystem->mServerTimestamp->getUTCFromDisplayDate( $d ) );
+				$d = $gBitSystem->mServerTimestamp->getUTCFromDisplayDate( $d );
 			}
 			$pParamHash['xref_store']['end_date'] = $d;
 		}

@@ -2080,10 +2080,10 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		return $gBitDb->getAll(
 			"SELECT lc.`content_id`, lc.`title` FROM `".BIT_DB_PREFIX."liberty_content` lc
 			 JOIN `".BIT_DB_PREFIX."liberty_xref` lx ON ( lx.`content_id` = lc.`content_id` AND lx.`item` = ?
-			     AND ( lx.`end_date` IS NULL OR lx.`end_date` > CURRENT_TIMESTAMP ) )
+			     AND ( lx.`end_date` IS NULL OR lx.`end_date` > ? ) )
 			 WHERE lc.`content_type_guid` = ?
 			 ORDER BY lc.`title`",
-			[ $pItem, $pContentTypeGuid ]
+			[ $pItem, time(), $pContentTypeGuid ]
 		) ?: [];
 	}
 
@@ -2121,8 +2121,8 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		return $gBitDb->getRow(
 			"SELECT FIRST 1 x.xkey, x.xkey_ext FROM `".BIT_DB_PREFIX."liberty_xref` x
 			 JOIN `".BIT_DB_PREFIX."liberty_xref_item` i ON i.item = x.item AND i.content_type_guid $guidFilter
-			 WHERE x.content_id = ? AND i.template = ? AND ( x.end_date IS NULL OR x.end_date > CURRENT_TIMESTAMP )",
-			[ $pContentId, $pTemplate ]
+			 WHERE x.content_id = ? AND i.template = ? AND ( x.end_date IS NULL OR x.end_date > ? )",
+			[ $pContentId, $pTemplate, time() ]
 		) ?: null;
 	}
 
@@ -2156,10 +2156,11 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			$itemSql = '= ?';
 			$bindVars = [ $pContentId, $pItem ];
 		}
+		$bindVars[] = time();
 		return $gBitDb->getRow(
 			"SELECT FIRST 1 x.item, x.xref_id, x.xkey, x.xkey_ext, x.data FROM `".BIT_DB_PREFIX."liberty_xref` x
 			 JOIN `".BIT_DB_PREFIX."liberty_xref_item` i ON i.item = x.item AND i.content_type_guid $guidFilter
-			 WHERE x.content_id = ? AND x.item $itemSql AND ( x.end_date IS NULL OR x.end_date > CURRENT_TIMESTAMP )",
+			 WHERE x.content_id = ? AND x.item $itemSql AND ( x.end_date IS NULL OR x.end_date > ? )",
 			$bindVars
 		) ?: null;
 	}
@@ -2261,10 +2262,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 */
 	public static function insertXrefReadingIfNew( int $pContentId, string $pItem, int $pStartDate, array $pValues ): bool {
 		global $gBitDb;
-		$startDateSql = gmdate( 'Y-m-d H:i:s', $pStartDate );
 		$existing = $gBitDb->getOne(
 			"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` = ? AND `start_date` = ?",
-			[ $pContentId, $pItem, $startDateSql ]
+			[ $pContentId, $pItem, $pStartDate ]
 		);
 		if( $existing ) {
 			return false;
