@@ -2044,6 +2044,40 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Resolve a content_id from a typeahead pick, falling back to an exact
+	 * title match — "the user either picked a suggestion (trust it, but verify
+	 * it's still the right type rather than a tampered/stale id) or typed a
+	 * title with nothing picked (fall back to an exact match within that
+	 * type)". Returns 0 if neither resolves, leaving "create a new one" to the
+	 * caller. Found hand-rolled identically (same SQL, same comments) across
+	 * `food/edit_movement.php`, `edit_assembly.php`, `add_assembly_item.php` —
+	 * `stock/add_movement_component.php` had the simpler title-only half of
+	 * this (never sent a picked id at all).
+	 *
+	 * @param int|null $pPickedId        candidate content_id from the dropdown, or null/0 if none picked
+	 * @param string   $pTitle           typed title, used for the exact-match fallback
+	 * @param string   $pContentTypeGuid content type the resolved id must belong to
+	 * @return int  resolved content_id, or 0 if nothing matched
+	 */
+	public static function resolveContentIdByTitle( ?int $pPickedId, string $pTitle, string $pContentTypeGuid ): int {
+		global $gBitDb;
+		if( $pPickedId ) {
+			$valid = (bool)$gBitDb->getOne(
+				"SELECT 1 FROM `".BIT_DB_PREFIX."liberty_content` WHERE `content_id` = ? AND `content_type_guid` = ?",
+				[ $pPickedId, $pContentTypeGuid ]
+			);
+			if( $valid ) {
+				return $pPickedId;
+			}
+		}
+		return (int)$gBitDb->getOne(
+			"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
+			 WHERE lc.`content_type_guid` = ? AND lc.`title` = ?",
+			[ $pContentTypeGuid, $pTitle ]
+		);
+	}
+
+	/**
 	 * Find content_id(s) whose xref for $pItem matches $pValue exactly, checking
 	 * both xkey and xkey_ext. The exact-match counterpart to lookupTitles()'s
 	 * substring search — for callers that have a known value (an email address,
