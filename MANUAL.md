@@ -1,13 +1,165 @@
 # Liberty Package — Reference Manual
 
-How the xref system actually works today. For the history of *why* — decisions, bugs found,
-wrong turns — see `CLAUDE.md`'s dated session log instead; this file only tracks current
-behaviour.
+How Liberty actually works today. For the history of *why* — decisions, bugs found, wrong turns —
+see `CLAUDE.md`'s dated session log instead; this file only tracks current behaviour.
 
-This manual covers `liberty_xref`/`liberty_xref_group`/`liberty_xref_item` — the generic
-attribute/relationship system every content-heavy package (Stock, Contact, Food, and others)
-builds its own custom data onto rather than adding schema columns. The rest of Liberty (content
-versioning/history, caching, permissions) isn't covered here.
+Liberty is bitweaver's content-management base: every user-visible content item — wiki pages,
+articles, blog posts, contacts, stock items, movements — is backed by a row in `liberty_content`
+and a PHP subclass of `LibertyContent`. This manual covers that base framework first (object
+lifecycle, versioning, permissions, content status, type registration), then the xref system
+(`liberty_xref`/`liberty_xref_group`/`liberty_xref_item`) that content-heavy packages build their
+own custom per-item data onto, as a layer on top of it, rather than adding schema columns.
+
+## The `liberty_content` object model
+
+Every content type (contacts, stock components, food items, wiki pages, ...) has its own PHP class
+extending `LibertyContent` (which itself extends `LibertyBase extends BitBase`). The shared
+`liberty_content` table row carries fields common to all content regardless of type: `content_id`
+(PK), `content_type_guid`, `title`, `data` (the main content blob — a wiki page's body, or unused
+scalar/null for record-shaped content types like a Stock component), `user_id`/`modifier_user_id`,
+`created`/`last_modified`, `format_guid` (which content-formatting plugin renders `data`),
+`content_status_id` (see "Content status" below), `hits`, `event_time`, `version`. A subclass adds
+its own table (or, like most `liberty_xref`-only content types, no table at all — see "The Xref
+system" below) joined to this row, plus whatever package-specific fields/behaviour it needs.
+
+`LibertyContent::registerContentType( $pContentGuid, $pTypeParams )` is how a class connects
+itself to a `content_type_guid` — called once per real subtype from the package's install/registration
+code, sets `$this->mContentTypeGuid`/`$this->mType` and (via `$gLibertySystem->registerContentType()`)
+makes the type resolvable by `LibertyBase::getLibertyObject()` (below). `$pTypeParams['handler_package']`
+matters when a package has multiple content types sharing one xref namespace — see "Dual-guid
+scoping" below.
+
+## Object lifecycle: load, verify, store, expunge
+
+Every subclass follows the same four-method pattern (from the class's own docblock, confirmed
+against the real implementations):
+
+- **`load()`** — the subclass loads its own table joined to `liberty_content`, then calls
+  `parent::load()`, which loads content preferences and invokes any `content_load_function`
+  services registered against this content type.
+- **`verify(&$pParamHash)`** — validates and normalises inbound data, building
+  `$pParamHash['content_store']` ready for the DB write. A subclass calls `parent::verify()` first,
+  then extends with its own package-specific checks.
+- **`store(&$pParamHash)`** — insert or update the `liberty_content` row (`associateInsert`/
+  `associateUpdate`, generating a new `content_id` via sequence on insert), inside a transaction the
+  subclass's own table write shares. Also (in order): writes a history snapshot if the change
+  isn't flagged `minor`/`has_no_history` and a real field changed (see "Versioning and history"),
+  stores aliases, invokes `content_store_function` services, runs the format plugin's own
+  `store_function` and post-store data filter, clears the object's cache file, stores any
+  `data_store`/`preferences_store` entries, updates hits, and logs the action.
+- **`expunge()`** — deletes the content item and every related record: comments (recursively, via
+  `LibertyComment::expunge()`), invokes `content_expunge_function` services and the format plugin's
+  own expunge hook, then deletes (in one transaction) favorites, history, per-item permissions,
+  aliases, the queued-processing entry, `liberty_content_data`, hits, preferences, content links,
+  **every `liberty_xref` row owned by this content_id**, and finally the `liberty_content` row
+  itself. `mContentId` is set back to `null` afterward so the (now-invalid) object can't be mistaken
+  for still-live.
+
+A subclass generally calls `parent::verify()`/`parent::store()`/`parent::load()`/`parent::expunge()`
+around its own package-specific table work — `LibertyContent`'s own four methods are the shared
+tail (or, for `load()`, the shared head) of that chain, not a full replacement for it.
+
+## Loading content generically — `LibertyBase::getLibertyObject()`
+
+The canonical way to load *any* content item by `content_id` when the concrete type isn't already
+known: looks up `content_type_guid` from `liberty_content` if not supplied, resolves the registered
+handler class via `$gLibertySystem->mContentTypes`, checks the APCu object cache first (unless
+told not to), and otherwise instantiates the handler class and calls `load()`. Every "open this
+content item" code path that doesn't already know its own type should go through here rather than
+hand-rolling a lookup.
+
+**Constructor-shape override point**: `getLibertyObject()` calls `getNewObject($class, $contentId)`,
+which does `new $pClass(null, $pContentId)` — every content class's constructor must accept exactly
+that two-parameter shape (a first "dummy" positional param, content_id second), even if the class
+only ever really needs the content_id. A class with a different constructor signature (e.g. a
+legacy primary key instead of content_id) overrides `getNewObjectById()` instead. Get this wrong and
+the class simply can't be loaded generically via `getLibertyObject()`.
+
+**Caching**: `LibertyContent implements BitCacheable`. `isCacheableClass()` defaults to caching only
+on non-live (dev) systems; `isCacheableObject()` additionally requires a real `mContentId`;
+`getCacheKey()` is the content_id itself. `store()`/`expunge()` both explicitly clear the object's
+cache file (`expungeCacheFile()`) so a write is never served stale from cache afterward.
+
+## Versioning and history
+
+`store()` writes a full snapshot (not a diff) to `liberty_content_history` — `storeHistory()` copies
+`version`, `last_modified`, `modifier_user_id`, `ip`, `data`, `summary`, `edit_comment`,
+`format_guid` from the just-saved object into a new history row — whenever a save isn't flagged
+`minor`, isn't flagged `has_no_history`, and a real field actually changed (`field_changed`). This
+only fires when `getField('version')` is already truthy (i.e. not on first creation — nothing to
+version yet). `getHistoryCount()`/`getHistory()` read it back; `rollbackVersion()`/
+`expungeVersion()`/`removeLastVersion()` manage it going the other way.
+
+**`store()` never writes the incremented version number back onto the in-memory object** — calling
+`store()` twice on the same already-loaded object within one request computes the identical "next
+version" both times and collides on `liberty_content_history`'s unique `(content_id, version)` key.
+Never call `store()` more than once on one loaded object per request if either call might have a
+real field change — merge into one `$pParamHash` and one call, or reload the object between calls.
+
+## Content status
+
+`liberty_content.content_status_id` is a plain numeric threshold, not an enum — `getContentStatus()`
+reads it (default `50` if unset). Five convenience checks compare it against configurable
+`kernel_config` thresholds: `isPublic()` (`>= 50` by default), `isHidden()` (`<= -10`),
+`isProtected()` (`<= -20`), `isPrivate()` (`<= -40`), `isDeleted()` (`<= -999`) — these are
+cumulative bands on one axis, not independent flags. `getAvailableContentStatuses()` returns the
+real named status rows a given user is allowed to set, gated by the `p_liberty_edit_all_status`
+permission for the full range.
+
+## Permissions
+
+Five permission-string properties are set in the constructor, one per operation, each defaulting to
+`p_admin_content` unless the subclass overrides it: `mViewContentPerm` (empty means "always
+allowed" — the only one with this shortcut), `mCreateContentPerm`, `mUpdateContentPerm`,
+`mExpungeContentPerm`, `mAdminContentPerm`. Six matching method pairs check/enforce them —
+`has<X>Permission()` returns a bool; `verify<X>Permission()` calls it and fatals (via
+`$gBitSystem->fatalPermission()`) if denied, the standard "check-or-die" pattern used throughout
+page controllers.
+
+**`hasUserPermission($permName)` is the shared check every `has<X>Permission()` wrapper calls
+through to.** Resolution order:
+1. No content loaded → plain role-permission check (`$gBitUser->hasPermission($permName)`).
+2. Content loaded, user is the object's owner, or user is a global admin → passes immediately.
+3. Otherwise, if the user holds `mAdminContentPerm` globally (as an ordinary role permission, not
+   an item-level override) → passes immediately, without ever consulting per-item overrides.
+4. Otherwise, look up per-item overrides for this content_id (`liberty_content_permissions`, loaded
+   per-user via `getUserPermissions()`). **If any overrides exist for this item, they alone decide
+   the answer** — an item-level grant of `mAdminContentPerm` or the specific requested permission
+   passes, anything else (including holding the plain role permission) does not. Only when **no**
+   item-level overrides exist at all does it fall back to the plain role-permission check.
+
+Per-item overrides don't merge with role permissions when both exist for an item — the item-level
+set wins outright once any row exists for that content_id, even if it doesn't cover every
+permission a role grant otherwise would.
+
+`getContentPermissionsSql()`/`checkContentPermission()` build the equivalent logic as a SQL
+`WHERE`/`JOIN` fragment for list queries (e.g. "which of these content_ids can this user view"),
+rather than checking one already-loaded object — used by `getContentList()`'s own permission
+filtering.
+
+## Other subsystems (not covered in depth here)
+
+- **`getContentList()`** — the generic content-listing method used by search, Calendar, and
+  anywhere a list of mixed content types gets built. See "Optional per-content-type calendar/grid
+  rendering" below for its one xref-relevant extension point (`getDayCellHtml()`).
+- **Structures** (`getStructures()`/`setStructure()`/`isInStructure()`) — optional hierarchical
+  placement (used by Wiki's page tree), via `liberty_structures`.
+- **Action log** (`storeActionLog()`/`getActionLogs()`) — a per-content audit trail of what
+  changed, separate from the version-history snapshots above.
+- **Comments** (`LibertyComment`) — a separate class; `expunge()` cascades into it but comment
+  authoring/display isn't part of `LibertyContent` itself.
+- **Content data parsing/filtering** (`parseData()`/`filterData()`/`getParsedData()`) — the format
+  plugin pipeline that turns stored `data` into rendered output.
+
+## The Xref system — attributes and relationships layered on `liberty_content`
+
+Everything from here on covers `liberty_xref`/`liberty_xref_group`/`liberty_xref_item` — the
+generic attribute/relationship system content-heavy packages (Stock, Contact, Food, and others)
+build their own custom per-item data onto, on top of the base framework above, rather than adding
+schema columns or a package-specific table. A content type doesn't need any xref data at all to
+work — plenty of `LibertyContent` subclasses never touch it — but for the ones that do, xref data
+lives and behaves independently of the base object's own lifecycle (loading xref info is an
+explicit extra step, not automatic on `load()`; `expunge()` does cascade into it, as noted above).
 
 ## Access boundaries — where each layer lives
 
@@ -395,18 +547,8 @@ warning. Always assign to a named variable first. Confirmed affected: `storeXref
 `parseDataHash()`, `LibertyXref::store()`, `FoodComponent::getDisplayUrlFromHash()` (this one
 package-level, but the same base-class contract — any `getDisplayUrlFromHash()` override should
 assume the same). Worth grepping `->store( [` / `->getDisplayUrlFromHash( [` etc. for a
-literal-array argument before considering xref-touching code finished.
-
-## Double-`store()` version collision
-
-`LibertyContent::store()` computes the next history version as `$this->mInfo['version'] + 1` and
-never writes the new value back onto `$this->mInfo['version']` after a successful save. Calling
-`->store()` twice on the *same already-loaded object* within one request — even for genuinely
-different field changes — computes the identical "next version" both times and collides on
-`liberty_content_history`'s unique `(content_id, version)` key (Firebird SQLSTATE 23000, an
-uncaught `PDOException` that kills the whole request). Never call `->store()` more than once on
-one loaded object per request if either call might have a real field change — merge into one
-`$pParamHash` and one call, or reload the object between calls.
+literal-array argument before considering xref-touching code finished. See "Versioning and
+history" above for a related `store()` footgun (calling it twice on one loaded object).
 
 ## Optional per-content-type calendar/grid rendering — `getDayCellHtml()`
 
