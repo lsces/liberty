@@ -71,20 +71,22 @@ if( !empty( $_REQUEST['fSaveXref'] ) ) {
 			$_REQUEST['xkey'] = trim( (string)( $_REQUEST['sod_sodium'] ?? '' ) );
 		}
 	}
-	if(
-		!empty( $_FILES['image_file']['tmp_name'] ?? null ) && is_uploaded_file( $_FILES['image_file']['tmp_name'] )
-		&& ( $gContent->mInfo['xref_store']['data']['item'] ?? '' ) === 'image'
-	) {
-		// fisheye's alternate poster/backdrop images (edit_image_item.tpl) - "replace what's in
-		// this slot", not "point this row at a different file": overwrite the file already
-		// referenced by this row's own xkey_ext in place, so xkey_ext itself never needs to
-		// change. See fisheye.md's 2026-09-02 "'images' xref group" entry for why these live
-		// outside storage/attachments (mime_film_get_storage_root() is already globally defined -
-		// mimefilm is an always-active plugin, see that entry too).
-		$existingPath = $gContent->mInfo['xref_store']['data']['xkey_ext'] ?? '';
-		$root = mime_film_get_storage_root();
-		if( !empty( $existingPath ) && !empty( $root ) ) {
-			move_uploaded_file( $_FILES['image_file']['tmp_name'], $root.$existingPath );
+	if( method_exists( $gContent, 'replaceXrefFile' ) ) {
+		// Generic file-lifecycle hook - deliberately no knowledge here of what content type or
+		// item this is (was fisheye/'image'-specific hardcoded logic until 2026-09-02, moved onto
+		// the content class itself so this controller stays package-agnostic; also fixed a real
+		// bug in passing - the old code always resolved a film's storage root regardless of
+		// content type, silently wrong for a season/show on any deployment where that root
+		// genuinely differs). Accepts whatever file was actually uploaded, under any field name.
+		foreach( $_FILES as $file ) {
+			if( !empty( $file['tmp_name'] ) && is_uploaded_file( $file['tmp_name'] ) ) {
+				$gContent->replaceXrefFile(
+					$gContent->mInfo['xref_store']['data']['item'] ?? '',
+					$gContent->mInfo['xref_store']['data']['xkey_ext'] ?? '',
+					$file['tmp_name']
+				);
+				break;
+			}
 		}
 	}
 	if( $gContent->storeXref( $_REQUEST ) ) {
@@ -93,6 +95,18 @@ if( !empty( $_REQUEST['fSaveXref'] ) ) {
 	}
 	$xrefInfo = $_REQUEST;
 	$xrefInfo['data'] = $_REQUEST['edit'] ?? '';
+} elseif( !empty( $_REQUEST['fSetAsThumbnail'] ) ) {
+	// A second named submit button on the same form - fSaveXref is never set when this one is
+	// clicked, so this needs its own top-level branch, not a nested check inside fSaveXref's.
+	$gContent->verifyUpdatePermission();
+	if( method_exists( $gContent, 'promoteImageToThumbnail' ) ) {
+		// Generic hook, same shape as replaceXrefFile()/deleteXrefFile() - lets a content class
+		// expose "make this xref row's file my own real thumbnail" without this controller
+		// needing to know what that means.
+		$gContent->promoteImageToThumbnail( $gContent->mInfo['xref_store']['data']['xkey_ext'] ?? '' );
+	}
+	header( 'Location: '.$gContent->getEditUrl() );
+	die;
 } elseif( isset( $_REQUEST['expunge'] ) ) {
 	// expunge=3 is a real hard delete (no history trace left) — gated behind the
 	// stricter expunge permission. Archive (1), restore (default/-1), and step (2)
@@ -103,20 +117,16 @@ if( !empty( $_REQUEST['fSaveXref'] ) ) {
 	} else {
 		$gContent->verifyUpdatePermission();
 	}
-	if(
-		(int)$_REQUEST['expunge'] === 3
-		&& ( $gContent->mInfo['xref_store']['data']['item'] ?? '' ) === 'image'
-	) {
-		// fisheye's alternate poster/backdrop images (edit_image_item.tpl) - the physical file
-		// is disposable (just a local copy of a Plex/TMDB download, unlike the main video file
-		// mime_film_expunge() deliberately never touches), so a real hard delete removes it too
-		// rather than leaving an orphan under fisheye_disk_storage_root/images/ forever. Read
-		// before stepXref() runs - the xref row (and its xkey_ext) won't exist to read afterward.
-		$imagePath = $gContent->mInfo['xref_store']['data']['xkey_ext'] ?? '';
-		$root = mime_film_get_storage_root();
-		if( !empty( $imagePath ) && !empty( $root ) && is_file( $root.$imagePath ) ) {
-			@unlink( $root.$imagePath );
-		}
+	if( (int)$_REQUEST['expunge'] === 3 && method_exists( $gContent, 'deleteXrefFile' ) ) {
+		// Generic file-lifecycle hook, same reasoning as replaceXrefFile() above - the content
+		// class itself decides whether this item has a disposable file worth cleaning up at all
+		// (only true for fisheye's 'image' items; an 'episode' row's own xkey_ext is the real,
+		// precious video file and must never be touched here). Read before stepXref() runs - the
+		// xref row (and its xkey_ext) won't exist to read afterward.
+		$gContent->deleteXrefFile(
+			$gContent->mInfo['xref_store']['data']['item'] ?? '',
+			$gContent->mInfo['xref_store']['data']['xkey_ext'] ?? ''
+		);
 	}
 	if( $gContent->stepXref( $_REQUEST ) ) {
 		header( 'Location: '.$gContent->getEditUrl() );
