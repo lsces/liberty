@@ -71,6 +71,22 @@ if( !empty( $_REQUEST['fSaveXref'] ) ) {
 			$_REQUEST['xkey'] = trim( (string)( $_REQUEST['sod_sodium'] ?? '' ) );
 		}
 	}
+	if(
+		!empty( $_FILES['image_file']['tmp_name'] ?? null ) && is_uploaded_file( $_FILES['image_file']['tmp_name'] )
+		&& ( $gContent->mInfo['xref_store']['data']['item'] ?? '' ) === 'image'
+	) {
+		// fisheye's alternate poster/backdrop images (edit_image_item.tpl) - "replace what's in
+		// this slot", not "point this row at a different file": overwrite the file already
+		// referenced by this row's own xkey_ext in place, so xkey_ext itself never needs to
+		// change. See fisheye.md's 2026-09-02 "'images' xref group" entry for why these live
+		// outside storage/attachments (mime_film_get_storage_root() is already globally defined -
+		// mimefilm is an always-active plugin, see that entry too).
+		$existingPath = $gContent->mInfo['xref_store']['data']['xkey_ext'] ?? '';
+		$root = mime_film_get_storage_root();
+		if( !empty( $existingPath ) && !empty( $root ) ) {
+			move_uploaded_file( $_FILES['image_file']['tmp_name'], $root.$existingPath );
+		}
+	}
 	if( $gContent->storeXref( $_REQUEST ) ) {
 		header( 'Location: '.$gContent->getEditUrl() );
 		die;
