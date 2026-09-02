@@ -67,6 +67,25 @@ class LibertyXrefContent {
 	}
 
 	/**
+	 * Every loaded xref row across every group, flattened - group name is irrelevant to a
+	 * caller that just wants each item's value regardless of which tab it's organised under
+	 * (e.g. a display page bucketing rows by item name into template variables). Same
+	 * "flatten across groups, no fresh query" spirit as findByItem()/allItems(), returning full
+	 * rows instead of just ids so callers don't also need a second lookup for xkey/xkey_ext/data.
+	 *
+	 * @return LibertyXref[]
+	 */
+	public function allXrefs(): array {
+		$ret = [];
+		foreach( $this->mGroups as $group ) {
+			foreach( $group->mXrefs as $xref ) {
+				$ret[] = $xref;
+			}
+		}
+		return $ret;
+	}
+
+	/**
 	 * Every loaded xref_id keyed by its item code — scanning already-loaded
 	 * groups, no fresh query, same spirit as findByItem() but for callers that
 	 * need to see the whole set at once (e.g. diffing a caller-submitted item
