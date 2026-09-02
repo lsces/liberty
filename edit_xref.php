@@ -103,6 +103,21 @@ if( !empty( $_REQUEST['fSaveXref'] ) ) {
 	} else {
 		$gContent->verifyUpdatePermission();
 	}
+	if(
+		(int)$_REQUEST['expunge'] === 3
+		&& ( $gContent->mInfo['xref_store']['data']['item'] ?? '' ) === 'image'
+	) {
+		// fisheye's alternate poster/backdrop images (edit_image_item.tpl) - the physical file
+		// is disposable (just a local copy of a Plex/TMDB download, unlike the main video file
+		// mime_film_expunge() deliberately never touches), so a real hard delete removes it too
+		// rather than leaving an orphan under fisheye_disk_storage_root/images/ forever. Read
+		// before stepXref() runs - the xref row (and its xkey_ext) won't exist to read afterward.
+		$imagePath = $gContent->mInfo['xref_store']['data']['xkey_ext'] ?? '';
+		$root = mime_film_get_storage_root();
+		if( !empty( $imagePath ) && !empty( $root ) && is_file( $root.$imagePath ) ) {
+			@unlink( $root.$imagePath );
+		}
+	}
 	if( $gContent->stepXref( $_REQUEST ) ) {
 		header( 'Location: '.$gContent->getEditUrl() );
 		die;
