@@ -272,9 +272,42 @@ if( !function_exists( '\Bitweaver\Liberty\mime_film_load' )) {
  * @access public
  * @return array thumbnail_url hash, same shape liberty_fetch_thumbnails() returns
  */
+/**
+ * Grab a single representative frame from a video file as a JPEG - ffmpegthumbnailer first
+ * (fast, seeks intelligently), falling back to a plain ffmpeg seek-and-grab if
+ * ffmpegthumbnailer isn't installed or produced nothing. Factored out of
+ * mime_film_get_thumbnail_url() below (same two commands, same 60s timeout, unchanged) so
+ * FisheyeSeason::reloadPlexImages() can reuse the exact same chain for a season with no
+ * Plex-provided artwork at all (2026-09-03) - a season has no attachment of its own for the
+ * normal mime-plugin thumbnail pipeline to hook into, so it calls this directly against one
+ * of its episode video files instead.
+ *
+ * @param string $pSourceFile    the video file to grab a frame from
+ * @param string $pDestJpegPath  where to write the grabbed frame - overwritten if it exists
+ * @param int $pSeekSeconds      how far into the video to seek before grabbing (only used by
+ *   the ffmpeg fallback - ffmpegthumbnailer picks its own seek point)
+ * @return bool  true if $pDestJpegPath now holds a real frame grab
+ */
+if( !function_exists( '\Bitweaver\Liberty\mime_film_grab_video_frame' )) {
+	function mime_film_grab_video_frame( string $pSourceFile, string $pDestJpegPath, int $pSeekSeconds = 60 ): bool {
+		global $gBitSystem;
+		@unlink( $pDestJpegPath );
+		$thumbnailer = trim( shell_exec( 'which ffmpegthumbnailer' ) ?? '' );
+		if( !empty( $thumbnailer ) && is_executable( $thumbnailer )) {
+			shell_exec( "timeout 60 ".escapeshellcmd( $thumbnailer )." -i ".escapeshellarg( $pSourceFile )." -o ".escapeshellarg( $pDestJpegPath )." -s 1024" );
+		}
+		if( !is_file( $pDestJpegPath ) || filesize( $pDestJpegPath ) <= 1 ) {
+			$ffmpeg = trim( $gBitSystem->getConfig( 'ffmpeg_path', shell_exec( 'which ffmpeg' ) ?? '' ) );
+			if( !empty( $ffmpeg ) && is_executable( $ffmpeg )) {
+				shell_exec( "timeout 60 ".escapeshellcmd( $ffmpeg )." -i ".escapeshellarg( $pSourceFile )." -an -ss ".(int)$pSeekSeconds." -t 00:00:01 -r 1 -y ".escapeshellarg( $pDestJpegPath )." 2>&1" );
+			}
+		}
+		return is_file( $pDestJpegPath ) && filesize( $pDestJpegPath ) > 1;
+	}
+}
+
 if( !function_exists( '\Bitweaver\Liberty\mime_film_get_thumbnail_url' )) {
 	function mime_film_get_thumbnail_url( $pAttachmentId, $pSourceFile ) {
-		global $gBitSystem;
 		$ret = [];
 		$destBranch = liberty_mime_get_storage_branch( [ 'attachment_id' => $pAttachmentId ] );
 		$destPath   = STORAGE_PKG_PATH.$destBranch;
@@ -285,19 +318,9 @@ if( !function_exists( '\Bitweaver\Liberty\mime_film_get_thumbnail_url' )) {
 			$posterSource = $sidecar;
 		} elseif( !is_file( $destPath.'thumbs/small.jpg' ) && !is_file( $destPath.'thumbs/small.png' )) {
 			// nothing cached yet and no sidecar - grab a frame
-			$thumbnailer = trim( shell_exec( 'which ffmpegthumbnailer' ) ?? '' );
 			$tmpFile = $destPath.'film_thumb_tmp.jpg';
 			KernelTools::mkdir_p( $destPath );
-			if( !empty( $thumbnailer ) && is_executable( $thumbnailer )) {
-				shell_exec( "timeout 60 ".escapeshellcmd( $thumbnailer )." -i ".escapeshellarg( $pSourceFile )." -o ".escapeshellarg( $tmpFile )." -s 1024" );
-			}
-			if( !is_file( $tmpFile ) || filesize( $tmpFile ) <= 1 ) {
-				$ffmpeg = trim( $gBitSystem->getConfig( 'ffmpeg_path', shell_exec( 'which ffmpeg' ) ?? '' ) );
-				if( !empty( $ffmpeg ) && is_executable( $ffmpeg )) {
-					shell_exec( "timeout 60 ".escapeshellcmd( $ffmpeg )." -i ".escapeshellarg( $pSourceFile )." -an -ss 60 -t 00:00:01 -r 1 -y ".escapeshellarg( $tmpFile )." 2>&1" );
-				}
-			}
-			if( is_file( $tmpFile ) && filesize( $tmpFile ) > 1 ) {
+			if( mime_film_grab_video_frame( $pSourceFile, $tmpFile ) ) {
 				$posterSource = $tmpFile;
 			}
 		}
