@@ -193,6 +193,36 @@ Other packages (Stock, Contact, Food, Health, Mapper, ...) must never contain ra
 way and to give prose/comments elsewhere in other packages a correct term (`Xref` /
 `$gContent->mXrefInfo`) to use instead of naming the raw table.
 
+**Generic content_id+item helper family** (all static on `LibertyContent`, built specifically to
+retire raw `liberty_xref` reads/writes hand-rolled elsewhere) — the standard way to
+touch a single xref row addressed by content_id+item without writing SQL. All accept
+`string|string[]` for the item param (an array means mutually-exclusive alternatives — "whichever
+of these is actually set" — same convention throughout):
+
+- **`lookupXrefByItem( $pContentId, $pItem )`** — the full row.
+- **`upsertXrefByContentId( $pContentId, $pItem, $pValues )`** — insert-or-update. With an array
+  `$pItem` and no existing row under any alternative, deliberately no-ops (returns `false`) rather
+  than guessing which item to create under. Preserves the row's current `xorder` on update when
+  the caller doesn't pass one (`LibertyXref::verify()` otherwise defaults it to `0`).
+- **`deleteXrefByItem( $pContentId, $pItem )`** — bulk delete, returns the count of rows deleted.
+- **`hasXrefItem( $pContentId, $pItem )`** — existence check, `bool`. Deliberately does **not**
+  filter `end_date` (unlike `lookupXrefByItem()`) — matches the hand-rolled queries it replaced;
+  add that filter only if a real caller needs it.
+- **`insertXrefReadingIfNew(...)`** — dedupe-by-`start_date`-then-insert, for a timestamped series
+  rather than single-cardinality data. Single-item only, a genuinely different shape from the rest
+  of the family.
+- **`lookupContentIdByXrefValue( $pItem, $pXkey, $pCaseInsensitive = false )`** — the one
+  reverse-direction member: item+xkey *in*, content_id *out* (e.g. "which component has
+  `KLID`=`'36A'`"). **No `content_type_guid` scoping, and none is cheaply possible** —
+  item+xkey together is the whole search key, so a colliding item code reused with the same value
+  across two packages would silently return the wrong package's row. Only safe for item codes
+  known to be effectively unique (`KLID`, `SCREF`) — flagged in the helper's own docblock, check
+  before reaching for it on a collision-prone code.
+
+Check this list before hand-rolling any new content_id+item query. `stock` is the heaviest current
+consumer (see `stock/MANUAL.md`) — most of its import scripts and movement-editing code used to
+carry raw `liberty_xref` SQL directly; all of it now goes through this family instead.
+
 ## Data model
 
 Three tables:
@@ -421,7 +451,7 @@ contract:
 | `text` | ✓ | ✓ | Any scalar `xkey`/`xkey_ext`/`data` field. Ultimate fallback. |
 | `value` | ✓ | ✓ | Same shape, different column emphasis (`xkey`+`xkey_ext` as two separate values rather than one combined). |
 | `link` | ✓ | ✓ (read-only target) | An item whose `xref` points at another piece of content — renders a real link via the linked title, generic across every package. |
-| `href` | ✓ | ✓ | An **external** URL built from `cross_ref_href` (link prefix, set on the item registration) + `xkey` (the external ID) — e.g. an IMDB/TheTVDB/MusicBrainz/Discogs cross-reference. `xkey_ext` is an optional display label, falling back to `xkey` itself. Distinct from `link`: that one points at another `liberty_content` row via `xref`; this one points off-site. Added 2026-09-02 — `cross_ref_href` had been selected into every xref row's data since `LibertyXrefType.php` was written, but no template actually rendered it (confirmed: `address`/`phone`, the only two templates using it in real schema data, both silently ignore it) — this is the first template that actually consumes it. |
+| `href` | ✓ | ✓ | An **external** URL built from `cross_ref_href` (link prefix, set on the item registration) + `xkey` (the external ID) — e.g. an IMDB/TheTVDB/MusicBrainz/Discogs cross-reference. `xkey_ext` is an optional display label, falling back to `xkey` itself. Distinct from `link`: that one points at another `liberty_content` row via `xref`; this one points off-site. `cross_ref_href` had been selected into every xref row's data since `LibertyXrefType.php` was written, but no template actually rendered it (confirmed: `address`/`phone`, the only two templates using it in real schema data, both silently ignore it) — this is the first template that actually consumes it. |
 | `json-text` | ✓ | ✓ | `data` holds a JSON object — renders as one tidy `Key: value, Key: value` line. Edit shares `json-list`'s form (`{include}` forward) — editing doesn't need to differ by view style. |
 | `json-list` | ✓ | ✓ | Same JSON case, but view renders each key on its own line — a nested table *inside* the cell, not separate outer rows (`list_xref.tpl` owns the one `<tr>` per xref row; an item template can't legitimately add more). Edit renders one input per key (`name="json_field[key]"`, PHP's array-POST convention) — `edit_xref.php` reassembles `$_REQUEST['json_field']` back into a JSON string (numeric strings cast back to int/float; blank/zero entries dropped so the saved blob stays sparse, same convention every importer already uses) before the normal `storeXref()` path runs. Only triggers when that field is actually present, so it can't affect any other item type's save. |
 | `sod` (Food-local, `food/templates/xref/foodcomponent/`) | — (falls back to `text`) | ✓ | Worked example of an **edit-only override**: a package needing a custom *edit* form for what's otherwise a completely ordinary scalar display doesn't need a matching view template at all — `getXrefRecordTemplate()`'s final fallback (`view_text_item.tpl`) covers it for free as long as no `view_sod_item.tpl` exists anywhere in the resolution chain. Food's `SOD` (sodium) uses this to offer Salt (g)/Sodium (mg) inputs, converting salt→sodium at save time — `edit_xref.php` has a small `sod_salt`/`sod_sodium` hook (same shape as `json_field`'s, gated purely on field presence) alongside the JSON one. **Worth reusing this pattern** for any future item that needs a nonstandard edit *input* but a perfectly standard scalar *display* — cheaper than building both halves of a new template pair. |
