@@ -534,6 +534,15 @@ class LibertyMime extends LibertyContent {
 
 	/**
 	 * Expunges the content deleting attached attachments
+	 *
+	 * Regression, not a deliberate change: the PHP8.4 namespace/style pass (9718d623,
+	 * 2025-08-27) rewrote this method's signature (`function expunge()` -> `public function
+	 * expunge(): bool`) and lost `return LibertyContent::expunge();` as collateral, replacing it
+	 * with a bare `return true;` - silently breaking the chain to LibertyContent::expunge() (the
+	 * actual liberty_content/xref/permissions/history removal) for every LibertyMime-based
+	 * content type ever since. Attachment/file rows still got cleaned up correctly (expungeAttachment()
+	 * above), so a "delete" always looked complete - found live 2026-09-04 via a leftover
+	 * liberty_content row after deleting a duplicate film import. Restored 2026-09-04.
 	 */
 	public function expunge(): bool {
 		if( !empty( $this->mStorage ) && count( $this->mStorage )) {
@@ -541,7 +550,7 @@ class LibertyMime extends LibertyContent {
 				$this->expungeAttachment( $this->mStorage[$i]['attachment_id'] );
 			}
 		}
-		return true;
+		return LibertyContent::expunge();
 	}
 
 	/**
