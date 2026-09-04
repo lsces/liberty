@@ -21,6 +21,7 @@ namespace Bitweaver\Liberty;
 
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
+use Bitweaver\HttpStatusCodes;
 
 function parse_data_plugins( &$pData, &$pReplace, $pCommonObject, $pParseHash ) {
 	global $gLibertySystem, $gBitSystem;
@@ -928,4 +929,73 @@ function get_subtitle( $pString ) {
 		return substr( $pString, $start + 1 );
 	}
 	return '';
+}
+
+/**
+ * Stream a local file with real single-range HTTP Range support (the common case for a
+ * browser's own <video> element seek bar - without it, seeking generally doesn't work and some
+ * browsers won't even start playback of a large file). Extracted from fisheye's
+ * play_episode.php (2026-09-02/03, proven live for episode/featurette playback) so
+ * mime_film_download() can share the same real implementation instead of its own
+ * Accept-Ranges:bytes header that was never actually backed by Range parsing (see liberty.md's
+ * 2026-09-01 entries and fisheye.md's 2026-09-04 entry for the history).
+ *
+ * Caller is responsible for any headers unrelated to range serving itself (Content-Disposition,
+ * Last-Modified, Cache-Control) - set those before calling this. This function owns
+ * Accept-Ranges/Content-Type/Content-Range/Content-Length/the response status, and does the
+ * actual streaming.
+ *
+ * @param string $pFilePath  absolute path to a real, readable file - caller must verify this
+ * @param string $pMimeType  Content-Type to send
+ * @access public
+ * @return void
+ */
+function liberty_serve_range_file( string $pFilePath, string $pMimeType ): void {
+	$fileSize = filesize( $pFilePath );
+	$start = 0;
+	$end = $fileSize - 1;
+	$status = HttpStatusCodes::HTTP_OK;
+
+	header( 'Accept-Ranges: bytes' );
+	header( 'Content-Type: '.$pMimeType );
+
+	if( !empty( $_SERVER['HTTP_RANGE'] ) && preg_match( '/^bytes=(\d*)-(\d*)$/', $_SERVER['HTTP_RANGE'], $m ) ) {
+		if( $m[1] === '' && $m[2] !== '' ) {
+			// suffix range, e.g. 'bytes=-500' - last 500 bytes.
+			$start = max( 0, $fileSize - (int)$m[2] );
+		} else {
+			if( $m[1] !== '' ) {
+				$start = (int)$m[1];
+			}
+			if( $m[2] !== '' ) {
+				$end = (int)$m[2];
+			}
+		}
+		$end = min( $end, $fileSize - 1 );
+		if( $start > $end ) {
+			header( 'Content-Range: bytes */'.$fileSize );
+			http_response_code( HttpStatusCodes::HTTP_REQUESTED_RANGE_NOT_SATISFIABLE );
+			exit;
+		}
+		$status = HttpStatusCodes::HTTP_PARTIAL_CONTENT;
+		header( 'Content-Range: bytes '.$start.'-'.$end.'/'.$fileSize );
+	}
+
+	http_response_code( $status );
+	header( 'Content-Length: '.( $end - $start + 1 ) );
+
+	while( ob_get_level() > 0 ) {
+		ob_end_clean();
+	}
+
+	$handle = fopen( $pFilePath, 'rb' );
+	fseek( $handle, $start );
+	$bytesRemaining = $end - $start + 1;
+	while( $bytesRemaining > 0 && !feof( $handle ) ) {
+		$chunk = min( 8192, $bytesRemaining );
+		echo fread( $handle, $chunk );
+		$bytesRemaining -= $chunk;
+		flush();
+	}
+	fclose( $handle );
 }

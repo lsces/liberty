@@ -9,8 +9,12 @@
  * liberty_process_upload() is ever called, since there is no upload event for a scanned-in file.
  *
  * Requires the fisheye_disk_storage_root kernel_config value (set via the fisheye admin page) -
- * filesystem path the film library lives under. source_url is still null until an nginx
- * location serving that same tree exists (not configured on any server yet).
+ * filesystem path the film library lives under. Playback goes through the same PHP-mediated
+ * download endpoint fisheye's play_episode.php uses for episodes (mime_film_download() calls the
+ * same liberty_serve_range_file() helper, see liberty_lib.php) rather than a direct nginx-served
+ * static URL - real single-range HTTP Range support, proven live for episode/featurette playback
+ * since 2026-09-02/03, so the originally-planned nginx location block for this tree was dropped
+ * as unnecessary (2026-09-04, see fisheye.md).
  *
  * Lives in liberty/plugins/ (not fisheye/liberty_plugins/) even though fisheye is currently its
  * only consumer - a package-scoped liberty_plugins/ dir for a non-default mime guid only gets
@@ -237,13 +241,10 @@ if( !function_exists( '\Bitweaver\Liberty\mime_film_load' )) {
 					$ret['download_url']  = LibertyMime::getAttachmentDownloadUrl( $row['attachment_id'] );
 					$ret['thumbnail_url'] = mime_film_get_thumbnail_url( $row['attachment_id'], $ret['source_file'] );
 					$ret['media_url'] = $ret['source_file'];
-					// Interim: play through the same PHP-mediated download endpoint rather than
-					// a direct static URL - works right now (confirmed streaming the real file
-					// correctly), but mime_film_download()'s readfile() fallback doesn't honour
-					// HTTP Range requests, so seeking in the player won't work and a PHP-FPM
-					// worker stays busy for the whole stream. Replace with a direct nginx-served
-					// URL (fisheye_disk_storage_root's own location block) once that exists -
-					// see liberty.md's 2026-09-01 entries.
+					// Plays through the same PHP-mediated download endpoint fisheye's own
+					// episode/featurette playback uses - mime_film_download() now streams via
+					// liberty_serve_range_file(), real HTTP Range support, seeking works (see
+					// mime_film_download()'s own docblock).
 					$ret['source_url'] = $ret['download_url'];
 				}
 			}
@@ -366,11 +367,15 @@ if( !function_exists( '\Bitweaver\Liberty\mime_film_get_thumbnail_url' )) {
  * Serve the download. Deliberately NOT delegating to mime_default_download() - its nginx
  * branch builds the X-Accel-Redirect target as str_replace(STORAGE_PKG_PATH, STORAGE_PKG_URL,
  * source_file), which is a no-op for a source_file outside STORAGE_PKG_PATH and would hand
- * nginx a raw filesystem path instead of a URI (nginx would reject it). Until source_url is
- * actually wired up (see load_function's TODO), always use the plain readfile() fallback -
- * correct for any web server, just not as efficient for a large file as X-Accel-Redirect would
- * be. Swap this for the nginx branch once an internal-serving location for the storage root
- * exists.
+ * nginx a raw filesystem path instead of a URI (nginx would reject it).
+ *
+ * Streams via liberty_serve_range_file() (liberty_lib.php) - real single-range HTTP Range
+ * support, same implementation fisheye's play_episode.php uses for episode/featurette playback.
+ * Previously used a plain readfile() fallback that advertised `Accept-Ranges: bytes` without
+ * ever actually honouring a Range request (always sent the full file as 200 OK) - worse than not
+ * advertising it at all, since a <video> element's seek bar believed seeking should work and
+ * silently failed. Fixed 2026-09-04 (see fisheye.md) once play_episode.php's own approach was
+ * proven live, making the originally-planned nginx static-URL piece unnecessary.
  *
  * @param array $pFileHash
  * @access public
@@ -382,19 +387,8 @@ if( !function_exists( '\Bitweaver\Liberty\mime_film_download' )) {
 		if( !empty( $pFileHash['source_file'] ) && is_readable( $pFileHash['source_file'] )) {
 			header( 'Last-Modified: '.gmdate( 'D, d M Y H:i:s T', $pFileHash['last_modified'] ?? time() ), true, 200 );
 			header( 'Content-Disposition: attachment; filename="'.$pFileHash['file_name'].'"' );
-			header( 'Content-type: '.$pFileHash['mime_type'] );
 			header( 'Cache-Control: no-cache,must-revalidate' );
-			header( 'Accept-Ranges: bytes' );
-			header( 'Content-Length: '.filesize( $pFileHash['source_file'] ) );
-			// ob_clean() alone only empties the current buffer, it doesn't stop buffering -
-			// readfile()'s output would still get captured into it instead of streamed, which
-			// for a multi-GB film means readfile() tries to hold the whole file in memory at
-			// once and hits PHP's memory_limit. Fully exit every active buffer level first.
-			while( ob_get_level() > 0 ) {
-				ob_end_clean();
-			}
-			flush();
-			readfile( $pFileHash['source_file'] );
+			liberty_serve_range_file( $pFileHash['source_file'], $pFileHash['mime_type'] );
 			$ret = true;
 		} else {
 			$pFileHash['errors']['no_file'] = KernelTools::tra( 'No matching file found.' );
