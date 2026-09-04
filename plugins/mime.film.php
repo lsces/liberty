@@ -386,7 +386,14 @@ if( !function_exists( '\Bitweaver\Liberty\mime_film_download' )) {
 		$ret = false;
 		if( !empty( $pFileHash['source_file'] ) && is_readable( $pFileHash['source_file'] )) {
 			header( 'Last-Modified: '.gmdate( 'D, d M Y H:i:s T', $pFileHash['last_modified'] ?? time() ), true, 200 );
-			header( 'Content-Disposition: attachment; filename="'.$pFileHash['file_name'].'"' );
+			// inline, not attachment - this is also player.tpl's <video><source> target
+			// (download_file.php is the one shared route for both playback and an explicit
+			// download), and Content-Disposition: attachment is respected by some browsers even
+			// inside a <video> element, working against smooth streaming/seeking on a multi-GB
+			// file (found live 2026-09-04 - view_film.php "slow loading"). play_episode.php
+			// already gets this right for episodes/featurettes; mime_default_download() stays
+			// attachment since that generic default never feeds a <video> tag.
+			header( 'Content-Disposition: inline; filename="'.$pFileHash['file_name'].'"' );
 			header( 'Cache-Control: no-cache,must-revalidate' );
 			liberty_serve_range_file( $pFileHash['source_file'], $pFileHash['mime_type'] );
 			$ret = true;
