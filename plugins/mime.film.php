@@ -308,20 +308,38 @@ if( !function_exists( '\Bitweaver\Liberty\mime_film_grab_video_frame' )) {
 
 if( !function_exists( '\Bitweaver\Liberty\mime_film_get_thumbnail_url' )) {
 	function mime_film_get_thumbnail_url( $pAttachmentId, $pSourceFile ) {
+		global $gBitSystem;
 		$ret = [];
 		$destBranch = liberty_mime_get_storage_branch( [ 'attachment_id' => $pAttachmentId ] );
 		$destPath   = STORAGE_PKG_PATH.$destBranch;
 
+		// The first downloaded Plex alternate (FisheyeFilm::reloadPlexImages(), stored right
+		// here in this same branch - "storage/attachments/<branch>/ has always been used as home
+		// for extras like the plex images and any manual uploads", Lester 2026-09-04) always
+		// wins over an auto-generated frame grab when one's available - a real DVD-style poster
+		// beats a random video frame. attachment_id === content_id for this plugin (see
+		// mime_film_verify()'s own comment), so $pAttachmentId doubles as the xref lookup key
+		// directly. Checked and regenerated every call, same as the external sidecar file this
+		// replaced always was - cheap, and the only way a promoteImageToThumbnail() xorder change
+		// or a fresh reloadPlexImages() ever gets picked up without extra bookkeeping.
 		$posterSource = null;
-		$sidecar = preg_replace( '/\.[^.\/]+$/', '', $pSourceFile ).'-poster.jpg';
-		if( is_file( $sidecar )) {
-			$posterSource = $sidecar;
-		} elseif( !is_file( $destPath.'thumbs/small.jpg' ) && !is_file( $destPath.'thumbs/small.png' )) {
-			// nothing cached yet and no sidecar - grab a frame
-			$tmpFile = $destPath.'film_thumb_tmp.jpg';
+		$imageRows = $gBitSystem->mDb->getAll(
+			"SELECT xkey_ext FROM `".BIT_DB_PREFIX."liberty_xref` WHERE content_id = ? AND item = 'image' ORDER BY xorder ASC",
+			[ $pAttachmentId ]
+		);
+		foreach( $imageRows as $imageRow ) {
+			if( is_file( $destPath.$imageRow['xkey_ext'] ) ) {
+				$posterSource = $destPath.$imageRow['xkey_ext'];
+				break;
+			}
+		}
+
+		$tmpFramePath = $destPath.'film_thumb_tmp.jpg';
+		if( empty( $posterSource ) && !is_file( $destPath.'thumbs/small.jpg' ) && !is_file( $destPath.'thumbs/small.png' )) {
+			// nothing cached yet and no Plex image - grab a frame
 			KernelTools::mkdir_p( $destPath );
-			if( mime_film_grab_video_frame( $pSourceFile, $tmpFile ) ) {
-				$posterSource = $tmpFile;
+			if( mime_film_grab_video_frame( $pSourceFile, $tmpFramePath ) ) {
+				$posterSource = $tmpFramePath;
 			}
 		}
 
@@ -332,7 +350,7 @@ if( !function_exists( '\Bitweaver\Liberty\mime_film_get_thumbnail_url' )) {
 				'dest_branch' => $destBranch,
 			];
 			liberty_generate_thumbnails( $fileHash );
-			if( $posterSource !== $sidecar ) {
+			if( $posterSource === $tmpFramePath ) {
 				@unlink( $posterSource );
 			}
 		}
