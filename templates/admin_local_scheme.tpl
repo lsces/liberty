@@ -13,13 +13,25 @@
 
 		{if $schemeFiles}
 			<p>{tr}Scheme files found:{/tr}</p>
-			<ul>
-				{foreach from=$schemeFiles item=file}
-					<li><code>{$file|escape}</code></li>
-				{/foreach}
-			</ul>
-
 			{form legend="" action="{$smarty.const.LIBERTY_PKG_URL}admin/admin_local_scheme.php"}
+				{if $schemeFiles|@count > 1}
+					<ul class="list-unstyled">
+						{foreach from=$schemeFiles item=file}
+							<li>
+								<label>
+									<input type="checkbox" name="fSchemes[]" value="{$file|escape}" checked="checked" />
+									<code>{$file|escape}</code>
+								</label>
+							</li>
+						{/foreach}
+					</ul>
+				{else}
+					<ul>
+						{foreach from=$schemeFiles item=file}
+							<li><code>{$file|escape}</code></li>
+						{/foreach}
+					</ul>
+				{/if}
 				<input type="submit" class="btn btn-primary" name="fApply" value="{tr}Apply{/tr}" />
 			{/form}
 		{else}

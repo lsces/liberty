@@ -29,10 +29,24 @@ $schemeFiles = is_dir( $schemeDir ) ? glob( $schemeDir.'/*.php' ) : [];
 
 $results = null;
 if( !empty( $_REQUEST['fApply'] ) && $schemeFiles ) {
+	// Checkboxes only appear when there's more than one file to choose between (see
+	// admin_local_scheme.tpl) - with a single file there's nothing to distinguish "unchecked"
+	// from "no selector shown", so always apply it. With more than one, trust fSchemes exactly
+	// as submitted (HTML omits unchecked boxes entirely, so an empty/missing value there
+	// genuinely means "apply nothing", not "apply everything").
+	if( count( $schemeFiles ) <= 1 ) {
+		$applyFiles = $schemeFiles;
+	} else {
+		$selected = $_REQUEST['fSchemes'] ?? [];
+		$applyFiles = array_filter( $schemeFiles, function( $file ) use ( $selected ) {
+			return in_array( basename( $file ), $selected, true );
+		} );
+	}
+
 	$groups = [];
 	$items  = [];
 	$galleryTitles = [];
-	foreach( $schemeFiles as $file ) {
+	foreach( $applyFiles as $file ) {
 		$scheme = require $file;
 		$groups = array_merge( $groups, $scheme['groups'] ?? [] );
 		$items  = array_merge( $items,  $scheme['items']  ?? [] );
