@@ -535,19 +535,18 @@ class LibertyMime extends LibertyContent {
 	/**
 	 * Expunges the content deleting attached attachments
 	 *
-	 * Regression, not a deliberate change: the PHP8.4 namespace/style pass (9718d623,
-	 * 2025-08-27) rewrote this method's signature (`function expunge()` -> `public function
-	 * expunge(): bool`) and lost `return LibertyContent::expunge();` as collateral, replacing it
-	 * with a bare `return true;` - silently breaking the chain to LibertyContent::expunge() (the
-	 * actual liberty_content/xref/permissions/history removal) for every LibertyMime-based
-	 * content type ever since. Attachment/file rows still got cleaned up correctly (expungeAttachment()
-	 * above), so a "delete" always looked complete - found live 2026-09-04 via a leftover
-	 * liberty_content row after deleting a duplicate film import. Restored 2026-09-04.
+	 * Aborts before touching LibertyContent::expunge() if any attachment can't be expunged,
+	 * so the content record - and its still-undeleted dependents - are left alone together
+	 * rather than half-gone with a raw LIBERTY_ATTACHMENTS_CON_REF foreign key violation.
 	 */
 	public function expunge(): bool {
 		if( !empty( $this->mStorage ) && count( $this->mStorage )) {
 			foreach( array_keys( $this->mStorage ) as $i ) {
-				$this->expungeAttachment( $this->mStorage[$i]['attachment_id'] );
+				$attachmentId = $this->mStorage[$i]['attachment_id'];
+				if( !$this->expungeAttachment( $attachmentId ) ) {
+					// expungeAttachment() already set mErrors['expunge_attachment'] to the specific reason
+					return false;
+				}
 			}
 		}
 		return LibertyContent::expunge();
@@ -563,38 +562,56 @@ class LibertyMime extends LibertyContent {
 	function expungeAttachment( $pAttachmentId ) {
 		global $gLibertySystem, $gBitUser;
 		$ret = null;
-		if( @$this->verifyId( $pAttachmentId ) ) {
-			$sql = "SELECT `attachment_plugin_guid`, `user_id` FROM `".BIT_DB_PREFIX."liberty_attachments` WHERE `attachment_id` = ?";
-			if(( $row = $this->mDb->getRow( $sql, [ $pAttachmentId ])) && ( $this->isOwner( $row ) || $gBitUser->isAdmin() )) {
-				// check if we have the means available to remove this attachment
-				if(( $guid = $row['attachment_plugin_guid'] ) && $expungeFunc = $gLibertySystem->getPluginFunction( $guid, 'expunge_function', 'mime' )) {
-					// --- Do the final cleanup of liberty related tables ---
+		// each early-exit branch records why into mErrors['expunge_attachment'] - the caller
+		// (LibertyMime::expunge()) aborts cleanly on a null/false return, but needs to know
+		// whether that was a bad id, a permission check, a missing plugin, or the plugin's own
+		// expunge failing
+		if( !@$this->verifyId( $pAttachmentId ) ) {
+			$this->mErrors['expunge_attachment'] = "Attachment id $pAttachmentId did not pass verifyId().";
+			return $ret;
+		}
+		$sql = "SELECT `attachment_plugin_guid`, `user_id` FROM `".BIT_DB_PREFIX."liberty_attachments` WHERE `attachment_id` = ?";
+		$row = $this->mDb->getRow( $sql, [ $pAttachmentId ]);
+		if( !$row ) {
+			$this->mErrors['expunge_attachment'] = "Attachment $pAttachmentId not found in liberty_attachments.";
+			return $ret;
+		}
+		if( !( $this->isOwner( $row ) || $gBitUser->isAdmin() )) {
+			$this->mErrors['expunge_attachment'] = "Attachment $pAttachmentId owned by user_id {$row['user_id']}: current user is neither the owner nor isAdmin().";
+			return $ret;
+		}
+		// check if we have the means available to remove this attachment
+		$guid = $row['attachment_plugin_guid'];
+		$expungeFunc = $guid ? $gLibertySystem->getPluginFunction( $guid, 'expunge_function', 'mime' ) : null;
+		if( !$guid || !$expungeFunc ) {
+			$this->mErrors['expunge_attachment'] = "Attachment $pAttachmentId: no expunge_function registered for plugin '".( $guid ?: '(none)' )."'.";
+			return $ret;
+		}
 
-					// there might be situations where we remove user images including portrait, avatar or logo
-					// This needs to happen before the plugin can do it's work due to constraints
-					$types = [ 'portrait', 'avatar', 'logo' ];
-					foreach( $types as $type ) {
-						$sql = "UPDATE `".BIT_DB_PREFIX."users_users` SET `{$type}_attachment_id` = null WHERE `{$type}_attachment_id` = ?";
-						$this->mDb->query( $sql, [ $pAttachmentId ]);
-					}
+		// --- Do the final cleanup of liberty related tables ---
 
-					if( $expungeFunc( $pAttachmentId )) {
-						// Delete the attachment meta data, prefs and record.
-						$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_attachment_meta_data` WHERE `attachment_id` = ?";
-						$this->mDb->query( $sql, [ $pAttachmentId ]);
-						$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_attachment_prefs` WHERE `attachment_id` = ?";
-						$this->mDb->query( $sql, [ $pAttachmentId ]);
-						$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_attachments` WHERE `attachment_id`=?";
-						$this->mDb->query( $sql, [ $pAttachmentId ]);
+		// there might be situations where we remove user images including portrait, avatar or logo
+		// This needs to happen before the plugin can do it's work due to constraints
+		$types = [ 'portrait', 'avatar', 'logo' ];
+		foreach( $types as $type ) {
+			$sql = "UPDATE `".BIT_DB_PREFIX."users_users` SET `{$type}_attachment_id` = null WHERE `{$type}_attachment_id` = ?";
+			$this->mDb->query( $sql, [ $pAttachmentId ]);
+		}
 
-						// Remove attachment from memory
-						unset( $this->mStorage[$pAttachmentId] );
-						$ret = true;
-					}
-				} else {
-					print "Expunge function not found for this content!";
-				}
-			}
+		if( $expungeFunc( $pAttachmentId )) {
+			// Delete the attachment meta data, prefs and record.
+			$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_attachment_meta_data` WHERE `attachment_id` = ?";
+			$this->mDb->query( $sql, [ $pAttachmentId ]);
+			$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_attachment_prefs` WHERE `attachment_id` = ?";
+			$this->mDb->query( $sql, [ $pAttachmentId ]);
+			$sql = "DELETE FROM `".BIT_DB_PREFIX."liberty_attachments` WHERE `attachment_id`=?";
+			$this->mDb->query( $sql, [ $pAttachmentId ]);
+
+			// Remove attachment from memory
+			unset( $this->mStorage[$pAttachmentId] );
+			$ret = true;
+		} else {
+			$this->mErrors['expunge_attachment'] = "Attachment $pAttachmentId: plugin '$guid''s expunge_function returned failure.";
 		}
 
 		return $ret;
