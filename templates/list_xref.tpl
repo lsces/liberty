@@ -34,7 +34,7 @@
 </div>
 {if $allow_add && $gContent->isValid() && $gContent->hasUpdatePermission() && !$isHistory}
 	<div>
-		{smartlink ititle="Add record" ipackage="liberty" ifile="add_xref.php" biticon="list-add" content_id=$gContent->mInfo.content_id group=$xrefGroup->mSortOrder}
+		{smartlink ititle="Add record" ipackage="liberty" ifile="add_xref.php" biticon="list-add" content_id=$xrefContentId|default:$gContent->mInfo.content_id group=$xrefGroup->mSortOrder}
 	</div>
 {/if}
 {/legend}
