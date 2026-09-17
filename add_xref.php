@@ -38,6 +38,16 @@ if( !empty( $_REQUEST['fAddXref'] ) ) {
 $group = (int)( $_REQUEST['group'] ?? 1 );
 $xrefTypeList = $gContent->getXrefTypeList( $group );
 
+// If the only addable item in this group needs a real file upload this generic form doesn't
+// have (e.g. fisheye's 'image' item), the content class exposes where to go instead - stays
+// package-agnostic, no knowledge of fisheye/'image' baked in here.
+if( count( $xrefTypeList ) === 1 && method_exists( $gContent, 'getAddImageUrl' )
+	&& ( $xrefTypeList[0]['item'] ?? null ) === 'image' && ( $redirectUrl = $gContent->getAddImageUrl() )
+) {
+	header( 'Location: '.$redirectUrl );
+	die;
+}
+
 $gBitSmarty->assign( 'gContent', $gContent );
 $gBitSmarty->assign( 'group', $group );
 $gBitSmarty->assign( 'xrefTypeList', $xrefTypeList );
