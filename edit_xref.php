@@ -51,8 +51,6 @@ if( !empty( $_REQUEST['fSaveXref'] ) ) {
 		// hinted subset of fields (liberty_xref_item.data), so any field outside that subset
 		// (e.g. fisheye episode's own 'thumb', or 'director'/'writer'/'star' arrays no plain-text
 		// field can edit) must survive untouched rather than being silently dropped on every save.
-		// Found live 2026-09-17: editing an episode's title wiped its already-populated 'thumb'
-		// filename reference every time, even though the image file itself was untouched on disk.
 		$existingData = (array)json_decode( (string)( $gContent->mInfo['xref_store']['data']['data'] ?? '' ), true );
 		$jsonFields = array_map(
 			fn( $v ) => is_numeric( $v ) ? $v + 0 : $v,

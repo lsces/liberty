@@ -231,11 +231,9 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 		}
 
 		// Editing an existing row in place (not fAddXref) must preserve its current xorder rather
-		// than the unconditional 0 default set above - found live 2026-09-17: a plain save (e.g.
-		// edit_xref.php's fSaveXref attaching a file to an existing row) silently zeroed a
-		// multiple-cardinality item's xorder every time, which getAvailableItems() then reads as
-		// "this row doesn't really count", hiding the item from the add picker even though
-		// multiple=1 says it should still be addable again.
+		// than the unconditional 0 default set above - a plain save otherwise silently zeroed a
+		// multiple-cardinality item's xorder, which getAvailableItems() then reads as "this row
+		// doesn't really count", hiding the item from the add picker despite multiple=1.
 		if( !isset( $pParamHash['fAddXref'] ) && isset( $this->mRow['xorder'] ) ) {
 			$pParamHash['xref_store']['xorder'] = (int)$this->mRow['xorder'];
 		}
