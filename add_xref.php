@@ -29,6 +29,21 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 }
 
 if( !empty( $_REQUEST['fAddXref'] ) ) {
+	// Generic file-lifecycle hook, same shape as edit_xref.php's replaceXrefFile() call - the
+	// content class decides whether this item has a real file to save at all (only fisheye's
+	// 'image' item does). Unlike replaceXrefFile() (which needs an existing xkey_ext to replace
+	// at), this is for a brand-new row: the content class picks the filename itself and hands it
+	// back, which becomes this row's own xkey_ext.
+	if( method_exists( $gContent, 'addImageXrefFile' ) ) {
+		foreach( $_FILES as $file ) {
+			if( !empty( $file['tmp_name'] ) && is_uploaded_file( $file['tmp_name'] ) ) {
+				if( $relativePath = $gContent->addImageXrefFile( $file['tmp_name'], $file['name'] ) ) {
+					$_REQUEST['xkey_ext'] = $relativePath;
+				}
+				break;
+			}
+		}
+	}
 	if( $gContent->storeXref( $_REQUEST ) ) {
 		header( 'Location: '.$gContent->getEditUrl() );
 		die;
@@ -38,15 +53,16 @@ if( !empty( $_REQUEST['fAddXref'] ) ) {
 $group = (int)( $_REQUEST['group'] ?? 1 );
 $xrefTypeList = $gContent->getXrefTypeList( $group );
 
-// If the only addable item in this group needs a real file upload this generic form doesn't
-// have (e.g. fisheye's 'image' item), the content class exposes where to go instead - stays
-// package-agnostic, no knowledge of fisheye/'image' baked in here. getXrefTypeList() returns
-// ['list' => [item => title], 'type' => [item => template]], keyed by item, not a flat row list.
-if( count( $xrefTypeList['list'] ?? [] ) === 1 && method_exists( $gContent, 'getAddImageUrl' )
-	&& isset( $xrefTypeList['list']['image'] ) && ( $redirectUrl = $gContent->getAddImageUrl() )
-) {
-	header( 'Location: '.$redirectUrl );
-	die;
+// Same group-template override the view side already has (getXrefListTemplate(), e.g.
+// fisheye's view_images_group.tpl) - a group whose only item needs something this generic form
+// can't do (a real file upload, for fisheye's 'image' item) gets a real template override
+// instead of rendering the broken generic one.
+$groupTemplate = null;
+foreach( $gContent->getXrefGroupList() as $groupRow ) {
+	if( (int)$groupRow['sort_order'] === $group ) {
+		$groupTemplate = $groupRow['template'] ?? null;
+		break;
+	}
 }
 
 $gBitSmarty->assign( 'gContent', $gContent );
@@ -54,4 +70,4 @@ $gBitSmarty->assign( 'group', $group );
 $gBitSmarty->assign( 'xrefTypeList', $xrefTypeList );
 $gBitSmarty->assign( 'errors', $gContent->mErrors );
 
-$gBitSystem->display( 'bitpackage:liberty/add_xref.tpl', 'Add Detail', [ 'display_mode' => 'edit' ] );
+$gBitSystem->display( $gContent->getXrefAddTemplate( $groupTemplate ), 'Add Detail', [ 'display_mode' => 'edit' ] );

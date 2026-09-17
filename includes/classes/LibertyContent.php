@@ -2680,6 +2680,38 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Resolve the Smarty group template for adding to an xref group - same resolution chain as
+	 * getXrefListTemplate(), just the 'add' family instead of 'view'. A group whose only item
+	 * needs something the generic add_xref.tpl form can't do (e.g. fisheye's 'image' item needs
+	 * a real file upload) gets a real override here instead.
+	 *
+	 * Template resolution order (first match wins):
+	 *   1. `<package>/templates/xref/<content_type_guid>/add_<template>_group.tpl`
+	 *   2. `<package>/templates/xref/add_<template>_group.tpl`
+	 *   3. `bitpackage:liberty/add_xref.tpl`  (generic fallback)
+	 *
+	 * @param string|null $pTemplate  liberty_xref_group.template value
+	 * @return string  bitpackage: path to the group add template
+	 */
+	public function getXrefAddTemplate( ?string $pTemplate = null ): string {
+		if( $pTemplate ) {
+			$package  = $this->mType['handler_package'] ?? 'liberty';
+			$pkgConst = strtoupper( $package ).'_PKG_PATH';
+			if( defined( $pkgConst ) ) {
+				$base = constant( $pkgConst ).'templates/xref/';
+				$file = 'add_'.$pTemplate.'_group.tpl';
+				if( $this->mContentTypeGuid && file_exists( $base.$this->mContentTypeGuid.'/'.$file ) ) {
+					return 'bitpackage:'.$package.'/xref/'.$this->mContentTypeGuid.'/'.$file;
+				}
+				if( file_exists( $base.$file ) ) {
+					return 'bitpackage:'.$package.'/xref/'.$file;
+				}
+			}
+		}
+		return 'bitpackage:liberty/add_xref.tpl';
+	}
+
+	/**
 	 * Resolve the Smarty item template for displaying a single xref row (view path).
 	 *
 	 * Template resolution order (first match wins):
