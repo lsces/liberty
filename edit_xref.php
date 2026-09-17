@@ -46,17 +46,25 @@ if( !empty( $_REQUEST['fSaveXref'] ) ) {
 		// the JSON string storeXref() actually saves into 'data'. Numeric strings cast
 		// back to int/float first so a human edit doesn't quietly turn a field's JSON
 		// type from number to string (every form input value arrives as a string).
+		//
+		// Starts from the EXISTING stored data, not empty - the edit form only ever shows a
+		// hinted subset of fields (liberty_xref_item.data), so any field outside that subset
+		// (e.g. fisheye episode's own 'thumb', or 'director'/'writer'/'star' arrays no plain-text
+		// field can edit) must survive untouched rather than being silently dropped on every save.
+		// Found live 2026-09-17: editing an episode's title wiped its already-populated 'thumb'
+		// filename reference every time, even though the image file itself was untouched on disk.
+		$existingData = (array)json_decode( (string)( $gContent->mInfo['xref_store']['data']['data'] ?? '' ), true );
 		$jsonFields = array_map(
 			fn( $v ) => is_numeric( $v ) ? $v + 0 : $v,
 			$_REQUEST['json_field']
 		);
-		// Drop blank/zero entries rather than storing every possible field every time —
-		// the edit form shows the item's full known field list (liberty_xref_item.data)
-		// so a currently-missing field can be added, but most components only ever have
-		// a few real values (matches the sparse-write convention every importer already
-		// uses) — keeps the stored blob, and anything reading it later, tidy.
+		// Drop blank/zero entries from what was actually submitted rather than storing every
+		// possible field every time — most components only ever have a few real values (matches
+		// the sparse-write convention every importer already uses). The merge below then only
+		// overwrites keys the form actually knew about, leaving everything else in
+		// $existingData (fields outside the hint) alone.
 		$jsonFields = array_filter( $jsonFields, fn( $v ) => $v !== '' && $v !== 0 && $v !== 0.0 );
-		$_REQUEST['edit'] = json_encode( (object)$jsonFields );
+		$_REQUEST['edit'] = json_encode( (object)array_merge( $existingData, $jsonFields ) );
 	}
 	if( isset( $_REQUEST['sod_salt'] ) || isset( $_REQUEST['sod_sodium'] ) ) {
 		// Food-specific: SOD's edit form (food/templates/xref/foodcomponent/edit_sod_item.tpl)
