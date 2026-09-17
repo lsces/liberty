@@ -40,9 +40,10 @@ $xrefTypeList = $gContent->getXrefTypeList( $group );
 
 // If the only addable item in this group needs a real file upload this generic form doesn't
 // have (e.g. fisheye's 'image' item), the content class exposes where to go instead - stays
-// package-agnostic, no knowledge of fisheye/'image' baked in here.
-if( count( $xrefTypeList ) === 1 && method_exists( $gContent, 'getAddImageUrl' )
-	&& ( $xrefTypeList[0]['item'] ?? null ) === 'image' && ( $redirectUrl = $gContent->getAddImageUrl() )
+// package-agnostic, no knowledge of fisheye/'image' baked in here. getXrefTypeList() returns
+// ['list' => [item => title], 'type' => [item => template]], keyed by item, not a flat row list.
+if( count( $xrefTypeList['list'] ?? [] ) === 1 && method_exists( $gContent, 'getAddImageUrl' )
+	&& isset( $xrefTypeList['list']['image'] ) && ( $redirectUrl = $gContent->getAddImageUrl() )
 ) {
 	header( 'Location: '.$redirectUrl );
 	die;
