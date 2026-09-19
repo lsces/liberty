@@ -1,7 +1,7 @@
 {strip}
 <td>{$xrefInfo.xref_title|escape}</td>
 <td>
-	{assign var="jsonData" value=$xrefInfo.data|json_decode:true}
+	{assign var="jsonData" value=$xrefInfo.data|default:'null'|json_decode:true}
 	{if $jsonData}
 		{foreach $jsonData as $jkey => $jval}{if !$jval@first}, {/if}{$jkey|replace:'_':' '|capitalize}: {$jval|escape}{/foreach}
 	{else}

@@ -100,7 +100,14 @@ class LibertyBase extends BitBase {
 			} else {
 				if( $typeClass ) {
 					$creator = new $typeClass();
-					if( $ret = $creator->getNewObject( $typeClass, $pContentId, $pLoadFromCache ) ) {
+					// A registered content_type_guid isn't always a real LibertyBase-family
+					// object - FoodDay (see its own docblock) self-registers purely so
+					// calendar/search can discover the type generically, but has no
+					// content_id rows and never extends LibertyBase, so it has no
+					// getNewObject() to call. Any caller that walks every registered type
+					// generically (search's has_permission(), found live crashing on
+					// 'foodday') needs this to return null gracefully rather than fatal.
+					if( method_exists( $creator, 'getNewObject' ) && ( $ret = $creator->getNewObject( $typeClass, $pContentId, $pLoadFromCache ) ) ) {
 						$ret->setCacheableObject( false );
 						$ret->clearFromCache();
 					}

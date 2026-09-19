@@ -16,8 +16,8 @@
 			   whatever's actually stored if no hint was registered — a component's stored
 			   blob is normally sparse (importers only write fields they had real values
 			   for), so without this hint there's no way to add a currently-missing field. *}
-			{assign var="jsonData" value=$xrefInfo.data|json_decode:true}
-			{assign var="jsonFields" value=$xrefInfo.item_data|json_decode:true}
+			{assign var="jsonData" value=$xrefInfo.data|default:'null'|json_decode:true}
+			{assign var="jsonFields" value=$xrefInfo.item_data|default:'null'|json_decode:true}
 			{if !$jsonFields}
 				{assign var="jsonFields" value=$jsonData|array_keys}
 			{/if}

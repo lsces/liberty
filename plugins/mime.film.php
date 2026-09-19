@@ -307,6 +307,24 @@ if( !function_exists( '\Bitweaver\Liberty\mime_film_grab_video_frame' )) {
 	}
 }
 
+/**
+ * Real duration of a video file, straight from its own container via ffprobe - the non-Plex
+ * counterpart to Plex's own `media_items.duration` (already used when a real Plex match exists).
+ * Needed anywhere an episode or featurette has no Plex metadata to source a duration from at all
+ * (a no-Plex-match show's episodes, or any featurette - Plex never catalogues bonus content).
+ *
+ * @param string $pFile  the video file to probe
+ * @return int|null  duration in milliseconds (matching the JSON 'duration' field's existing
+ *                    Plex-sourced unit), or null if ffprobe couldn't read it
+ */
+if( !function_exists( '\Bitweaver\Liberty\mime_film_get_duration_ms' )) {
+	function mime_film_get_duration_ms( string $pFile ): ?int {
+		$cmd = 'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 '.escapeshellarg( $pFile );
+		$seconds = trim( shell_exec( $cmd ) ?? '' );
+		return is_numeric( $seconds ) ? (int)round( (float)$seconds * 1000 ) : null;
+	}
+}
+
 if( !function_exists( '\Bitweaver\Liberty\mime_film_get_thumbnail_url' )) {
 	function mime_film_get_thumbnail_url( $pAttachmentId, $pSourceFile ) {
 		global $gBitSystem;

@@ -1,8 +1,8 @@
 {strip}
 <td>{$xrefInfo.xref_title|escape}</td>
 <td>
-	{assign var="itemData" value=$xrefInfo.item_data|json_decode:true}
-	{assign var="jsonData" value=$xrefInfo.data|json_decode:true}
+	{assign var="itemData" value=$xrefInfo.item_data|default:'null'|json_decode:true}
+	{assign var="jsonData" value=$xrefInfo.data|default:'null'|json_decode:true}
 	{assign var="sep" value=""}
 	{if $xrefInfo.xkey ne ''}
 		{$sep}{if $itemData.0}{$itemData.0|replace:'_':' '|capitalize}{else}Value{/if}: {$xrefInfo.xkey|escape}{assign var="sep" value=", "}
