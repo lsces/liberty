@@ -394,6 +394,18 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			if ( isset($pParamHash["title"]) )       $this->mInfo['index_data'] .= $pParamHash["title"] . ' ';
 			if ( isset($pParamHash["author_name"]) ) $this->mInfo['index_data'] .= $pParamHash["author_name"] . ' ';
 			if ( isset($pParamHash["edit"]) )        $this->mInfo['index_data'] .= $pParamHash["edit"];
+			// Override point for a content type whose own searchable text lives somewhere other
+			// than its own title/edit fields - e.g. a season's own episode titles, which live as
+			// xref rows on the season's own content_id, never a separate liberty_content row of
+			// their own, so they'd otherwise never be indexed at all. Distinct from the older
+			// setIndexData() (only consulted by the async/rebuild refresh paths, gated on
+			// index_data not already being set) - this runs on every save too, appending rather
+			// than replacing, and reads $pParamHash/$this directly since this save's own DB write
+			// hasn't happened yet at this point in store() (a fresh re-read would still see the
+			// old row).
+			if ( method_exists( $this, 'getExtraIndexWords' ) ) {
+				$this->mInfo['index_data'] .= ' '.$this->getExtraIndexWords( $pParamHash );
+			}
 		}
 
 		// content preferences
@@ -3776,6 +3788,12 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		$res = $gBitSystem->mDb->getRow($sql, [ $pContentId ]);
 		if ( isset($res["title"] ) and !(isset($this->mInfo['no_index']) and $this->mInfo['no_index'] == true)) {
 			$this->mInfo['index_data'] = $res["title"] . " " . $res["data"] . " " . $res["login"] . " " . $res["real_name"];
+			// Same getExtraIndexWords() hook verify()'s own index_data block consults on a normal
+			// save - this method is the async/rebuild refresh paths' own equivalent (see there for
+			// why it's a separate hook rather than reusing this method for both).
+			if ( method_exists( $this, 'getExtraIndexWords' ) ) {
+				$this->mInfo['index_data'] .= ' '.$this->getExtraIndexWords( [] );
+			}
 		}
 	}
 
