@@ -250,10 +250,19 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 			$pParamHash['xref_store']['data']       = '';
 		}
 
+		// Truncated defensively (mb_substr, not a byte-oriented cut - a value ending mid-character
+		// on a multi-byte name/tag would otherwise store mangled instead of just short) to this
+		// class's own documented xkey/xkey_ext limits above - a caller occasionally hands this an
+		// unexpectedly long value it had no reason to length-check itself (found live: a
+		// MusicBrainz box-set release's CATALOGNUMBER tag listing every disc's own catalog code
+		// joined together, 314 characters against xkey_ext's 250-char column) and a silent
+		// truncation beats a fatal SQLSTATE 22001 on whatever the next surprisingly-long value
+		// turns out to be, for every content type built on this class, not just the one that
+		// happened to find it first.
 		if( isset( $pParamHash['xorder'] ) )   { $pParamHash['xref_store']['xorder']   = (int)$pParamHash['xorder']; }
 		if( isset( $pParamHash['xref'] ) )     { $pParamHash['xref_store']['xref']     = $pParamHash['xref']; }
-		if( isset( $pParamHash['xkey'] ) )     { $pParamHash['xref_store']['xkey']     = $pParamHash['xkey']; }
-		if( isset( $pParamHash['xkey_ext'] ) ) { $pParamHash['xref_store']['xkey_ext'] = $pParamHash['xkey_ext']; }
+		if( isset( $pParamHash['xkey'] ) )     { $pParamHash['xref_store']['xkey']     = mb_substr( (string)$pParamHash['xkey'], 0, 32 ); }
+		if( isset( $pParamHash['xkey_ext'] ) ) { $pParamHash['xref_store']['xkey_ext'] = mb_substr( (string)$pParamHash['xkey_ext'], 0, 250 ); }
 		if( isset( $pParamHash['edit'] ) )     { $pParamHash['xref_store']['data']     = $pParamHash['edit']; }
 
 		// entry_date: stamped once at insert time, left untouched on update — unless the
