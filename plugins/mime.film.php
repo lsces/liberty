@@ -325,6 +325,71 @@ if( !function_exists( '\Bitweaver\Liberty\mime_film_get_duration_ms' )) {
 	}
 }
 
+/**
+ * Video resolution and audio channel layout, straight from the file's own streams - the same
+ * "don't trust the container/source, ask ffprobe directly" reasoning as mime_film_get_duration_ms().
+ * Both are read at once (one ffprobe call, one process spawn) since anywhere this is wanted,
+ * both fields are wanted together.
+ *
+ * Exists so a quality regression (a re-encode that quietly drops 5.1 down to stereo, or a lower-
+ * resolution copy replacing a better one) shows up as a plain fact on the page instead of only
+ * being discovered by ear during playback - a browser's own silent handling of 5.1 audio can
+ * otherwise look indistinguishable from data loss.
+ *
+ * @param string $pFile  the video file to probe
+ * @return array{resolution:?string,audio:?string}  e.g. ['resolution'=>'1080p','audio'=>'5.1'] -
+ *                                                    either value null if ffprobe couldn't read it
+ */
+if( !function_exists( '\Bitweaver\Liberty\mime_film_get_quality_info' )) {
+	function mime_film_get_quality_info( string $pFile ): array {
+		$ret = [ 'resolution' => null, 'audio' => null ];
+		// No -select_streams here deliberately - ffprobe only honours the LAST -select_streams/
+		// -show_entries pair given on the command line, not one filter per pair as it looks like
+		// it should (confirmed live) - so this asks for every stream's fields at once instead and
+		// picks out the first video/audio block itself below.
+		$cmd = 'ffprobe -v error -show_entries stream=codec_type,width,height,channels '
+			.'-of default=noprint_wrappers=1 '.escapeshellarg( $pFile );
+		$video = null;
+		$audio = null;
+		$current = [];
+		foreach( explode( "\n", trim( shell_exec( $cmd ) ?? '' ) ) as $line ) {
+			if( !str_contains( $line, '=' ) ) {
+				continue;
+			}
+			[ $key, $value ] = explode( '=', $line, 2 );
+			if( $key === 'codec_type' && !empty( $current ) ) {
+				// a new stream block always starts with codec_type here (the field order asked
+				// for above) - close off whichever block was building before starting the next
+				if( ( $current['codec_type'] ?? null ) === 'video' && $video === null ) {
+					$video = $current;
+				} elseif( ( $current['codec_type'] ?? null ) === 'audio' && $audio === null ) {
+					$audio = $current;
+				}
+				$current = [];
+			}
+			$current[$key] = trim( $value );
+		}
+		if( ( $current['codec_type'] ?? null ) === 'video' && $video === null ) {
+			$video = $current;
+		} elseif( ( $current['codec_type'] ?? null ) === 'audio' && $audio === null ) {
+			$audio = $current;
+		}
+		if( !empty( $video['height'] ) ) {
+			$height = (int)$video['height'];
+			// Common broadcast/streaming heights get their familiar label; anything else falls
+			// back to the raw dimensions rather than guessing at a label that doesn't apply.
+			$labels = [ 2160 => '4K', 1080 => '1080p', 720 => '720p', 576 => '576p', 480 => '480p' ];
+			$ret['resolution'] = $labels[$height] ?? ( ( $video['width'] ?? '?' ).'x'.$height );
+		}
+		if( isset( $audio['channels'] ) && is_numeric( $audio['channels'] ) ) {
+			$channels = (int)$audio['channels'];
+			$labels = [ 1 => 'Mono', 2 => 'Stereo', 6 => '5.1', 8 => '7.1' ];
+			$ret['audio'] = $labels[$channels] ?? "{$channels}ch";
+		}
+		return $ret;
+	}
+}
+
 if( !function_exists( '\Bitweaver\Liberty\mime_film_get_thumbnail_url' )) {
 	function mime_film_get_thumbnail_url( $pAttachmentId, $pSourceFile ) {
 		global $gBitSystem;
