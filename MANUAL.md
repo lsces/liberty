@@ -561,21 +561,35 @@ that bespoke logic supplied per package underneath it; it would mostly just move
 special-casing lives, not remove it. Each package building its own small `add_X.php` when it
 genuinely needs one is the *correct* shape here, not a duplication defect.
 
-## Xref vocabulary management — hand-authored, no admin UI
+## Xref vocabulary management — real admin tools, but dated/overlapping
 
 Everything above is about a content object's own xref *data*. The xref *vocabulary* itself —
 `liberty_xref_group`/`liberty_xref_item` definition rows, which groups/items exist for a given
-`content_type_guid` at all — has no admin UI for adding or editing groups/items through bitweaver
-directly. The generic mechanism is `LibertyXrefScheme::apply()`, applied via
-`liberty/admin/admin_local_scheme.php` (a real, package-agnostic entry under Liberty's own admin
-menu, not any one package's), which takes a hand-authored PHP scheme file (an array of group/item
-definitions) and reconciles it against the live DB. Building a real vocabulary — deciding what
-groups/items a new content type needs, or changing an existing one — means writing or editing that
-scheme file directly, then applying it through this page; there's no browse-and-edit UI over
-`liberty_xref_group`/`liberty_xref_item` themselves. A one-off addition (a single new item, a
-`role_id` fix) is still routinely done via direct `isql` instead, which works but bypasses
-whatever validation `LibertyXrefScheme::apply()` does — see the `role_id` gotcha above for a real
-case that bit exactly this way.
+`content_type_guid` at all — does have real, generic, cross-package admin tools, they're just
+showing their age:
+
+- **`liberty/admin/admin_xref_groups.php`** ("Xref Groups") — add/edit/delete `liberty_xref_group`
+  rows for any `content_type_guid`.
+- **`liberty/admin/admin_xref_sources.php`** ("Xref Sources") — add/edit/delete `liberty_xref_item`
+  rows for any `content_type_guid`. **Name is stale** — the underlying table was renamed
+  `liberty_xref_source` → `liberty_xref_item` some time ago (see the "Current table names" note
+  near the top of this file), but the admin page's own title and internal variable names
+  (`fAddSource`, `$source`) never followed. Should read "Xref Items".
+- Both default `role_id` to `3` (Registered) when the form doesn't supply one — going through
+  either page avoids the exact `role_id`-missing gotcha documented above, which only bit because
+  that particular row was inserted via direct `isql`, bypassing this default entirely.
+- **`contact/admin/admin_contact_type.php`** ("Contact Type List") and
+  **`contact/admin/admin_xref_types.php`** ("Contact Xref List") predate the two generic pages
+  above, from when Contact was the only package with any xref vocabulary at all — real overlapping
+  functionality now, a package-specific hangover rather than a gap.
+
+**What's actually missing**: a single grid/tree view of one content type's *entire* xref structure
+— every group, and every item within each — at a glance. The two generic admin pages above only
+ever show one group's items or one item's own fields at a time; a hand-authored scheme file (the
+array `LibertyXrefScheme::apply()` reconciles against the DB) still communicates the whole shape of
+a content type's vocabulary better than the live admin UI does, purely by being readable as one
+piece of code. A grid-style overview page — not a new storage mechanism, just a different read/edit
+view over the same two tables — would close that gap.
 
 ## Expunge and history — archive, step, or real hard-delete
 
