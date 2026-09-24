@@ -238,7 +238,8 @@ Three tables:
   (rarely used — a default/hint, not the row's actual value) + `sort_order` (display position
   among the items in a group and among items in schema-listing picker queries; defaults to `0`,
   which sorts first — populate explicitly on a new item if display order matters, otherwise it
-  will jump ahead of items that already have a real value set).
+  will jump ahead of items that already have a real value set) + `role_id` (**visibility gate, see
+  below — not optional**).
 - **`liberty_xref`** — the actual data, one row per (content_id, item) pair (or several if
   `multiple=1`). Columns: `xref_id` (PK), `content_id` (whose xref this is), `item`, `xkey`
   (`C(32)` — short values only), `xkey_ext` (`C(250)` — longer text: UUIDs, prices, URLs), `data`
@@ -304,6 +305,16 @@ specific supplier relationship's own part number/price.
 
 **`xorder`** must be explicitly selected in queries — it is not auto-included in standard `SELECT`
 lists the way most columns are.
+
+**`liberty_xref_item.role_id` — a missing value silently hides the item, everywhere, not just from
+edit.** `loadXrefInfo()`'s own query is permission-filtered by `role_id`, so an item definition row
+with it left `NULL`/unset never surfaces through `allXrefs()` at all — not in a view template, not
+in `edit.php`'s xref tabs, not to any PHP code reading the object's own loaded xref data back. There
+is no error anywhere in that chain; the row just behaves as if it doesn't exist, which looks exactly
+like a data problem (row missing, wrong content_id, stale cache) rather than the actual cause. This
+bites hardest when a new item definition is inserted directly (`isql`, bypassing the normal
+add-a-new-item admin flow) without copying a sibling item's `role_id` — always match an existing
+item in the same group (`3` = Registered is the common case) rather than leaving it unset.
 
 **`LibertyXrefType`** is an *instance* class, not a bag of statics — construct with
 `new LibertyXrefType( $contentTypeGuid, $packageGuid = null )`, though in page/class code you
