@@ -561,6 +561,22 @@ that bespoke logic supplied per package underneath it; it would mostly just move
 special-casing lives, not remove it. Each package building its own small `add_X.php` when it
 genuinely needs one is the *correct* shape here, not a duplication defect.
 
+## Xref vocabulary management — hand-authored, no admin UI
+
+Everything above is about a content object's own xref *data*. The xref *vocabulary* itself —
+`liberty_xref_group`/`liberty_xref_item` definition rows, which groups/items exist for a given
+`content_type_guid` at all — has no admin UI for adding or editing groups/items through bitweaver
+directly. The generic mechanism is `LibertyXrefScheme::apply()`, applied via
+`liberty/admin/admin_local_scheme.php` (a real, package-agnostic entry under Liberty's own admin
+menu, not any one package's), which takes a hand-authored PHP scheme file (an array of group/item
+definitions) and reconciles it against the live DB. Building a real vocabulary — deciding what
+groups/items a new content type needs, or changing an existing one — means writing or editing that
+scheme file directly, then applying it through this page; there's no browse-and-edit UI over
+`liberty_xref_group`/`liberty_xref_item` themselves. A one-off addition (a single new item, a
+`role_id` fix) is still routinely done via direct `isql` instead, which works but bypasses
+whatever validation `LibertyXrefScheme::apply()` does — see the `role_id` gotcha above for a real
+case that bit exactly this way.
+
 ## Expunge and history — archive, step, or real hard-delete
 
 `LibertyContent::storeXref()`/`stepXref()` are the two write paths; `stepXref()`'s `expunge`
