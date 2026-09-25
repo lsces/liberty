@@ -638,6 +638,18 @@ assume the same). Worth grepping `->store( [` / `->getDisplayUrlFromHash( [` etc
 literal-array argument before considering xref-touching code finished. See "Versioning and
 history" above for a related `store()` footgun (calling it twice on one loaded object).
 
+## `'edit'`, not `'data'` — the free-text field's real param key
+
+Both `LibertyContent::store()` and `LibertyXref::store()`/`verify()` populate their own free-text
+field (`liberty_content.data` / `liberty_xref.data`) from a param key literally named `'edit'` —
+`LibertyXref::verify()`: `if( isset( $pParamHash['edit'] ) ) { $pParamHash['xref_store']['data'] =
+$pParamHash['edit']; }`. A plain `'data'` key in the hash passed to either `store()` is **silently
+ignored** — no error, no warning, the row just saves with that field empty, which looks exactly
+like "the value never made it into the form/request" rather than "the value was there but the
+wrong key name". Confirmed hit twice independently (Contact's own note field, and a `wikidata` xref
+item meant to cache a whole fetched JSON blob) - grep for a literal `'data' =>` in any hash about to
+be passed to `store()`/`storeXref()` before trusting that field actually saved.
+
 ## Optional per-content-type calendar/grid rendering — `getDayCellHtml()`
 
 `LibertyContent::getContentList()` — the single generic content-listing method used by search,
