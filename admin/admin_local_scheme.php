@@ -45,15 +45,23 @@ if( !empty( $_REQUEST['fApply'] ) && $schemeFiles ) {
 
 	$groups = [];
 	$items  = [];
+	$replaceGuids = [];
 	$galleryTitles = [];
 	foreach( $applyFiles as $file ) {
 		$scheme = require $file;
 		$groups = array_merge( $groups, $scheme['groups'] ?? [] );
 		$items  = array_merge( $items,  $scheme['items']  ?? [] );
+		$replaceGuids = array_merge( $replaceGuids, $scheme['replace'] ?? [] );
 		$galleryTitles = array_merge( $galleryTitles, $scheme['galleries'] ?? [] );
 	}
 
-	$counts = LibertyXrefScheme::apply( $groups, $items );
+	// Every selected file's own groups/items are merged above before this one apply() call, not
+	// applied file-by-file - a scheme declaring 'replace' for a guid only sees the FULL combined
+	// set for it, from every file selected this run, never just its own. Selecting a file that
+	// declares 'replace' for a guid without also selecting whichever sibling file owns the rest of
+	// that guid's vocabulary would still wipe it with nothing here to reinsert it - see
+	// LibertyXrefScheme::apply()'s own docblock.
+	$counts = LibertyXrefScheme::apply( $groups, $items, array_unique( $replaceGuids ) );
 
 	$galleryResults = [];
 	// Pragmatic simplification, not generic: this creates fisheye galleries specifically,

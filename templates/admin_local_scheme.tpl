@@ -42,12 +42,14 @@
 			<div class="alert alert-success">
 				<p>
 					{tr}Groups:{/tr}
+					{$results.counts.groups_deleted} {tr}deleted{/tr},
 					{$results.counts.groups_inserted} {tr}inserted{/tr},
 					{$results.counts.groups_updated} {tr}updated{/tr},
 					{$results.counts.groups_unchanged} {tr}unchanged{/tr}
 				</p>
 				<p>
 					{tr}Items:{/tr}
+					{$results.counts.items_deleted} {tr}deleted{/tr},
 					{$results.counts.items_inserted} {tr}inserted{/tr},
 					{$results.counts.items_updated} {tr}updated{/tr},
 					{$results.counts.items_unchanged} {tr}unchanged{/tr}

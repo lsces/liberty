@@ -23,15 +23,44 @@ class LibertyXrefScheme {
 	 *                       include x_group and content_type_guid (the natural key).
 	 * @param array $pItems  Each entry an assoc array of liberty_xref_item columns - must
 	 *                       include item and content_type_guid (the natural key).
-	 * @return array Counts: groups_inserted/groups_updated/groups_unchanged,
-	 *               items_inserted/items_updated/items_unchanged.
+	 * @param array $pReplaceContentTypeGuids  Content type guids whose *entire* existing
+	 *                       liberty_xref_group/liberty_xref_item vocabulary should be deleted
+	 *                       before $pGroups/$pItems are applied - for a scheme that wants to
+	 *                       fully remodel a content type's vocabulary (move a group to a
+	 *                       different guid, drop one it no longer needs) rather than just add to
+	 *                       what's already there, which plain insert-or-update can never do (it
+	 *                       has no way to know a row that used to exist should now be gone). Runs
+	 *                       first, so anything for these guids in $pGroups/$pItems still gets
+	 *                       inserted fresh afterwards in the normal way - only rows for OTHER
+	 *                       guids are left untouched by this. If a scheme calling this doesn't
+	 *                       fully own a guid's vocabulary on its own (e.g. it's split across more
+	 *                       than one scheme file), the caller must merge every file's own
+	 *                       groups/items before calling this once with the combined set, or the
+	 *                       delete here will wipe out a sibling file's own rows for that guid with
+	 *                       nothing here to reinsert them.
+	 * @return array Counts: groups_deleted/groups_inserted/groups_updated/groups_unchanged,
+	 *               items_deleted/items_inserted/items_updated/items_unchanged.
 	 */
-	public static function apply( array $pGroups, array $pItems ): array {
+	public static function apply( array $pGroups, array $pItems, array $pReplaceContentTypeGuids = [] ): array {
 		global $gBitDb;
 		$counts = [
-			'groups_inserted' => 0, 'groups_updated' => 0, 'groups_unchanged' => 0,
-			'items_inserted'  => 0, 'items_updated'  => 0, 'items_unchanged'  => 0,
+			'groups_deleted' => 0, 'groups_inserted' => 0, 'groups_updated' => 0, 'groups_unchanged' => 0,
+			'items_deleted'  => 0, 'items_inserted'  => 0, 'items_updated'  => 0, 'items_unchanged'  => 0,
 		];
+
+		if( $pReplaceContentTypeGuids ) {
+			$placeholders = implode( ',', array_fill( 0, count( $pReplaceContentTypeGuids ), '?' ) );
+			$counts['items_deleted'] = (int)$gBitDb->getOne(
+				"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref_item` WHERE `content_type_guid` IN ($placeholders)",
+				$pReplaceContentTypeGuids
+			);
+			$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_xref_item` WHERE `content_type_guid` IN ($placeholders)", $pReplaceContentTypeGuids );
+			$counts['groups_deleted'] = (int)$gBitDb->getOne(
+				"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref_group` WHERE `content_type_guid` IN ($placeholders)",
+				$pReplaceContentTypeGuids
+			);
+			$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_xref_group` WHERE `content_type_guid` IN ($placeholders)", $pReplaceContentTypeGuids );
+		}
 
 		foreach( $pGroups as $group ) {
 			$key = [ 'x_group' => $group['x_group'], 'content_type_guid' => $group['content_type_guid'] ];
