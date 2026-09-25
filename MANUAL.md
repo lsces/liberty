@@ -418,7 +418,7 @@ purpose-built code path instead of the generic per-group tab loop. Used when a g
 mutually-exclusive *classifiers* rather than independent fields — e.g. Contact's person/business
 type toggle, Food's `FoodAssembly` meal-type group (`BREAKFAST`/`LUNCH`/`DINNER`/`MSNK`/`ESNK` —
 which single item code is populated *is* the classification, not a field to display in a tab). Some
-type-marker groups are genuinely mutually exclusive this way; others (Contact's own `W01`-`W06`
+type-marker groups are genuinely mutually exclusive this way; others (Contact's own `WPxx`/`WBxx`
 role tags — see `contact/MANUAL-WIKI.md`) are a free multi-select toggle *set* instead, several
 active at once, still riding the same `sort_order = 0` mechanism.
 
