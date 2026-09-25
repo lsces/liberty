@@ -417,7 +417,23 @@ A group with `sort_order = 0` is deliberately excluded from the normal tabbed di
 purpose-built code path instead of the generic per-group tab loop. Used when a group's items are
 mutually-exclusive *classifiers* rather than independent fields — e.g. Contact's person/business
 type toggle, Food's `FoodAssembly` meal-type group (`BREAKFAST`/`LUNCH`/`DINNER`/`MSNK`/`ESNK` —
-which single item code is populated *is* the classification, not a field to display in a tab).
+which single item code is populated *is* the classification, not a field to display in a tab). Some
+type-marker groups are genuinely mutually exclusive this way; others (Contact's own `W01`-`W06`
+role tags — see `contact/MANUAL-WIKI.md`) are a free multi-select toggle *set* instead, several
+active at once, still riding the same `sort_order = 0` mechanism.
+
+**Possible extension, not built**: a multi-select toggle-set with many possible markers (a dozen or
+more) currently costs one real `liberty_xref` row per active tag, each needing its own
+`liberty_xref_item` definition — fine at a handful of markers, more xref rows than necessary at
+many. An alternative worth having on record: pack the whole set of flags into a single integer on
+one row and query it with Firebird's own native `BIN_AND`/`BIN_OR`/`BIN_XOR`/`BIN_NOT` (built in
+since Firebird 3.0, no UDF needed — confirmed working directly against this DB). **`liberty_xref`
+already has a spare `BIGINT` column for exactly this shape: `xref`.** A type-marker row never needs
+`xref` for its normal job (linking to another `content_id`) — a classifier tag doesn't point at
+another piece of content — so using it to hold a packed bitmask instead doesn't collide with its
+existing meaning anywhere else. Not pursued now: it trades away a trivial indexed
+`WHERE item='<code>'` lookup for a `BIN_AND`-based scan, a real cost not worth paying while any
+given marker set stays small.
 
 ## Group templates vs the generic tabbed display
 
