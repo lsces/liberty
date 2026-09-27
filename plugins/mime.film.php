@@ -8,20 +8,21 @@
  * kernel_config setting) is stored directly in liberty_files.file_name; nothing under
  * liberty_process_upload() is ever called, since there is no upload event for a scanned-in file.
  *
- * Requires the fisheye_disk_storage_root kernel_config value (set via the fisheye admin page) -
- * filesystem path the film library lives under. Playback goes through the same PHP-mediated
- * download endpoint fisheye's play_episode.php uses for episodes (mime_film_download() calls the
- * same liberty_serve_range_file() helper, see liberty_lib.php) rather than a direct nginx-served
- * static URL - real single-range HTTP Range support, proven live for episode/featurette playback
- * since 2026-09-02/03, so the originally-planned nginx location block for this tree was dropped
- * as unnecessary (2026-09-04, see fisheye.md).
+ * Requires the fisheye_disk_storage_root kernel_config value (set via fisheyemedia's own admin
+ * page, admin/admin_fisheyemedia_settings.php) - filesystem path the film library lives under.
+ * Playback goes through the same PHP-mediated download endpoint fisheyemedia's play_episode.php
+ * uses for episodes (mime_film_download() calls the same liberty_serve_range_file() helper, see
+ * liberty_lib.php) rather than a direct nginx-served static URL - real single-range HTTP Range
+ * support, proven live for episode/featurette playback since 2026-09-02/03, so the originally-
+ * planned nginx location block for this tree was dropped as unnecessary (2026-09-04, see
+ * fisheye.md).
  *
- * Lives in liberty/plugins/ (not fisheye/liberty_plugins/) even though fisheye is currently its
- * only consumer - a package-scoped liberty_plugins/ dir for a non-default mime guid only gets
- * scanned when that specific package is bootstrapped for the current request, which core liberty
- * pages (e.g. download_file.php) never do. Every other real mime handler (mime.default.php,
- * mime.video.php, mime.audio.php, mime.image.php, mime.pdf.php) already lives here for the same
- * reason.
+ * Lives in liberty/plugins/ (not fisheyemedia/liberty_plugins/) even though fisheyemedia is
+ * currently its only consumer - a package-scoped liberty_plugins/ dir for a non-default mime guid
+ * only gets scanned when that specific package is bootstrapped for the current request, which
+ * core liberty pages (e.g. download_file.php) never do. Every other real mime handler
+ * (mime.default.php, mime.video.php, mime.audio.php, mime.image.php, mime.pdf.php) already lives
+ * here for the same reason.
  *
  * @package     liberty
  * @subpackage  liberty_mime_handler
