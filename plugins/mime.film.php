@@ -3,7 +3,7 @@
  * Mime handler for external, uncopied film files.
  *
  * Registers an already-on-disk video file as a liberty attachment WITHOUT copying or moving it —
- * for the srv9/desktop film library (Plex-managed today), too large to duplicate into
+ * for a film library (Plex-managed today), too large to duplicate into
  * storage/attachments/. The source file's path (relative to the `fisheye_disk_storage_root`
  * kernel_config setting) is stored directly in liberty_files.file_name; nothing under
  * liberty_process_upload() is ever called, since there is no upload event for a scanned-in file.
@@ -84,11 +84,11 @@ if( !function_exists( '\Bitweaver\Liberty\mime_film_get_storage_root' )) {
 }
 
 /**
- * TV's two-root A-M/N-Z split (srv9: /media1/TV Shows/ = A-M, /media2/TV Shows/ = N-Z - desktop
- * has no physical split, both config keys point at the same /media3/) - derived from the show
- * title's first letter at read time rather than stored per-row, per the 2026-09-01 design
- * decision (see liberty.md). Film/music still use the single fisheye_disk_storage_root above;
- * only TV needs this.
+ * TV's two-root A-M/N-Z split (some installs physically split a large TV library across two
+ * storage roots by the show title's first letter; others point both config keys at the same
+ * single root) - derived from the show title's first letter at read time rather than stored
+ * per-row, per the 2026-09-01 design decision (see liberty.md). Film/music still use the single
+ * fisheye_disk_storage_root above; only TV needs this.
  *
  * @param string $pShowTitle The show's title - only the first letter matters.
  * @return string empty string if unconfigured
