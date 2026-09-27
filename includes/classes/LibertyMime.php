@@ -620,12 +620,16 @@ class LibertyMime extends LibertyContent {
 	/**
 	 * loadAttachment will load details of a given attachment
 	 *
-	 * @param int $pAttachmentId Attachment ID of the attachment
+	 * @param int|null $pAttachmentId Attachment ID of the attachment - null is a no-op (returns
+	 *                                 null), not an error; callers reading a possibly-unset
+	 *                                 attachment_id straight from a DB row (e.g. BitArticle::
+	 *                                 getList()'s primary_attachment_id) shouldn't need to guard
+	 *                                 it themselves
 	 * @param array $pParams optional parameters that might contain information like display thumbnail size
 	 * @access public
 	 * @return array|null attachment details
 	 */
-	public static function loadAttachment( int $pAttachmentId, ?array $pParams = null ): array|null {
+	public static function loadAttachment( ?int $pAttachmentId, ?array $pParams = null ): array|null {
 		global $gLibertySystem, $gBitSystem;
 		$ret = null;
 
