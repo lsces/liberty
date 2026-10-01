@@ -358,6 +358,30 @@ function liberty_content_list_sql( $pObject, $pParamHash=null ) {
 		}
 	}
 
+	// Generic "has one of these xref items" list filter - any getList() that runs this service can
+	// be narrowed to content carrying a live xref row with any of the given item codes (a contact's
+	// type tags - Supplier, Composer, Orchestra - being the first use). 'xref_items' is an array or a
+	// comma-separated string, so it survives a pagination link. 'xref_items_exempt_types' lists
+	// content types the item filter doesn't apply to: a list spanning several types where only some
+	// had specific items chosen still includes every row of the others (two-stage class/type filter).
+	$xrefItems = $pParamHash['xref_items'] ?? null;
+	if( !empty( $xrefItems ) ) {
+		$xrefItems = array_values( array_filter( array_map( 'trim', is_array( $xrefItems ) ? $xrefItems : explode( ',', $xrefItems ) ) ) );
+	}
+	if( !empty( $xrefItems ) ) {
+		$exempt = $pParamHash['xref_items_exempt_types'] ?? [];
+		$exempt = array_values( array_filter( array_map( 'trim', is_array( $exempt ) ? $exempt : explode( ',', $exempt ) ) ) );
+		$itemSql = "EXISTS ( SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` lcxf WHERE lcxf.`content_id` = lc.`content_id`"
+			." AND lcxf.`end_date` IS NULL AND lcxf.`item` IN (".implode( ',', array_fill( 0, count( $xrefItems ), '?' ) ).") )";
+		$bindVars = $xrefItems;
+		if( $exempt ) {
+			$itemSql = "( lc.`content_type_guid` IN (".implode( ',', array_fill( 0, count( $exempt ), '?' ) ).") OR $itemSql )";
+			$bindVars = array_merge( $exempt, $xrefItems );
+		}
+		$ret['where_sql'] = ( $ret['where_sql'] ?? '' )." AND $itemSql ";
+		$ret['bind_vars'] = array_merge( $ret['bind_vars'] ?? [], $bindVars );
+	}
+
 	return $ret;
 }
 
