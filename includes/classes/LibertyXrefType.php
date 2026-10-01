@@ -332,7 +332,7 @@ class LibertyXrefType {
 				        s.`template`, s.`cross_ref_href`, s.`multiple`, s.`data` AS `item_data`,
 				        CASE WHEN x.`xorder` = 0 THEN s.`cross_ref_title`
 				             ELSE s.`cross_ref_title` || '-' || x.`xorder` END AS xref_title,
-				        CASE WHEN x.`end_date` IS NOT NULL AND x.`end_date` < ? THEN 'history'
+				        CASE WHEN x.`end_date` IS NOT NULL AND x.`end_date` <= ? THEN 'history'
 				             ELSE s.`x_group` END AS type_source,
 				        lc_linked.`title` AS linked_title,
 				        lc_linked.`data` AS linked_data
