@@ -133,13 +133,16 @@ class LibertyXrefType {
 			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
 			: "= '$this->contentTypeGuid'";
 		$result = $gBitSystem->mDb->query(
+			// EXISTS, not a JOIN, on the group: with the dual-guid filter a site can have the 'type'
+			// group at both the package and the content-type level (mid-migration), and a JOIN then
+			// returned every item once per matching group row.
 			"SELECT g.`cross_ref_title` AS `type_name`, g.`item`
 			 FROM `".BIT_DB_PREFIX."liberty_xref_item` g
-			 JOIN `".BIT_DB_PREFIX."liberty_xref_group` t
-			     ON t.`x_group` = g.`x_group` AND t.`content_type_guid` $guidFilter
 			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
 			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = g.`role_id`
-			 WHERE g.`content_type_guid` = '$this->contentTypeGuid' AND t.`x_group` = 'type' AND t.`sort_order` = 0
+			 WHERE g.`content_type_guid` = '$this->contentTypeGuid' AND g.`x_group` = 'type'
+			   AND EXISTS ( SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref_group` t
+			                WHERE t.`x_group` = 'type' AND t.`content_type_guid` $guidFilter AND t.`sort_order` = 0 )
 			   AND (g.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
 			 ORDER BY g.`sort_order`, g.`item`",
 			$bindVars
