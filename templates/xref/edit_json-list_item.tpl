@@ -26,7 +26,14 @@
 					<div class="form-group">
 						{formlabel label="`$jkey|replace:'_':' '|capitalize`" for="json_field_`$jkey`"}
 						{forminput}
-							<input type="text" class="form-control input-small" name="json_field[{$jkey}]" id="json_field_{$jkey}" value="{$jsonData[$jkey]|escape}" />
+							{if $jsonData[$jkey]|is_array}
+								{* A list (several artists, several contact ids) - shown read-only and NOT
+								   submitted: a text box would turn it into the literal "Array" on save.
+								   edit_xref.php keeps any stored field the form doesn't send untouched. *}
+								<p class="form-control-static">{$jsonData[$jkey]|join:', '|escape}</p>
+							{else}
+								<input type="text" class="form-control input-small" name="json_field[{$jkey}]" id="json_field_{$jkey}" value="{$jsonData[$jkey]|escape}" />
+							{/if}
 						{/forminput}
 					</div>
 				{/foreach}
