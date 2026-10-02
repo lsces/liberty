@@ -269,6 +269,47 @@ class LibertyXrefType {
 	}
 
 	/**
+	 * Rows of an item whose liberty_xref_item.data declares {"follows":"<item>"} are moved to sit
+	 * directly after the row of that item with the same xorder - e.g. a 'track_artist' row beside
+	 * its 'track' in the same group, rather than all of them after every track (the group query
+	 * orders by item first). Items that don't declare it keep the query's order exactly; a follower
+	 * with no matching row stays at the end. Item data is either a plain list of json-list field
+	 * names, or an object {"fields":[...], "follows":"<item>"} (see edit_json-list_item.tpl).
+	 *
+	 * @param array $pRows  one group's live rows, in query order
+	 * @return array
+	 */
+	protected static function orderFollowingRows( array $pRows ): array {
+		$followers = [];
+		$rest = [];
+		foreach( $pRows as $row ) {
+			$itemData = !empty( $row['item_data'] ) ? json_decode( $row['item_data'], true ) : null;
+			if( is_array( $itemData ) && !empty( $itemData['follows'] ) && is_string( $itemData['follows'] ) ) {
+				$followers[$itemData['follows']][(int)$row['xorder']][] = $row;
+			} else {
+				$rest[] = $row;
+			}
+		}
+		if( !$followers ) {
+			return $pRows;
+		}
+		$ret = [];
+		foreach( $rest as $row ) {
+			$ret[] = $row;
+			if( isset( $followers[$row['item']][(int)$row['xorder']] ) ) {
+				array_push( $ret, ...$followers[$row['item']][(int)$row['xorder']] );
+				unset( $followers[$row['item']][(int)$row['xorder']] );
+			}
+		}
+		foreach( $followers as $byOrder ) {
+			foreach( $byOrder as $rows ) {
+				array_push( $ret, ...$rows );
+			}
+		}
+		return $ret;
+	}
+
+	/**
 	 * Load all xref groups and their rows for a specific content item.
 	 *
 	 * Replaces the former LibertyXrefInfo::load() + LibertyXrefGroup::loadXrefs()
@@ -350,13 +391,16 @@ class LibertyXrefType {
 				array_merge( [ $gBitSystem->getUTCTime(), $contentId ], $roles, [ $userId ] )
 			);
 			if( $rowResult ) {
+				$groupRows = [];
 				while( $row = $rowResult->fetchRow() ) {
-					$xref = LibertyXref::fromRow( $row );
 					if( $row['type_source'] === 'history' ) {
-						$allHistory[] = $xref;
+						$allHistory[] = LibertyXref::fromRow( $row );
 					} else {
-						$group->mXrefs[] = $xref;
+						$groupRows[] = $row;
 					}
+				}
+				foreach( self::orderFollowingRows( $groupRows ) as $row ) {
+					$group->mXrefs[] = LibertyXref::fromRow( $row );
 				}
 			}
 			$content->mGroups[$xGroup] = $group;

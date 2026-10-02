@@ -18,6 +18,11 @@
 			   for), so without this hint there's no way to add a currently-missing field. *}
 			{assign var="jsonData" value=$xrefInfo.data|default:'null'|json_decode:true}
 			{assign var="jsonFields" value=$xrefInfo.item_data|default:'null'|json_decode:true}
+			{* Object form {"fields":[...], "follows":"<item>"} - only the field list matters here
+			   (LibertyXrefType::orderFollowingRows() reads 'follows'). *}
+			{if $jsonFields|is_array && isset($jsonFields.follows)}
+				{assign var="jsonFields" value=$jsonFields.fields|default:null}
+			{/if}
 			{if !$jsonFields}
 				{assign var="jsonFields" value=$jsonData|array_keys}
 			{/if}
