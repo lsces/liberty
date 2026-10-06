@@ -5,7 +5,7 @@
 	{if $jsonData}
 		<table class="table-condensed table-borderless" style="margin:0">
 			{foreach $jsonData as $jkey => $jval}
-				<tr><th style="padding-right:.5em">{$jkey|replace:'_':' '|capitalize}</th><td>{$jval|escape}</td></tr>
+				<tr><th style="padding-right:.5em">{$jkey|replace:'_':' '|capitalize}</th><td>{if is_array($jval)}{foreach $jval as $jv}{if is_array($jv)}{$jv|json_encode|escape}{else}{$jv|escape}{/if}{if !$jv@last}, {/if}{/foreach}{else}{$jval|escape}{/if}</td></tr>
 			{/foreach}
 		</table>
 	{else}
