@@ -417,4 +417,144 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 		$this->store( $pParamHash );
 		return true;
 	}
+
+	/**
+	 * Bring one xref item's live rows on a content item in line with what a source now says, without
+	 * ever wiping them - the xref table records when each row was created and last edited, and a
+	 * reload must keep that. Rows are matched by a natural key (a track's own file path, a person's
+	 * MusicBrainz id, or '' for a single-valued item):
+	 *   - no live row for a key          -> insert
+	 *   - live row locally owned         -> left alone (see below), whatever the files say
+	 *   - live row, different value      -> old row archived as-is (end_date set, fully reversible
+	 *                                       via the xref history), new value inserted in its place
+	 *   - live row, same value           -> untouched, nothing written
+	 *   - live row the files no longer
+	 *     mention, not locally owned     -> archived
+	 *
+	 * "Locally owned" = hand-edited: last_update_date later than entry_date. This routine only ever
+	 * inserts or archives, never edits a live row in place, so a live row carrying a later update
+	 * stamp can only have come from a hand edit (the xref edit page) - a correction a reload must
+	 * never overwrite. A few seconds' grace covers entry_date/last_update_date being stamped by two
+	 * separate clock reads on insert. With $pStrictOwnership (credit rows), a row with no 'source'
+	 * in its data is also locally owned - every row this code writes carries one, so a row without
+	 * it was added by hand. The one exception is xorder 0: the old single-row common-tag storage
+	 * (the whole credit string in one 'artist' row, say) never carried a source either, and is
+	 * exactly what the per-person rows replace.
+	 *
+	 * Not LibertyXref::stepXref(expunge=2): that writes the incoming values onto the row it closes
+	 * (losing the old value) and numbers the continuation xorder+1 (colliding with the next track).
+	 *
+	 * @param int $pContentId  the content item whose rows are reconciled
+	 * @param string $pItem
+	 * @param list<array{key:string, xorder:int, xref?:int, xkey_ext?:string, xkey?:string, data?:array}> $pWanted
+	 * @param string|callable|null $pKey  how a live row's key is read: a column name ('xkey_ext'
+	 *                                    for a track's path), a callable taking the row, or null
+	 *                                    for a single-valued item
+	 * @param bool $pStrictOwnership
+	 * @param bool $pKeepLinks  a live row's contact link (xref/xkey) survives a reload that doesn't carry one
+	 *                         itself - a credit's name comes from Plex, the link to its contact from here, so
+	 *                         a changed order or value must not unlink it
+	 * @return array<string,int>  counts: inserted/archived/unchanged/kept_local
+	 */
+	public function reconcileItem( int $pContentId, string $pItem, array $pWanted, string|callable|null $pKey, bool $pStrictOwnership = false, bool $pKeepLinks = false ): array {
+		$counts = [ 'inserted' => 0, 'archived' => 0, 'unchanged' => 0, 'kept_local' => 0 ];
+		$live = $this->mDb->getAll(
+			"SELECT `xref_id`, `xorder`, `xref`, `xkey`, `xkey_ext`, `data`, `entry_date`, `last_update_date`
+			 FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` = ? AND `end_date` IS NULL",
+			[ $pContentId, $pItem ]
+		);
+		$liveByKey = [];
+		foreach( $live as $row ) {
+			$key = $pKey === null ? '' : ( is_callable( $pKey ) ? $pKey( $row ) : (string)$row[$pKey] );
+			$liveByKey[$key][] = $row;
+		}
+		$isLocal = function( array $row ) use ( $pStrictOwnership ): bool {
+			if( (int)$row['last_update_date'] - (int)$row['entry_date'] > 5 ) {
+				return true;
+			}
+			if( $pStrictOwnership && (int)$row['xorder'] > 0 ) {
+				$data = !empty( $row['data'] ) ? json_decode( $row['data'], true ) : null;
+				return empty( $data['source'] );
+			}
+			return false;
+		};
+		$archive = function( array $row ) use ( &$counts ) {
+			$stepHash = [ 'xref_id' => (int)$row['xref_id'], 'expunge' => 1 ];
+			$xref = $this->newScopedXref();
+			$xref->load( $stepHash['xref_id'] );
+			$xref->stepXref( $stepHash );
+			$counts['archived']++;
+		};
+
+		foreach( $pWanted as $want ) {
+			$candidates = $liveByKey[$want['key']] ?? [];
+			unset( $liveByKey[$want['key']] );
+			if( array_filter( $candidates, $isLocal ) ) {
+				// A hand-corrected row wins outright; any other live row under the same key is
+				// left too rather than second-guessed.
+				$counts['kept_local']++;
+				continue;
+			}
+			$current = array_shift( $candidates );
+			foreach( $candidates as $duplicate ) {
+				$archive( $duplicate );
+			}
+			if( $pKeepLinks && $current ) {
+				foreach( [ 'xref', 'xkey' ] as $field ) {
+					if( empty( $want[$field] ) && !empty( $current[$field] ) ) {
+						$want[$field] = $current[$field];
+					}
+				}
+			}
+			if( $current
+				&& (int)$current['xorder'] === (int)$want['xorder']
+				&& (int)$current['xref'] === (int)( $want['xref'] ?? 0 )
+				&& (string)$current['xkey_ext'] === (string)( $want['xkey_ext'] ?? '' )
+				&& (string)$current['xkey'] === (string)( $want['xkey'] ?? '' )
+				&& ( !empty( $current['data'] ) ? json_decode( $current['data'], true ) : null ) == ( $want['data'] ?? null ) ) {
+				$counts['unchanged']++;
+				continue;
+			}
+			if( $current ) {
+				$archive( $current );
+			}
+			$xrefHash = [ 'content_id' => $pContentId, 'item' => $pItem, 'xorder' => (int)$want['xorder'] ];
+			if( !empty( $want['xref'] ) ) {
+				$xrefHash['xref'] = (int)$want['xref'];
+			}
+			foreach( [ 'xkey_ext', 'xkey' ] as $field ) {
+				if( isset( $want[$field] ) && $want[$field] !== '' ) {
+					$xrefHash[$field] = $want[$field];
+				}
+			}
+			if( isset( $want['data'] ) ) {
+				$xrefHash['edit'] = json_encode( $want['data'] );
+			}
+			$this->newScopedXref()->store( $xrefHash );
+			$counts['inserted']++;
+		}
+
+		// Whatever's left is no longer in the files - archived, unless locally owned.
+		foreach( $liveByKey as $rows ) {
+			foreach( $rows as $row ) {
+				if( $isLocal( $row ) ) {
+					$counts['kept_local']++;
+				} else {
+					$archive( $row );
+				}
+			}
+		}
+		return $counts;
+	}
+
+	/**
+	 * A fresh LibertyXref carrying this instance's content-type/package scope, for the row-level
+	 * work reconcileItem() does (one instance per row - load()/store() keep per-row state).
+	 */
+	private function newScopedXref(): self {
+		$xref = new self();
+		$xref->mContentTypeGuid = $this->mContentTypeGuid;
+		$xref->mPackageGuid     = $this->mPackageGuid;
+		return $xref;
+	}
 }

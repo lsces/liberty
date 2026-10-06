@@ -4550,6 +4550,24 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * Reconcile one xref item's live rows on this content item against a wanted list, never wiping
+	 * history or hand edits - see LibertyXref::reconcileItem() for the rules and parameters.
+	 * Reloads the content item once afterwards if anything was written.
+	 *
+	 * @return array<string,int>  counts: inserted/archived/unchanged/kept_local
+	 */
+	public function reconcileXrefItem( string $pItem, array $pWanted, string|callable|null $pKey, bool $pStrictOwnership = false, bool $pKeepLinks = false ): array {
+		$xref = new LibertyXref();
+		$xref->mContentTypeGuid = $this->mContentTypeGuid;
+		$xref->mPackageGuid     = $this->mPackageGuid;
+		$counts = $xref->reconcileItem( (int)$this->mContentId, $pItem, $pWanted, $pKey, $pStrictOwnership, $pKeepLinks );
+		if( $counts['inserted'] || $counts['archived'] ) {
+			$this->load();
+		}
+		return $counts;
+	}
+
+	/**
 	 * Upsert one xref item's value(s) for this content item — the "does a live
 	 * row for this item already exist? update it in place; otherwise create
 	 * one" shape that keeps recurring per-package (found hand-rolled twice in

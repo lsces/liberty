@@ -205,6 +205,17 @@ of these is actually set" — same convention throughout):
   than guessing which item to create under. Preserves the row's current `xorder` on update when
   the caller doesn't pass one (`LibertyXref::verify()` otherwise defaults it to `0`).
 - **`deleteXrefByItem( $pContentId, $pItem )`** — bulk delete, returns the count of rows deleted.
+- **`reconcileXrefItem( $pItem, $pWanted, $pKey, $pStrictOwnership = false, $pKeepLinks = false )`**
+  — the *set* operation the others aren't: bring all the live rows of one item on this content item
+  in line with a wanted list (a re-scan of files, a reload from an external source) **without ever
+  wiping them**. Rows match by a natural key (`$pKey`: a column name, a callable, or `null` for a
+  single-valued item); no row -> insert, same value -> untouched, changed value -> old row archived
+  (`end_date`) and the new one inserted, no longer wanted -> archived. A hand-edited row
+  (`last_update_date` later than `entry_date`) is never touched. `$pKeepLinks` carries a live row's
+  `xref`/`xkey` (a contact link) over when the incoming row has none. Returns
+  `inserted/archived/unchanged/kept_local` counts. Instance method on `LibertyContent`, logic in
+  `LibertyXref::reconcileItem()`. Use it instead of `deleteXrefByItem()` + rebuild whenever history
+  or manual edits matter.
 - **`hasXrefItem( $pContentId, $pItem )`** — existence check, `bool`. Deliberately does **not**
   filter `end_date` (unlike `lookupXrefByItem()`) — matches the hand-rolled queries it replaced;
   add that filter only if a real caller needs it.
