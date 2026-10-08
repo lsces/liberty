@@ -692,3 +692,8 @@ Every package needs its own `includes/bit_setup_inc.php`, which:
 3. Registers anything else the package needs at boot — an app menu entry
    (`$gBitSystem->registerAppMenu()`), a Liberty service (`$gLibertySystem->registerService()`) if
    the package is content-bearing, etc.
+
+### Search index text on a partial save
+`LibertyContent::verify()` builds a save's search text from the title, author and `edit` text of that save. A save that carries `edit` but
+no `title` keeps the stored title in the database, and (since 2026-10-08) in the index too - it falls back to the loaded content's title.
+A save with no `edit` still clears the stored data (the fisheye convention), so there is nothing of it to index.

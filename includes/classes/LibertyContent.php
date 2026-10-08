@@ -391,7 +391,10 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		// search related stuff
 		if ( ( !(isset($this->mInfo['no_index']) and $this->mInfo['no_index'] == true ) ) and !isset($this->mInfo['index_data']) ) {
 			$this->mInfo['index_data'] = "";
-			if ( isset($pParamHash["title"]) )       $this->mInfo['index_data'] .= $pParamHash["title"] . ' ';
+			// A save that does not carry a title leaves the stored one alone (see above), so the index keeps it too: without this a
+			// description-only save re-indexed the content by its description alone and it could no longer be found by title.
+			$indexTitle = $pParamHash["title"] ?? ( $this->mInfo['title'] ?? null );
+			if ( $indexTitle !== null )              $this->mInfo['index_data'] .= $indexTitle . ' ';
 			if ( isset($pParamHash["author_name"]) ) $this->mInfo['index_data'] .= $pParamHash["author_name"] . ' ';
 			if ( isset($pParamHash["edit"]) )        $this->mInfo['index_data'] .= $pParamHash["edit"];
 			// Override point for a content type whose own searchable text lives somewhere other
