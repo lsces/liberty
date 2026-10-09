@@ -97,7 +97,9 @@ if( !function_exists( '\Bitweaver\Liberty\mime_film_get_tvshow_storage_root' )) 
 	function mime_film_get_tvshow_storage_root( string $pShowTitle ): string {
 		global $gBitSystem;
 		$firstLetter = strtoupper( substr( ltrim( $pShowTitle ), 0, 1 ) );
-		$configKey = ( $firstLetter >= 'A' && $firstLetter <= 'M' )
+		// A to M - and anything that sorts before A (a digit: "7 Ages of Rock") - is the first root, N to Z the second. The old test sent a digit to the
+		// second root, where its folder is not, so the loader found no episode files and a registered show stayed seasonless.
+		$configKey = ( $firstLetter < 'N' )
 			? 'fisheye_tvshow_storage_root_am'
 			: 'fisheye_tvshow_storage_root_nz';
 		$root = $gBitSystem->getConfig( $configKey, '' );
