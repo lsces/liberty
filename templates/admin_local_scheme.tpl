@@ -19,7 +19,7 @@
 						{foreach from=$schemeFiles item=file}
 							<li>
 								<label>
-									<input type="checkbox" name="fSchemes[]" value="{$file|escape}" checked="checked" />
+									<input type="checkbox" name="fSchemes[]" value="{$file|escape}" />
 									<code>{$file|escape}</code>
 								</label>
 							</li>
