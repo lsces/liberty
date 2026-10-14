@@ -177,7 +177,12 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 			$pParamHash['xref_store']['item'] = $pParamHash['item'];
 		}
 
-		$pParamHash['xref_store']['xorder'] = 0;
+		// Default xorder only for a new row. An update (xref_id given) leaves the stored xorder
+		// alone unless the caller passes one - defaulting it here silently reset every edited
+		// row's position to 0 for any caller that hadn't load()ed the row first.
+		if( empty( $pParamHash['xref_id'] ) ) {
+			$pParamHash['xref_store']['xorder'] = 0;
+		}
 
 		if( isset( $pParamHash['fAddXref'] ) ) {
 			$pParamHash['xref_store']['item']       = isset( $pParamHash['Array_xref_type_list'] ) ? $pParamHash['Array_xref_type_list']['Array.item'] : $pParamHash['item'];
