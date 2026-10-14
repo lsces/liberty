@@ -272,15 +272,17 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 		// assumed to be a plain UTC-formatted "Y-m-d H:i:s" string (the pre-migration column's
 		// own shape), not a display-timezone-aware value.
 		if( isset( $pParamHash['entry_date'] ) ) {
-			$pParamHash['xref_store']['entry_date'] = is_int( $pParamHash['entry_date'] )
-				? $pParamHash['entry_date'] : strtotime( $pParamHash['entry_date'].' UTC' );
+			// A numeric string is an epoch that arrived typed as string (strtotime() returns
+			// false for it, which stored NULL and orphaned any rows matched on that stamp).
+			$pParamHash['xref_store']['entry_date'] = is_int( $pParamHash['entry_date'] ) || ctype_digit( (string)$pParamHash['entry_date'] )
+				? (int)$pParamHash['entry_date'] : strtotime( $pParamHash['entry_date'].' UTC' );
 		} elseif( empty( $pParamHash['xref_id'] ) ) {
 			$pParamHash['xref_store']['entry_date'] = $gBitSystem->getUTCTime();
 		}
 
 		// last_update_date: same override convention as entry_date above.
 		$pParamHash['xref_store']['last_update_date'] = isset( $pParamHash['last_update_date'] )
-			? ( is_int( $pParamHash['last_update_date'] ) ? $pParamHash['last_update_date'] : strtotime( $pParamHash['last_update_date'].' UTC' ) )
+			? ( is_int( $pParamHash['last_update_date'] ) || ctype_digit( (string)$pParamHash['last_update_date'] ) ? (int)$pParamHash['last_update_date'] : strtotime( $pParamHash['last_update_date'].' UTC' ) )
 			: $gBitSystem->getUTCTime();
 
 		$gBitSystem->mServerTimestamp->get_display_offset();
