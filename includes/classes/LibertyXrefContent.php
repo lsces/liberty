@@ -24,6 +24,22 @@ class LibertyXrefContent {
 	public array $mGroups = [];
 
 	/**
+	 * @var string[] Item codes this content item holds live rows for that have no liberty_xref_item definition for its
+	 * type - the signature of a type whose xref scheme was never applied (or was wiped, as a database restore does).
+	 * The rows exist but nothing can show them, so they are reported rather than silently left out.
+	 */
+	public array $mUndefinedItems = [];
+
+	/** The message for mUndefinedItems, or '' when every row has a definition. */
+	public function getSchemeProblem( string $pContentTypeGuid ): string {
+		if( !$this->mUndefinedItems ) {
+			return '';
+		}
+		return sprintf( 'This %s has xref rows (%s) that no xref item definition covers, so they cannot be shown or edited. The type\'s xref scheme has not been applied to this site - apply it from liberty/admin/admin_local_scheme.php.',
+			$pContentTypeGuid, implode( ', ', $this->mUndefinedItems ) );
+	}
+
+	/**
 	 * Every xref_id for a given item tag, scanning already-loaded groups — no
 	 * fresh query, just a lookup into data loadContent() already fetched.
 	 *

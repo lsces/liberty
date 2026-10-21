@@ -351,6 +351,20 @@ class LibertyXrefType {
 		$content    = new LibertyXrefContent();
 		$allHistory = [];
 
+		// Live rows with no item definition for this type (under either guid): data that exists but that no group can
+		// show. Reported, not left to read as an empty page.
+		$undefined = $db->getCol(
+			"SELECT DISTINCT x.`item` FROM `".BIT_DB_PREFIX."liberty_xref` x
+			 WHERE x.`content_id` = ? AND x.`end_date` IS NULL
+			   AND NOT EXISTS ( SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref_item` s WHERE s.`item` = x.`item` AND s.`content_type_guid` $guidFilter )
+			 ORDER BY x.`item`",
+			[ $contentId ]
+		);
+		if( $undefined ) {
+			$content->mUndefinedItems = array_map( 'strval', $undefined );
+			error_log( $content->getSchemeProblem( $this->contentTypeGuid ).' (content_id '.$contentId.')' );
+		}
+
 		$groupResult = $db->query(
 			"SELECT g.`x_group`, g.`title`, g.`sort_order`, g.`template`, g.`role_id`, g.`content_type_guid` AS group_guid
 			 FROM `".BIT_DB_PREFIX."liberty_xref_group` g

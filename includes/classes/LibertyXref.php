@@ -336,7 +336,7 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 	 * @return bool true on success
 	 */
 	public function store( &$pParamHash = NULL ) {
-		if( $this->verify( $pParamHash ) ) {
+		if( $this->verify( $pParamHash ) && $this->verifyItemDefined( $pParamHash ) ) {
 			$table = BIT_DB_PREFIX."liberty_xref";
 			$this->mDb->StartTrans();
 			if( isset( $pParamHash['xref_id'] ) ) {
@@ -378,6 +378,41 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * A new row must be for an item the content's type (or its package) defines. Without a definition nothing can
+	 * list, edit or order the row, and a type whose scheme was never applied (or was wiped by a restore) would take
+	 * writes happily and show an empty page afterwards - so refuse, and say what to apply. Updates of an existing row
+	 * are left alone.
+	 *
+	 * @param array $pParamHash  as verified: xref_store carries the item and content_id
+	 */
+	protected function verifyItemDefined( array $pParamHash ): bool {
+		if( isset( $pParamHash['xref_id'] ) ) {
+			return true;
+		}
+		$item      = $pParamHash['xref_store']['item'] ?? null;
+		$contentId = $pParamHash['xref_store']['content_id'] ?? null;
+		if( $item === null || $contentId === null ) {
+			return true;
+		}
+		global $gLibertySystem;
+		$typeGuid    = $this->mContentTypeGuid ?: (string)$this->mDb->getOne( "SELECT `content_type_guid` FROM `".BIT_DB_PREFIX."liberty_content` WHERE `content_id` = ?", [ $contentId ] );
+		$packageGuid = $this->mPackageGuid ?: (string)( $gLibertySystem->mContentTypes[$typeGuid]['handler_package'] ?? '' );
+		if( $typeGuid === '' ) {
+			return true;
+		}
+		$guids = array_values( array_unique( array_filter( [ $typeGuid, $packageGuid ] ) ) );
+		$defined = (int)$this->mDb->getOne(
+			"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref_item` WHERE `item` = ? AND `content_type_guid` IN (".implode( ',', array_fill( 0, count( $guids ), '?' ) ).")",
+			array_merge( [ $item ], $guids )
+		);
+		if( !$defined ) {
+			$this->mErrors['xref_item'] = sprintf( KernelTools::tra( 'The xref item "%s" is not defined for %s, so it cannot be stored. Apply the type\'s xref scheme from liberty/admin/admin_local_scheme.php.' ), $item, $typeGuid );
+			return false;
+		}
+		return true;
 	}
 
 	/**
@@ -537,8 +572,17 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 			if( isset( $want['data'] ) ) {
 				$xrefHash['edit'] = json_encode( $want['data'] );
 			}
-			$this->newScopedXref()->store( $xrefHash );
-			$counts['inserted']++;
+			$inserting = $this->newScopedXref();
+			if( $inserting->store( $xrefHash ) ) {
+				$counts['inserted']++;
+			} else {
+				// Most likely an item with no definition for this type (verifyItemDefined()) - counted and reported, not
+				// passed over as if it had been written.
+				$counts['failed'] = ( $counts['failed'] ?? 0 ) + 1;
+				foreach( $inserting->mErrors as $message ) {
+					$this->mErrors[] = $message;
+				}
+			}
 		}
 
 		// Whatever's left is no longer in the files - archived, unless locally owned.

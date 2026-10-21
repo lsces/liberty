@@ -4564,6 +4564,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		$xref->mContentTypeGuid = $this->mContentTypeGuid;
 		$xref->mPackageGuid     = $this->mPackageGuid;
 		$counts = $xref->reconcileItem( (int)$this->mContentId, $pItem, $pWanted, $pKey, $pStrictOwnership, $pKeepLinks );
+		if( !empty( $counts['failed'] ) ) {
+			$this->mErrors['xref_'.$pItem] = implode( ' ', array_unique( $xref->mErrors ) );
+		}
 		if( $counts['inserted'] || $counts['archived'] ) {
 			$this->load();
 		}

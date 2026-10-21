@@ -10,6 +10,9 @@
 	   until now, so it never rendered as a clickable link, just plain text via the else branch. *}
 	{if $xrefInfo.cross_ref_href && ( $xrefInfo.xkey || $xrefInfo.xkey_ext )}
 		<a href="{$xrefInfo.cross_ref_href|escape}{$xrefInfo.xkey|default:$xrefInfo.xkey_ext|escape}" target="_blank" rel="noopener">{$xrefInfo.xkey_ext|default:$xrefInfo.xkey|escape}</a>
+	{elseif !$xrefInfo.cross_ref_href && $xrefInfo.xkey_ext && ( $xrefInfo.xkey_ext|substr:0:4 ) eq 'http'}
+		{* no prefix, the value is a whole URL (an official site): the value is the link *}
+		<a href="{$xrefInfo.xkey_ext|escape}" target="_blank" rel="noopener">{$xrefInfo.xkey_ext|escape}</a>
 	{else}
 		{$xrefInfo.xkey|escape} {$xrefInfo.xkey_ext|escape}
 	{/if}

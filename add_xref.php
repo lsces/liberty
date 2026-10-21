@@ -45,6 +45,11 @@ if( !empty( $_REQUEST['fAddXref'] ) ) {
 		}
 	}
 	if( $gContent->storeXref( $_REQUEST ) ) {
+		// Optional hook, same shape as the file hooks above: lets a content class act on a row just added (a book with no
+		// thumbnail making this first image its own) without this controller knowing what that means.
+		if( method_exists( $gContent, 'xrefAdded' ) ) {
+			$gContent->xrefAdded( (string)( $_REQUEST['item'] ?? $_REQUEST['Array_xref_type_list']['Array.item'] ?? '' ), (string)( $_REQUEST['xkey_ext'] ?? '' ) );
+		}
 		header( 'Location: '.$gContent->getEditUrl() );
 		die;
 	}
