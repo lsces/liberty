@@ -29,6 +29,18 @@ if( $gContent = LibertyBase::getLibertyObject( $attachment['content_id'] ) ) {
 	$gContent->verifyViewPermission();
 	$gBitSmarty->assign( 'gContent', $gContent );
 
+	// ?size=<name> asks for one of the generated thumbnails kept beside the original (thumbs/<name>.jpg) instead of the
+	// original file itself; the name is checked against the known sizes, and the original is served when there is no such file.
+	if( !empty( $_REQUEST['size'] ) && in_array( $_REQUEST['size'], [ 'icon', 'avatar', 'small', 'medium', 'large', 'extra-large' ], true ) && !empty( $attachment['source_file'] )) {
+		$thumbFile = dirname( $attachment['source_file'] ).'/thumbs/'.$_REQUEST['size'].'.jpg';
+		if( is_file( $thumbFile )) {
+			$attachment['source_file'] = $thumbFile;
+			$attachment['mime_type'] = 'image/jpeg';
+			$attachment['file_name'] = pathinfo( (string)( $attachment['file_name'] ?? 'image' ), PATHINFO_FILENAME ).'-'.$_REQUEST['size'].'.jpg';
+			$attachment['last_modified'] = filemtime( $thumbFile );
+		}
+	}
+
 	if( $download_function = $gLibertySystem->getPluginFunction( $attachment['attachment_plugin_guid'], 'download_function', 'mime' )) {
 		if( $download_function( $attachment )) {
 			LibertyMime::addDownloadHit( $attachment['attachment_id'] );
