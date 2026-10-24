@@ -76,8 +76,8 @@
 				{/if}
 
 				<div class="form-group submit">
-					<input type="submit" class="btn btn-default" name="post_comment_preview" value="{tr}Preview{/tr}" {if $gBitSystem->isFeatureActive('comments_ajax')}onclick="LibertyComment.previewComment(); return false;"{/if}/>&nbsp;
-					<input type="submit" class="btn btn-default" name="post_comment_submit" value="{tr}Post{/tr}" {if $gBitSystem->isFeatureActive('comments_ajax')}onclick="LibertyComment.postComment(); return false;"{/if}/>&nbsp;
+					<input type="submit" class="btn btn-default" name="post_comment_preview" value="{tr}Preview{/tr}" {if $gBitSystem->isFeatureActive('comments_ajax')}onclick="LibertyComment.previewComment(); return false;"{/if}/>
+					<input type="submit" class="btn btn-default" name="post_comment_submit" value="{tr}Post{/tr}" {if $gBitSystem->isFeatureActive('comments_ajax')}onclick="LibertyComment.postComment(); return false;"{/if}/>
 					<input type="submit" class="btn btn-default" name="post_comment_cancel" value="{tr}Cancel{/tr}" {if $gBitSystem->isFeatureActive('comments_ajax')}onclick="LibertyComment.cancelComment(true); return false;"{/if}/>
 				</div>
 			{/legend}
