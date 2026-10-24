@@ -298,6 +298,7 @@ $indices = [
 	'lib_attachment_meta_title_idx'  => [ 'table' => 'liberty_attachment_meta_data', 'cols' => 'meta_title_id', 'opts' => null ],
 	'liberty_xref_content_idx'       => [ 'table' => 'liberty_xref',       'cols' => 'content_id',        'opts' => null ],
 	'liberty_xref_item_key_idx'      => [ 'table' => 'liberty_xref',       'cols' => 'item, xkey_ext',    'opts' => null ],
+	'liberty_xref_xref_idx'          => [ 'table' => 'liberty_xref',       'cols' => 'xref',              'opts' => null ],
 	'liberty_xref_item_pkg_idx'      => [ 'table' => 'liberty_xref_item',  'cols' => 'content_type_guid', 'opts' => null ],
 	'liberty_xref_group_pkg_idx'     => [ 'table' => 'liberty_xref_group', 'cols' => 'content_type_guid', 'opts' => null ],
 ];
