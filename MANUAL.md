@@ -679,6 +679,28 @@ consumer gets the same override capability for free. `Health\HealthDay::getDayCe
 package) is the reference implementation to copy — see its own `MANUAL.md` for what it actually
 renders.
 
+## Local Imports (admin)
+
+**Liberty admin > Local Imports** lists the one-off import scripts that belong to *this* site and runs
+them. It is to data what **Local Scheme** is to the xref vocabulary: a gateway to files that live in the
+site's own `config/local/` folder and are not part of any package.
+
+- **Where the scripts live:** `config/local/import/*.php`, one import per file. Nothing is listed until a
+  site puts a file there.
+- **Who can use it:** administrators only (`p_admin`).
+- **Running one:** each import shows its title, a description, its settings (source address, an id, a list of
+  name matches, whatever the script asks for) and two buttons. **Dry run** reads and reports what would be
+  done and writes nothing. **Apply** does it, after a confirmation. The result is printed on the page.
+- **Batches:** an import that touches many records does a limited number per press and says so at the end;
+  press Apply again until the report shows nothing left.
+- **Errors:** an import that fails shows its message in the result instead of a blank page.
+
+Imports are the site-specific counterpart of package upgrade scripts (`<package>/admin/upgrades/<version>.php`,
+registered with `registerPackageUpgrade()`): upgrades are versioned and run once per database, an import is
+chosen by an administrator, may be run again, and starts as a dry run. An import that anyone with the package
+could use belongs in that package; one tied to a particular site's sources belongs in `config/local/import/`.
+How to write one is in `DEVELOPER.md`.
+
 ## Package registration
 
 Every package needs its own `includes/bit_setup_inc.php`, which:
