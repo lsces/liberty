@@ -7,6 +7,7 @@
  *
  * An import file returns an array:
  *   'title'       short name
+ *   'group'       optional heading the import is listed under (default 'Other')
  *   'description' what it does, one or two sentences
  *   'params'      optional, name => [ 'label' => ..., 'default' => ..., 'size' => width ] - one text field each
  *   'run'         function( array $pParams, bool $pApply ): string|array  - the output as text or a list of lines
@@ -36,6 +37,7 @@ foreach( $files as $file ) {
 		$imports[basename( $file )] = [
 			'file'        => basename( $file ),
 			'title'       => (string)( $def['title'] ?? basename( $file, '.php' ) ),
+			'group'       => (string)( $def['group'] ?? 'Other' ),
 			'description' => (string)( $def['description'] ?? '' ),
 			'params'      => (array)( $def['params'] ?? [] ),
 			'run'         => $def['run'],
@@ -62,7 +64,7 @@ if( $chosen !== '' && isset( $imports[$chosen] ) && ( isset( $_REQUEST['fDryRun'
 	$result = [ 'file' => $chosen, 'title' => $import['title'], 'apply' => $apply, 'text' => $text ];
 }
 
-// What the template needs - never the callables.
+// What the template needs - never the callables. Listed by group, in file order within it.
 $list = [];
 foreach( $imports as $import ) {
 	$params = [];
@@ -73,10 +75,11 @@ foreach( $imports as $import ) {
 			'value' => (string)( $_REQUEST['p'][$import['file']][$name] ?? $param['default'] ?? '' ),
 		];
 	}
-	$list[] = [ 'file' => $import['file'], 'title' => $import['title'], 'description' => $import['description'], 'params' => $params ];
+	$list[$import['group']][] = [ 'file' => $import['file'], 'title' => $import['title'], 'description' => $import['description'], 'params' => $params ];
 }
 
 $gBitSmarty->assign( 'importDir', $importDir );
+ksort( $list );
 $gBitSmarty->assign( 'imports', $list );
 $gBitSmarty->assign( 'result', $result );
 
