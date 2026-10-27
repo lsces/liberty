@@ -843,6 +843,35 @@ consumer gets the same override capability for free. `Health\HealthDay::getDayCe
 package) is the reference implementation to copy — see its own `MANUAL.md` for what it actually
 renders.
 
+## List hashes — what may be pasted into SQL
+
+A `getList()`-style function takes a hash of parameters. Nearly everything in it is **bound as data**, which is safe
+whatever it contains. A few values cannot be bound because they are SQL text, and `getContentList()` pastes these into
+the query:
+
+| Key | What it is | Where it may come from |
+|---|---|---|
+| `join_sql` | a join fragment | SQL written in code only (service hooks: protector, blogs, tags, user favourites) - **never a request** |
+| `time_limit_column` | a column name (`event_time`) | code; accepted only as a plain identifier |
+| `time_limit_table`, `order_table` | a table alias with its dot (`lc.`, `ufm.`) | code; accepted only as `alias.` |
+| `hash_key` | a select expression (`lc.content_id`) | code; accepted only as `name` or `alias.name` |
+
+`LibertyContent::listHashIdentifier()` enforces the shapes above (anything else is ignored and the clause left out),
+and `get_content_list_inc.php` removes all five from a request before merging it into the hash. `sort_mode` is made
+safe by `BitDb::convertSortmode()`, which strips everything except letters, digits, dots, underscores and commas; an
+unknown column name there gives an SQL error, not an injection.
+
+Rules for code that builds a list hash:
+- **Do not copy `$_REQUEST` wholesale** to pick up the pagination variables. Take the named keys you mean to support
+  (`page`, `offset`, `max_records`, `sort_mode`, `find`, `content_type_guid`, `user_id` through `verifyId()`), and call
+  `prepGetList()` to fill in defaults. `prepGetList()` only normalises; it does not remove keys, so it cannot tell a
+  value your code set from one a request set.
+- A new key whose value goes into the SQL text must be validated as an identifier at the point it is pasted, the way
+  `listHashIdentifier()` does, not trusted because the caller "always" sets it.
+- `liberty/list_content.php` is two pages in one: with a `user_id` it lists that person's content (profile pages, the
+  user list, modules) and needs `p_liberty_list_content`; without one it is the admin "List All Content" page and needs
+  `p_admin`.
+
 ## Local Imports (`admin/admin_local_import.php`)
 
 The page globs `BIT_ROOT_PATH.'config/local/import/*.php'`, `require`s each file and expects it to **return a
