@@ -3351,12 +3351,22 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 						$type['handler_class'] = $gLibertySystem->getContentClassName( $aux['content_type_guid'] );
 					}
 					if( class_exists( $type['handler_class'] ) ) {
+						$userInfo = null;
 						if( $aux['content_type_guid'] == BITUSER_CONTENT_TYPE_GUID ) {
-							// here we provide getDisplay(Link|Url) with user-specific information that we get the correct links to display in pages
 							$userInfo = $gBitUser->getUserInfo( ['content_id' => $aux['content_id'] ] );
+						}
+						if( !empty( $userInfo ) && is_array( $userInfo ) ) {
+							// here we provide getDisplay(Link|Url) with user-specific information that we get the correct links to display in pages
 							$aux['title']        = $type['handler_class']::getTitleFromHash( $userInfo );
 							$aux['display_link'] = $type['handler_class']::getDisplayLinkFromHash( $userInfo, $userInfo['login'] ?? '' );
 							$aux['display_url']  = $type['handler_class']::getDisplayUrlFromHash( $userInfo );
+						} elseif( $aux['content_type_guid'] == BITUSER_CONTENT_TYPE_GUID ) {
+							// A user content row with no user record behind it (a user deleted, or one that was
+							// only half made): there is nothing to build a name or a link from, so it is listed
+							// by whatever title it has instead of failing the whole list.
+							$aux['title']        = trim( (string)( $aux['title'] ?? '' ) ) !== '' ? $aux['title'] : KernelTools::tra( 'Unknown user' );
+							$aux['display_link'] = htmlspecialchars( $aux['title'] );
+							$aux['display_url']  = '';
 						} else {
 							$aux['title']        = $type['handler_class']::getTitleFromHash( $aux );
 							$aux['display_link'] = $type['handler_class']::getDisplayLinkFromHash( $aux, $aux['title'] );
