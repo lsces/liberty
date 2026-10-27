@@ -2657,6 +2657,24 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 				[ $pXrefInfo['xref'] ]
 			);
 		}
+		// A json-list/json-text item (or any item whose definition data carries options): the parsed
+		// options, the row's JSON values and the field names to offer, for the shared fields template.
+		// A row with no JSON yet starts from the plain columns the item's "legacy" map names.
+		$hint = LibertyXrefType::parseItemHint( $pXrefInfo['item_data'] ?? null );
+		if( $hint ) {
+			$values = json_decode( (string)( $pXrefInfo['data'] ?? '' ), true );
+			$values = is_array( $values ) ? $values : [];
+			if( !$values && !empty( $hint['legacy'] ) && is_array( $hint['legacy'] ) ) {
+				foreach( $hint['legacy'] as $column => $key ) {
+					if( (string)( $pXrefInfo[$column] ?? '' ) !== '' ) {
+						$values[$key] = $pXrefInfo[$column];
+					}
+				}
+			}
+			$pXrefInfo['item_hint']   = $hint;
+			$pXrefInfo['json_values'] = $values;
+			$pXrefInfo['json_fields'] = !empty( $hint['fields'] ) ? $hint['fields'] : array_keys( $values );
+		}
 	}
 
 	/**
@@ -4445,6 +4463,57 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	/** @see LibertyXrefType::getTemplateFormats() */
 	public function getXrefFormatList(): array {
 		return $this->xrefType()->getTemplateFormats();
+	}
+
+	/**
+	 * Whether the edit and add pages for this content type's xref rows offer the start/end date fields
+	 * (a "Time period" tab). Dates are a property of the row, not of its item type, so the page shows
+	 * them once around the item's fields. Off by default; a content type whose rows are date-bounded
+	 * (a contact's addresses and numbers) turns it on.
+	 */
+	public function xrefShowsDates(): bool {
+		return false;
+	}
+
+	/** @see LibertyXrefType::getItemDefinition() */
+	public function getXrefItemDefinition( string $pItem ): ?array {
+		return $this->xrefType()->getItemDefinition( $pItem );
+	}
+
+	/**
+	 * Resolve the Smarty *fields* template for one xref item template: just the inputs, with no
+	 * heading, form tag or buttons, so the edit page and the add page can both show the same fields.
+	 * Same resolution order as getXrefEditTemplate(), with `edit_<t>_fields.tpl`:
+	 *   1. `<package>/templates/xref/<content_type_guid>/edit_<t>_fields.tpl`
+	 *   2. `<package>/templates/xref/edit_<t>_fields.tpl`
+	 *   3. `liberty/templates/xref/edit_<t>_fields.tpl`
+	 * An empty or `generic` template means `text`. Returns null when no fields template exists, which
+	 * tells the caller this item still has only a whole-page edit template (getXrefEditTemplate()).
+	 *
+	 * @param string|null $pTemplate  liberty_xref_item.template
+	 * @return string|null            a `bitpackage:` template path, or null
+	 */
+	public function getXrefFieldsTemplate( ?string $pTemplate = null ): ?string {
+		$pTemplate = trim( (string)$pTemplate );
+		if( $pTemplate === '' || $pTemplate === 'generic' ) {
+			$pTemplate = 'text';
+		}
+		$file     = 'edit_'.$pTemplate.'_fields.tpl';
+		$package  = $this->mType['handler_package'] ?? 'liberty';
+		$pkgConst = strtoupper( $package ).'_PKG_PATH';
+		if( defined( $pkgConst ) ) {
+			$base = constant( $pkgConst ).'templates/xref/';
+			if( $this->mContentTypeGuid && file_exists( $base.$this->mContentTypeGuid.'/'.$file ) ) {
+				return 'bitpackage:'.$package.'/xref/'.$this->mContentTypeGuid.'/'.$file;
+			}
+			if( file_exists( $base.$file ) ) {
+				return 'bitpackage:'.$package.'/xref/'.$file;
+			}
+		}
+		if( file_exists( LIBERTY_PKG_PATH.'templates/xref/'.$file ) ) {
+			return 'bitpackage:liberty/xref/'.$file;
+		}
+		return null;
 	}
 
 	/**

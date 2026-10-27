@@ -1,6 +1,847 @@
 # Liberty Package — Developer Reference
 
-Programmer-facing notes that are not part of the object model in `MANUAL.md`.
+How Liberty actually works today, for people writing code against it. For the history of *why* —
+decisions, bugs found, wrong turns — see `CLAUDE.md`'s dated session log instead; this file only
+tracks current behaviour. The administrator's view of the same features is in `MANUAL.md`.
+
+Liberty is bitweaver's content-management base: every user-visible content item — wiki pages,
+articles, blog posts, contacts, stock items, movements — is backed by a row in `liberty_content`
+and a PHP subclass of `LibertyContent`. This reference covers that base framework first (object
+lifecycle, versioning, permissions, content status, type registration), then the xref system
+(`liberty_xref`/`liberty_xref_group`/`liberty_xref_item`) that content-heavy packages build their
+own custom per-item data onto, as a layer on top of it, rather than adding schema columns.
+
+## The `liberty_content` object model
+
+Every content type (contacts, stock components, food items, wiki pages, ...) has its own PHP class
+extending `LibertyContent` (which itself extends `LibertyBase extends BitBase`). The shared
+`liberty_content` table row carries fields common to all content regardless of type: `content_id`
+(PK), `content_type_guid`, `title`, `data` (the main content blob — a wiki page's body, or unused
+scalar/null for record-shaped content types like a Stock component), `user_id`/`modifier_user_id`,
+`created`/`last_modified`, `format_guid` (which content-formatting plugin renders `data`),
+`content_status_id` (see "Content status" below), `hits`, `event_time`, `version`. A subclass adds
+its own table (or, like most `liberty_xref`-only content types, no table at all — see "The Xref
+system" below) joined to this row, plus whatever package-specific fields/behaviour it needs.
+
+`LibertyContent::registerContentType( $pContentGuid, $pTypeParams )` is how a class connects
+itself to a `content_type_guid` — called once per real subtype from the package's install/registration
+code, sets `$this->mContentTypeGuid`/`$this->mType` and (via `$gLibertySystem->registerContentType()`)
+makes the type resolvable by `LibertyBase::getLibertyObject()` (below). `$pTypeParams['handler_package']`
+matters when a package has multiple content types sharing one xref namespace — see "Dual-guid
+scoping" below.
+
+## Object lifecycle: load, verify, store, expunge
+
+Every subclass follows the same four-method pattern (from the class's own docblock, confirmed
+against the real implementations):
+
+- **`load()`** — the subclass loads its own table joined to `liberty_content`, then calls
+  `parent::load()`, which loads content preferences and invokes any `content_load_function`
+  services registered against this content type.
+- **`verify(&$pParamHash)`** — validates and normalises inbound data, building
+  `$pParamHash['content_store']` ready for the DB write. A subclass calls `parent::verify()` first,
+  then extends with its own package-specific checks.
+- **`store(&$pParamHash)`** — insert or update the `liberty_content` row (`associateInsert`/
+  `associateUpdate`, generating a new `content_id` via sequence on insert), inside a transaction the
+  subclass's own table write shares. Also (in order): writes a history snapshot if the change
+  isn't flagged `minor`/`has_no_history` and a real field changed (see "Versioning and history"),
+  stores aliases, invokes `content_store_function` services, runs the format plugin's own
+  `store_function` and post-store data filter, clears the object's cache file, stores any
+  `data_store`/`preferences_store` entries, updates hits, and logs the action.
+- **`expunge()`** — deletes the content item and every related record: comments (recursively, via
+  `LibertyComment::expunge()`), invokes `content_expunge_function` services and the format plugin's
+  own expunge hook, then deletes (in one transaction) favorites, history, per-item permissions,
+  aliases, the queued-processing entry, `liberty_content_data`, hits, preferences, content links,
+  **every `liberty_xref` row owned by this content_id**, and finally the `liberty_content` row
+  itself. `mContentId` is set back to `null` afterward so the (now-invalid) object can't be mistaken
+  for still-live.
+
+A subclass generally calls `parent::verify()`/`parent::store()`/`parent::load()`/`parent::expunge()`
+around its own package-specific table work — `LibertyContent`'s own four methods are the shared
+tail (or, for `load()`, the shared head) of that chain, not a full replacement for it.
+
+## Loading content generically — `LibertyBase::getLibertyObject()`
+
+The canonical way to load *any* content item by `content_id` when the concrete type isn't already
+known: looks up `content_type_guid` from `liberty_content` if not supplied, resolves the registered
+handler class via `$gLibertySystem->mContentTypes`, checks the APCu object cache first (unless
+told not to), and otherwise instantiates the handler class and calls `load()`. Every "open this
+content item" code path that doesn't already know its own type should go through here rather than
+hand-rolling a lookup.
+
+**Constructor-shape override point**: `getLibertyObject()` calls `getNewObject($class, $contentId)`,
+which does `new $pClass(null, $pContentId)` — every content class's constructor must accept exactly
+that two-parameter shape (a first "dummy" positional param, content_id second), even if the class
+only ever really needs the content_id. A class with a different constructor signature (e.g. a
+legacy primary key instead of content_id) overrides `getNewObjectById()` instead. Get this wrong and
+the class simply can't be loaded generically via `getLibertyObject()`.
+
+**Caching**: `LibertyContent implements BitCacheable`. `isCacheableClass()` defaults to caching only
+on non-live (dev) systems; `isCacheableObject()` additionally requires a real `mContentId`;
+`getCacheKey()` is the content_id itself. `store()`/`expunge()` both explicitly clear the object's
+cache file (`expungeCacheFile()`) so a write is never served stale from cache afterward.
+
+## Versioning and history
+
+`store()` writes a full snapshot (not a diff) to `liberty_content_history` — `storeHistory()` copies
+`version`, `last_modified`, `modifier_user_id`, `ip`, `data`, `summary`, `edit_comment`,
+`format_guid` from the just-saved object into a new history row — whenever a save isn't flagged
+`minor`, isn't flagged `has_no_history`, and a real field actually changed (`field_changed`). This
+only fires when `getField('version')` is already truthy (i.e. not on first creation — nothing to
+version yet). `getHistoryCount()`/`getHistory()` read it back; `rollbackVersion()`/
+`expungeVersion()`/`removeLastVersion()` manage it going the other way.
+
+**`store()` never writes the incremented version number back onto the in-memory object** — calling
+`store()` twice on the same already-loaded object within one request computes the identical "next
+version" both times and collides on `liberty_content_history`'s unique `(content_id, version)` key.
+Never call `store()` more than once on one loaded object per request if either call might have a
+real field change — merge into one `$pParamHash` and one call, or reload the object between calls.
+
+## Content status
+
+`liberty_content.content_status_id` is a plain numeric threshold, not an enum — `getContentStatus()`
+reads it (default `50` if unset). Five convenience checks compare it against configurable
+`kernel_config` thresholds: `isPublic()` (`>= 50` by default), `isHidden()` (`<= -10`),
+`isProtected()` (`<= -20`), `isPrivate()` (`<= -40`), `isDeleted()` (`<= -999`) — these are
+cumulative bands on one axis, not independent flags. `getAvailableContentStatuses()` returns the
+real named status rows a given user is allowed to set, gated by the `p_liberty_edit_all_status`
+permission for the full range.
+
+## Permissions
+
+Five permission-string properties are set in the constructor, one per operation, each defaulting to
+`p_admin_content` unless the subclass overrides it: `mViewContentPerm` (empty means "always
+allowed" — the only one with this shortcut), `mCreateContentPerm`, `mUpdateContentPerm`,
+`mExpungeContentPerm`, `mAdminContentPerm`. Six matching method pairs check/enforce them —
+`has<X>Permission()` returns a bool; `verify<X>Permission()` calls it and fatals (via
+`$gBitSystem->fatalPermission()`) if denied, the standard "check-or-die" pattern used throughout
+page controllers.
+
+**`hasUserPermission($permName)` is the shared check every `has<X>Permission()` wrapper calls
+through to.** Resolution order:
+1. No content loaded → plain role-permission check (`$gBitUser->hasPermission($permName)`).
+2. Content loaded, user is the object's owner, or user is a global admin → passes immediately.
+3. Otherwise, if the user holds `mAdminContentPerm` globally (as an ordinary role permission, not
+   an item-level override) → passes immediately, without ever consulting per-item overrides.
+4. Otherwise, look up per-item overrides for this content_id (`liberty_content_permissions`, loaded
+   per-user via `getUserPermissions()`). **If any overrides exist for this item, they alone decide
+   the answer** — an item-level grant of `mAdminContentPerm` or the specific requested permission
+   passes, anything else (including holding the plain role permission) does not. Only when **no**
+   item-level overrides exist at all does it fall back to the plain role-permission check.
+
+Per-item overrides don't merge with role permissions when both exist for an item — the item-level
+set wins outright once any row exists for that content_id, even if it doesn't cover every
+permission a role grant otherwise would.
+
+`getContentPermissionsSql()`/`checkContentPermission()` build the equivalent logic as a SQL
+`WHERE`/`JOIN` fragment for list queries (e.g. "which of these content_ids can this user view"),
+rather than checking one already-loaded object — used by `getContentList()`'s own permission
+filtering.
+
+## Other subsystems (not covered in depth here)
+
+- **`getContentList()`** — the generic content-listing method used by search, Calendar, and
+  anywhere a list of mixed content types gets built. See "Optional per-content-type calendar/grid
+  rendering" below for its one xref-relevant extension point (`getDayCellHtml()`).
+- **Structures** (`getStructures()`/`setStructure()`/`isInStructure()`) — optional hierarchical
+  placement (used by Wiki's page tree), via `liberty_structures`.
+- **Action log** (`storeActionLog()`/`getActionLogs()`) — a per-content audit trail of what
+  changed, separate from the version-history snapshots above.
+- **Comments** (`LibertyComment`) — a separate class; `expunge()` cascades into it but comment
+  authoring/display isn't part of `LibertyContent` itself.
+- **Content data parsing/filtering** (`parseData()`/`filterData()`/`getParsedData()`) — the format
+  plugin pipeline that turns stored `data` into rendered output.
+
+## The Xref system — attributes and relationships layered on `liberty_content`
+
+Everything from here on covers `liberty_xref`/`liberty_xref_group`/`liberty_xref_item` — the
+generic attribute/relationship system content-heavy packages (Stock, Contact, Food, and others)
+build their own custom per-item data onto, on top of the base framework above, rather than adding
+schema columns or a package-specific table. A content type doesn't need any xref data at all to
+work — plenty of `LibertyContent` subclasses never touch it — but for the ones that do, xref data
+lives and behaves independently of the base object's own lifecycle (loading xref info is an
+explicit extra step, not automatic on `load()`; `expunge()` does cascade into it, as noted above).
+
+## Access boundaries — where each layer lives
+
+Never write raw SQL against any of the three tables below from outside
+`liberty/includes/classes/` — every access goes through one of these:
+
+- **Structure** (`liberty_xref_group`, `liberty_xref_item`) — only `LibertyXrefType` queries these.
+  Other code calls the current content object's cached instance via
+  `LibertyContent::xrefType()->method()`; almost never construct `LibertyXrefType` directly (see
+  below).
+- **Live data, single row** (`liberty_xref`) — load/verify/store/stepXref for one row lives in
+  `LibertyXref` only.
+- **Live data, bulk-loaded for a content item** — `LibertyXrefType::loadContent()` builds the
+  in-memory `LibertyXrefContent` (one `LibertyXrefGroup` per tab, each holding `LibertyXref` rows),
+  cached on the content object as `$this->mXrefInfo` by `loadXrefInfo()`. Once loaded, read via
+  `findByItem()`/`allItems()` or a `foreach` over `mGroups` — never re-query `liberty_xref` for
+  data already loaded this request. **`LibertyXrefContent` is the read-side cache, not a write
+  path** — easy to guess wrong from the name alone.
+- **`LibertyContent`'s own xref methods** (`xrefType()`, `loadXrefInfo()`, `loadXref()`,
+  `storeXref()`, `stepXref()`, `enrichXrefDisplay()`, `getXrefListTemplate()`/
+  `getXrefRecordTemplate()`/`getXrefEditTemplate()`) are the sanctioned facade every other
+  package's content class calls through — thin delegation to `LibertyXrefType`/`LibertyXref` only,
+  no table SQL of their own. The one exception is `expunge()`'s own
+  `DELETE FROM liberty_xref WHERE content_id = ?`, alongside its sibling `liberty_content_*`
+  deletes in the same method — a content-lifecycle cascade, not a query against the xref system,
+  and correctly stays as raw SQL.
+
+Other packages (Stock, Contact, Food, Health, Mapper, ...) must never contain raw SQL against
+`liberty_xref`/`liberty_xref_group`/`liberty_xref_item` — go through the content object's
+`xrefType()`/`mXrefInfo`/`storeXref()`/`stepXref()` instead. This section exists to keep it that
+way and to give prose/comments elsewhere in other packages a correct term (`Xref` /
+`$gContent->mXrefInfo`) to use instead of naming the raw table.
+
+**Generic content_id+item helper family** (all static on `LibertyContent`, built specifically to
+retire raw `liberty_xref` reads/writes hand-rolled elsewhere) — the standard way to
+touch a single xref row addressed by content_id+item without writing SQL. All accept
+`string|string[]` for the item param (an array means mutually-exclusive alternatives — "whichever
+of these is actually set" — same convention throughout):
+
+- **`lookupXrefByItem( $pContentId, $pItem )`** — the full row.
+- **`upsertXrefByContentId( $pContentId, $pItem, $pValues )`** — insert-or-update. With an array
+  `$pItem` and no existing row under any alternative, deliberately no-ops (returns `false`) rather
+  than guessing which item to create under. Preserves the row's current `xorder` on update when
+  the caller doesn't pass one (`LibertyXref::verify()` otherwise defaults it to `0`).
+- **`deleteXrefByItem( $pContentId, $pItem )`** — bulk delete, returns the count of rows deleted.
+- **`reconcileXrefItem( $pItem, $pWanted, $pKey, $pStrictOwnership = false, $pKeepLinks = false )`**
+  — the *set* operation the others aren't: bring all the live rows of one item on this content item
+  in line with a wanted list (a re-scan of files, a reload from an external source) **without ever
+  wiping them**. Rows match by a natural key (`$pKey`: a column name, a callable, or `null` for a
+  single-valued item); no row -> insert, same value -> untouched, changed value -> old row archived
+  (`end_date`) and the new one inserted, no longer wanted -> archived. A hand-edited row
+  (`last_update_date` later than `entry_date`) is never touched. `$pKeepLinks` carries a live row's
+  `xref`/`xkey` (a contact link) over when the incoming row has none. Returns
+  `inserted/archived/unchanged/kept_local` counts. Instance method on `LibertyContent`, logic in
+  `LibertyXref::reconcileItem()`. Use it instead of `deleteXrefByItem()` + rebuild whenever history
+  or manual edits matter.
+- **`hasXrefItem( $pContentId, $pItem )`** — existence check, `bool`. Deliberately does **not**
+  filter `end_date` (unlike `lookupXrefByItem()`) — matches the hand-rolled queries it replaced;
+  add that filter only if a real caller needs it.
+- **`insertXrefReadingIfNew(...)`** — dedupe-by-`start_date`-then-insert, for a timestamped series
+  rather than single-cardinality data. Single-item only, a genuinely different shape from the rest
+  of the family.
+- **`lookupContentIdByXrefValue( $pItem, $pXkey, $pCaseInsensitive = false )`** — the one
+  reverse-direction member: item+xkey *in*, content_id *out* (e.g. "which component has
+  `KLID`=`'36A'`"). **No `content_type_guid` scoping, and none is cheaply possible** —
+  item+xkey together is the whole search key, so a colliding item code reused with the same value
+  across two packages would silently return the wrong package's row. Only safe for item codes
+  known to be effectively unique (`KLID`, `SCREF`) — flagged in the helper's own docblock, check
+  before reaching for it on a collision-prone code.
+
+Check this list before hand-rolling any new content_id+item query. `stock` is the heaviest current
+consumer (see `stock/DEVELOPER.md`) — most of its import scripts and movement-editing code used to
+carry raw `liberty_xref` SQL directly; all of it now goes through this family instead.
+
+## Data model
+
+Three tables:
+
+- **`liberty_xref_group`** — a tab. `x_group` (short code) + `content_type_guid` (which content
+  type this tab belongs to) + `title` (tab label) + `sort_order` (tab position; `0` is a special
+  case, see "Type-marker convention" below) + `template` (optional — see "Group templates" below).
+- **`liberty_xref_item`** — a field definition within a group. `item` (short code, e.g. `SUP`,
+  `WT`, `CAL`) + `x_group` + `content_type_guid` + `cross_ref_title` (field label) + `multiple`
+  (`0` = at most one row per content_id, `1` = many; **negative = read-only**, see below) +
+  `template` (which item template to render
+  — see "Item templates" below) + `cross_ref_href` (link prefix, used by some templates) + `data`
+  (rarely used — a default/hint, not the row's actual value) + `sort_order` (display position
+  among the items in a group and among items in schema-listing picker queries; defaults to `0`,
+  which sorts first — populate explicitly on a new item if display order matters, otherwise it
+  will jump ahead of items that already have a real value set) + `role_id` (**visibility gate, see
+  below — not optional**).
+- **`liberty_xref`** — the actual data, one row per (content_id, item) pair (or several if
+  `multiple=1`). Columns: `xref_id` (PK), `content_id` (whose xref this is), `item`, `xkey`
+  (`C(32)` — short values only), `xkey_ext` (`C(250)` — longer text: UUIDs, prices, URLs), `data`
+  (CLOB — free text/notes), `xref` (FK to *another* `liberty_content.content_id` — this is what
+  makes an xref a real link to another piece of content, not just a text field), `xorder`
+  (position within a `multiple=1` group), `entry_date`/`last_update_date`/`start_date`/`end_date`
+  (see below).
+
+`liberty_xref_item.sort_order` and `liberty_xref.xorder` are different axes — `sort_order` orders
+the several *item types* within a group against each other (e.g. which order `CAL`/`FAT`/`FIBR`
+display in on a Nutrition tab); `xorder` orders the several *rows* of one `multiple=1` item against
+each other. Both `LibertyXrefType::loadContent()`'s row query and the schema-listing queries that
+build type/item pickers (`getTypeMarkers()`, `getAvailableItems()`, `getContentTypeMarkers()`)
+order by `sort_order` first, falling back to item/title alphabetically as a tie-break.
+
+**Negative `multiple` values**: `multiple` is a plain `I2` (signed smallint, no `CHECK`
+constraint). Its only real runtime consumer anywhere in liberty/stock/food/contact is
+`LibertyXref::verify()`'s xorder-auto-increment gate — no template or PHP anywhere else branches
+on `multiple` by truthiness, so negative values can't be misread as `1`-like by any existing code
+path. Two distinct meanings, not a sign+magnitude cardinality scheme — each value below is a flat,
+separate flag:
+
+- **`-1` = read-only.** Used for device-reported sensor/time-series data (see `health/MANUAL.md`)
+  where editing genuinely doesn't make sense, unlike every other consumer (Stock/Contact/Food),
+  whose xref data is all human-curated.
+- **`-2` = mutually exclusive within the same `x_group`.** Scoped to the *items actually flagged
+  `-2`*, not the whole group — other ordinary `0`/`1` items in the same group are unaffected, so no
+  group split is needed to use this.
+
+**Enforced for both flags**:
+- `LibertyXrefType::getAvailableItems()` (the query behind `add_xref.php`'s item-type dropdown,
+  and every other "what items can this content type have" caller) excludes only `multiple = -1` —
+  a `-2` item is a completely normal, still-addable choice, it just has a side effect on store.
+- `LibertyXref::verify()` rejects a write only for `multiple = -1` (both the `fAddXref` case and a
+  plain in-place edit) — `-2` items are freely addable/editable. Neither flag touches `fStepXref`
+  (archive/restore/hard-delete via `stepXref()`) directly — see "Expunge and history" below for how
+  a `-1` item's lifecycle operations are handled.
+- `edit_xref.php` refuses to even render the edit form for a `multiple = -1` row (redirects back
+  to `getEditUrl()`), not just reject the save.
+- `LibertyXref::store()` — the `-2` mechanism's actual point: after a successful store of an item
+  whose own `multiple = -2`, hard-deletes any *other* item in the same `x_group` (respecting the
+  usual dual-guid scoping) that's also flagged `-2`, for that `content_id`. Runs inside the same
+  transaction as the store itself (atomic — a failed eviction rolls back the store too), and on
+  every store of a `-2` item (add or in-place edit), not just `fAddXref`, so it's self-healing
+  against any stale sibling left over from before an item was flagged `-2`. **Hard delete, not
+  `stepXref`'s archive path** — mirrors `stepXref`'s own `expunge=3` case, no history trace kept
+  for the choice that lost out.
+
+`action_icons.tpl` (see "Item templates" below) checks `$xrefInfo.multiple` to hide the Edit icon
+on a read-only (`multiple=-1`) row — `LibertyXrefType::loadContent()`'s row query selects
+`s.multiple` for exactly this purpose.
+
+`liberty_xref_group.multiple` exists as a column but is completely dead — zero PHP consumers, no
+package's `schema_inc.php` sets it. Left in place as a possible future extension point for a
+genuine group-wide (not item-scoped) exclusivity case, but every real case so far has been covered
+by the item-scoped `-2` flag instead; don't expect to need it.
+
+**`xref` vs `xkey`/`xkey_ext`**: easy to conflate. `xkey`/`xkey_ext`/`data` hold this row's own
+scalar value(s) — a number, a UUID, a note. `xref` holds a *foreign key* to a different content
+object entirely (a Contact, a component, whatever). An item can use both at once — e.g. Stock's
+`#SUP`/Food's `SUP`: `xref` = the supplier Contact's `content_id`, `xkey`/`xkey_ext` = that
+specific supplier relationship's own part number/price.
+
+**`xorder`** must be explicitly selected in queries — it is not auto-included in standard `SELECT`
+lists the way most columns are. `LibertyXref::verify()` defaults it to `0` **only when the call has no
+`xref_id`** (a new row); an update by `xref_id` keeps the stored position, and a caller that passes
+`xorder` explicitly always wins. A plain in-place edit therefore never moves a row, and the
+add-picker's "already added" test (`xorder > 0`) is not disturbed by an edit.
+
+**`liberty_xref_item.role_id` — a missing value silently hides the item, everywhere, not just from
+edit.** `loadXrefInfo()`'s own query is permission-filtered by `role_id`, so an item definition row
+with it left `NULL`/unset never surfaces through `allXrefs()` at all — not in a view template, not
+in `edit.php`'s xref tabs, not to any PHP code reading the object's own loaded xref data back. There
+is no error anywhere in that chain; the row just behaves as if it doesn't exist, which looks exactly
+like a data problem (row missing, wrong content_id, stale cache) rather than the actual cause. This
+bites hardest when a new item definition is inserted directly (`isql`, bypassing the normal
+add-a-new-item admin flow) without copying a sibling item's `role_id` — always match an existing
+item in the same group (`3` = Registered is the common case) rather than leaving it unset.
+
+**`LibertyXrefType`** is an *instance* class, not a bag of statics — construct with
+`new LibertyXrefType( $contentTypeGuid, $packageGuid = null )`, though in page/class code you
+should almost never construct it directly: access the current content object's own instance via
+`LibertyContent::xrefType()`, which lazily creates and caches it. The five runtime query methods
+(`getDisplayGroups`, `getTypeMarkers`, `getAvailableItems`, `getTemplateFormats`,
+`getContentTypeMarkers`) are instance methods on it; admin cross-type queries (`getXrefTypeList`,
+`getContentTypeGuids`, `getGroupList`) remain static.
+
+**Dates**: all four date columns are `I8` Unix timestamps (UTC epoch seconds), not database
+timestamps. `entry_date` is stamped once at insert, untouched on update, unless the caller explicitly
+overrides it (e.g. to group a batch of related xrefs under one shared timestamp — every line one
+operation inserts can share one `entry_date`, which later code can use to find that batch).
+`last_update_date` stamps every write. **Passing dates, per column:** `entry_date`/`last_update_date`
+take an integer epoch, a numeric string (also an epoch) or a date string read as UTC.
+`start_date`/`end_date` take an integer epoch (used as is) or a string, which is taken to be
+display-timezone form input and converted — **even a numeric string**, so a caller holding an epoch
+must pass it as an `int`, not a string (a string epoch comes out an hour off in summer time). `start_date`/`end_date` drive the history/expunge
+mechanism (see "Expunge and history" below) — `end_date IS NOT NULL` is what "closed"/"history"
+means, not a separate status column.
+
+## Usage pattern — loading and rendering a content object's xrefs
+
+PHP (view or edit page):
+```php
+$gContent->loadXrefInfo();
+$gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
+```
+
+Template:
+```smarty
+{foreach $gXrefInfo->mGroups as $xrefGroup}
+    {include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+        xrefGroup=$xrefGroup allow_edit=false}   {* true for edit pages *}
+{/foreach}
+```
+
+Every group template (custom or the generic `list_xref.tpl`) starts with:
+```smarty
+{assign var=xrefAllowEdit value=$allow_edit|default:false}
+{assign var=isHistory value=($xrefGroup->mXGroup eq 'history')}
+```
+
+**Reading the loaded rows.** Bucket by *item*, not by group name. A page that reads
+`$gContent->mXrefInfo->mGroups['metadata']` directly breaks silently the next time an item moves to
+another tab, and nothing reports it. `findByItem()`/`allItems()` ignore the group; if you need a flat
+pass over everything, iterate `mGroups` and skip rows with an `end_date` — liberty's synthetic
+`history` group holds the closed rows, and `allXrefs()` includes it on purpose for the generic
+grid's History tab. After a `storeXref()` read from `mXrefInfo` (or `loadXref()` again), never from
+`mInfo['xref_store']`: `load()` replaces `mInfo`, so anything read from it after a store is stale.
+
+**Extra per-row fields beyond what `loadContent()` already provides** (e.g. a second xref's value
+folded into the same row): override `loadXrefInfo()` in the content class, call
+`parent::loadXrefInfo()` first, then enrich `$group->mXrefs` afterward. Use
+`array_map( fn($r) => $r['xref'], $group->mXrefs )`, **not** `array_column()`, to pull `xref`
+values out — `LibertyXref` rows are `ArrayAccess` objects, and `array_column()` ignores
+`offsetGet()` on some PHP builds.
+
+## Dual-guid scoping (package-level vs content-type-level)
+
+A package with multiple content types can register xref groups/items at two different scopes,
+both matched at query time via `content_type_guid IN (class_guid, package_guid)`:
+
+- **Package-level** — `content_type_guid` = the bare package name (e.g. `'stock'`, `'food'`).
+  Shared across every content type in that package.
+- **Content-type-level** — `content_type_guid` = the specific class's own guid (e.g.
+  `'stockcomponent'`, `'foodcomponent'`). Scoped to just that one content type.
+
+**Both levels share one `sort_order` numbering space** — a package-level group at the same
+`sort_order` as a content-type-level group is a real collision once both get loaded together for
+the same content type, not just a style nit.
+
+Pass `$packageGuid` when constructing `LibertyXrefType`/`LibertyXrefInfo` to enable dual-guid
+matching; `LibertyContent::$mPackageGuid` is set automatically by `registerContentType()` from
+whatever `handler_package` was passed in the type registration hash (Stock's three classes each
+pass `'handler_package' => 'stock'`, for example — no per-class manual wiring needed, it's a base
+`LibertyContent` behaviour).
+
+**Two different join styles, for two different situations — don't apply one where the other
+belongs:**
+
+- **Resolving items/groups generically for one content type** (`getTypeMarkers()`,
+  `getAvailableItems()`, `getContentTypeMarkers()`, `getDisplayGroups()`) — put the guid filter
+  (`IN(contentTypeGuid, packageGuid)`) directly in the item↔group JOIN condition, not just `WHERE`.
+  Safe here because the filter only ever admits this one content type's own two guid levels, never
+  a sibling type's guid — a `contactperson` instance's filter can't accidentally match a
+  `contactbusiness`-only group.
+- **`loadContent()`** loads several groups first (via that same IN-filter), then joins each
+  group's own items using that specific row's own real `content_type_guid` — exact-match there is
+  what stops two different guids sharing an `x_group` name (e.g. `quantity` on both
+  `stockcomponent` and `stockassembly`) from cross-attributing rows once multiple groups are loaded
+  side by side. This is the situation "filter only in WHERE, exact-match the JOIN" actually applies
+  to, not the single-type generic queries above.
+
+**Known gap**: `getTypeMarkers()`, `getAvailableItems()`, `getContentTypeMarkers()`, and
+`getDisplayGroups()` all correctly use the dual-guid JOIN filter above. `getTemplateFormats()`
+(reached through `getXrefFormatList()`) still doesn't — flat single-guid `WHERE`, no package-level
+fallback — but it now has no caller: its only consumer was Contact's own Add flow, retired when the
+generic add began showing each item's own fields. Delete it rather than fix it, unless something needs
+"which item templates does this content type use" again.
+
+The dual-guid gap only bites when a group and its item are registered at *different* levels
+(group package-level, item type-specific, or vice versa). Stock's `supplier` group (shared across
+StockComponent/StockAssembly/StockMovement) isn't at risk despite being shared across several
+classes — both the group and its `#SUP` item are registered at the same package-level guid
+(`'stock'`), so every query that resolves them does a plain exact match, no cross-level fallback
+ever needed. Check which level a group is at and which level its item is at, and whether they
+match, before assuming any "shared across several classes" case is at risk the same way.
+
+## Type-marker convention (`sort_order = 0`)
+
+A group with `sort_order = 0` is deliberately excluded from the normal tabbed display
+(`LibertyXrefType::loadContent()` filters it out) — it's meant to be loaded via a separate,
+purpose-built code path instead of the generic per-group tab loop. Used when a group's items are
+mutually-exclusive *classifiers* rather than independent fields — e.g. Contact's person/business
+type toggle, Food's `FoodAssembly` meal-type group (`BREAKFAST`/`LUNCH`/`DINNER`/`MSNK`/`ESNK` —
+which single item code is populated *is* the classification, not a field to display in a tab). Some
+type-marker groups are genuinely mutually exclusive this way; others (Contact's own `WPxx`/`WBxx`
+role tags — see `contact/MANUAL-WIKI.md`) are a free multi-select toggle *set* instead, several
+active at once, still riding the same `sort_order = 0` mechanism.
+
+**Possible extension, not built**: a multi-select toggle-set with many possible markers (a dozen or
+more) currently costs one real `liberty_xref` row per active tag, each needing its own
+`liberty_xref_item` definition — fine at a handful of markers, more xref rows than necessary at
+many. An alternative worth having on record: pack the whole set of flags into a single integer on
+one row and query it with Firebird's own native `BIN_AND`/`BIN_OR`/`BIN_XOR`/`BIN_NOT` (built in
+since Firebird 3.0, no UDF needed — confirmed working directly against this DB). **`liberty_xref`
+already has a spare `BIGINT` column for exactly this shape: `xref`.** A type-marker row never needs
+`xref` for its normal job (linking to another `content_id`) — a classifier tag doesn't point at
+another piece of content — so using it to hold a packed bitmask instead doesn't collide with its
+existing meaning anywhere else. Not pursued now: it trades away a trivial indexed
+`WHERE item='<code>'` lookup for a `BIN_AND`-based scan, a real cost not worth paying while any
+given marker set stays small.
+
+## Group templates vs the generic tabbed display
+
+`$gContent->getXrefListTemplate($xrefGroup->mTemplate)` resolves, in order:
+1. `<package>/templates/xref/<content_type_guid>/view_<template>_group.tpl`
+2. `<package>/templates/xref/view_<template>_group.tpl`
+3. `bitpackage:liberty/list_xref.tpl` (generic fallback)
+
+(Paths live under `templates/xref/`, not bare `templates/`, and filenames have no `_xref_`
+infix — e.g. `view_sup_group.tpl`, not `view_xref_sup_group.tpl`.)
+
+An empty/null `liberty_xref_group.template` skips straight to the generic fallback. **The generic
+`list_xref.tpl` imposes a fixed 3-column contract** — Type / Value / Notes (+ Started/Updated/Edit
+when `allow_edit`) — and wraps every row in its own `<tr>`, calling
+`getXrefRecordTemplate($xrefInfo.template)` *inside* that `<tr>` for each row. Any item template
+resolving through the generic group path must fit that shape (no own `<tr>`, exactly 3 `<td>`s
++ optional edit columns) — copying a *custom* group's item template (which owns its own `<tr>`
+and can have any number of columns) into a generically-dispatched group breaks the layout.
+
+A **custom group template** (non-empty `template`, e.g. Stock's/Food's `'sup'`) opts a group out
+of the generic 3-column shape entirely — it can define whatever columns make sense (Stock's/
+Food's supplier group: Supplier / Product Code / Price / Note), and its own "Add" link can point
+at a package-specific add page instead of the generic `add_xref.php` (see next section for why
+that's usually necessary anyway).
+
+## Item templates (view and edit)
+
+Same 3-tier resolution, separately for view and edit:
+
+- `getXrefRecordTemplate($template)` → `<package>/templates/xref/<content_type_guid>/view_<t>_item.tpl` →
+  `<package>/templates/xref/view_<t>_item.tpl` → `bitpackage:liberty/xref/view_<t>_item.tpl` →
+  hardcoded fallback `bitpackage:liberty/xref/view_text_item.tpl`.
+- `getXrefEditTemplate($template)` → same shape, `edit_<t>_item.tpl`, falling back to
+  `bitpackage:liberty/edit_xref.tpl` (page-level, not in `xref/`) if no matching template exists
+  anywhere.
+
+**Generic templates that exist today** (`liberty/templates/xref/`), all fitting the 3-column
+contract:
+
+| `template` | View | Edit | Use |
+|---|---|---|---|
+| `text` | ✓ | ✓ | Any scalar `xkey`/`xkey_ext`/`data` field. Ultimate fallback. |
+| `value` | ✓ | ✓ | Same shape, different column emphasis (`xkey`+`xkey_ext` as two separate values rather than one combined). |
+| `link` | ✓ | ✓ (read-only target) | An item whose `xref` points at another piece of content — renders a real link via the linked title, generic across every package. |
+| `href` | ✓ | ✓ | An **external** URL built from `cross_ref_href` (link prefix, set on the item registration) + `xkey` (the external ID) — e.g. an IMDB/TheTVDB/MusicBrainz/Discogs cross-reference. `xkey_ext` is an optional display label, falling back to `xkey` itself. Distinct from `link`: that one points at another `liberty_content` row via `xref`; this one points off-site. `cross_ref_href` had been selected into every xref row's data since `LibertyXrefType.php` was written, but no template actually rendered it (confirmed: `address`/`phone`, the only two templates using it in real schema data, both silently ignore it) — this is the first template that actually consumes it. |
+| `json-text` | ✓ | ✓ | `data` holds a JSON object — renders as one tidy `Key: value, Key: value` line. Edit shares `json-list`'s form (`{include}` forward) — editing doesn't need to differ by view style. |
+| `json-list` | ✓ | ✓ | Same JSON case, but view renders each key on its own line — a nested table *inside* the cell, not separate outer rows (`list_xref.tpl` owns the one `<tr>` per xref row; an item template can't legitimately add more). Edit renders one input per key (`name="json_field[key]"`, PHP's array-POST convention) — `edit_xref.php` reassembles `$_REQUEST['json_field']` back into a JSON string (numeric strings cast back to int/float; blank/zero entries dropped so the saved blob stays sparse, same convention every importer already uses) before the normal `storeXref()` path runs. Only triggers when that field is actually present, so it can't affect any other item type's save. |
+| `sod` (Food-local, `food/templates/xref/foodcomponent/`) | — (falls back to `text`) | ✓ | Worked example of an **edit-only override**: a package needing a custom *edit* form for what's otherwise a completely ordinary scalar display doesn't need a matching view template at all — `getXrefRecordTemplate()`'s final fallback (`view_text_item.tpl`) covers it for free as long as no `view_sod_item.tpl` exists anywhere in the resolution chain. Food's `SOD` (sodium) uses this to offer Salt (g)/Sodium (mg) inputs, converting salt→sodium at save time — `edit_xref.php` has a small `sod_salt`/`sod_sodium` hook (same shape as `json_field`'s, gated purely on field presence) alongside the JSON one. **Worth reusing this pattern** for any future item that needs a nonstandard edit *input* but a perfectly standard scalar *display* — cheaper than building both halves of a new template pair. |
+
+**Full field list for `json-list`/`json-text` editing** — a component's stored JSON blob is
+normally *sparse* (an importer only writes keys it had real values for), so the edit form can't
+know about a currently-missing key from the stored data alone; there'd be no way to add it.
+Solved by repurposing `liberty_xref_item.data` (documented above as an unused "default/hint"
+column) to hold the item's **complete** set of possible keys as a JSON array — `LibertyXref::load()`
+selects it (aliased `item_data`, distinct from the row's own `data`), and the edit template
+uses that as the authoritative field list, falling back to whatever's actually in the stored blob
+if no hint was registered (so any other package's `json-list` item works with zero extra setup,
+just without the "add a missing field" capability until it registers one). Food's `FAT`/`VIT`/`MIN`
+register theirs, e.g. `'["total_mg","saturated_mg","mono_mg","poly_mg","trans_mg","cholesterol_mg"]'`
+for `FAT`.
+
+`address`/`bank`/`date`/`locate`/`phone`/`sig` also exist as view-only files in `liberty/templates/xref/`,
+but only `address`/`phone` are actually registered anywhere (both exclusively by Contact's own
+items) — treat the rest as unconfirmed/likely-dead rather than assuming they're safe to reuse.
+Contact's *own* `templates/view_xref_contact_item.tpl` is a different, older, separate thing, part
+of Contact's own pre-`_item`-convention xref system, deliberately left untouched.
+
+**Using a raw PHP function as a Smarty modifier** (needed for `json-text`/`json-list`'s
+`|json_decode:true` and the edit form's `|array_keys` fallback) **requires an explicit allowlist
+entry** — `themes/includes/classes/BitweaverExtension.php`'s `getModifierCallback()` has a
+`switch` statement of permitted native functions (`basename`, `strpos`, `ucwords`, `json_decode`,
+`array_keys`, etc.); anything not listed there fails at Smarty compile time with "unknown
+modifier", not a runtime error. Add new entries there, not by trying to register a plugin file for
+something that's really just a bare PHP function call.
+
+**Shared date/action-icon columns** (`liberty/templates/xref/dates_cell.tpl`,
+`liberty/templates/xref/action_icons.tpl`): every 3-column-contract item template ends with the
+same two columns — Added/Updated dates, then Edit/Archive-Restore/Delete icons — so both are
+factored into standalone includes rather than hand-rolled per item template. `{include
+file="bitpackage:liberty/xref/dates_cell.tpl"}` renders `start_date`/`end_date` (whichever applies
+given `$isHistory`) plus `last_update_date`, self-gated on `$xrefAllowEdit|default:true`.
+`{include file="bitpackage:liberty/xref/action_icons.tpl"}` renders Edit (gated on update
+permission, hidden for `multiple=-1` read-only items and on history rows), Archive/Restore (update
+permission — swaps label/icon/`expunge` value based on `$isHistory`), and Delete (gated on the
+stricter expunge permission, `expunge=3`, the real hard-delete from the section below). Accepts an
+optional `xrefProtected` param (truthy) to hide Archive/Restore and Delete entirely, for items that
+must never be touched via this path. **Any new item template should `{include}` both** rather than
+reimplementing these columns — copy an already-converted template (e.g.
+`liberty/templates/xref/view_text_item.tpl`) as the reference shape.
+
+**`linked_title`/`linked_data`**: `LibertyXrefType::loadContent()` LEFT JOINs
+`liberty_content lc_linked ON lc_linked.content_id = x.xref` and exposes `lc_linked.title AS
+linked_title` / `lc_linked.data AS linked_data` on every loaded xref row for the **view** path —
+no extra query needed there. **The edit path (`edit_xref.php`) doesn't go through that query** —
+it loads a single row via `loadXref()`. `LibertyContent::enrichXrefDisplay(array &$pXrefInfo): void`
+is the hook for this (called by `edit_xref.php` right before assigning `$xrefInfo` to Smarty,
+row passed by reference) — its base implementation populates `linked_title` generically via one
+lookup whenever `xref` is set, so `link`'s edit form works with zero package code. Override and
+call `parent::enrichXrefDisplay($pXrefInfo)` first to add further package-specific computed fields
+on top (e.g. a component's pack size) — the base behaviour isn't lost by overriding.
+
+## Add and edit
+
+- **`list_xref.tpl`'s "Add record" link** (`{smartlink ... ifile="add_xref.php" ... group=
+  $xrefGroup->mSortOrder}`, gated on `$allow_add && $gContent->hasUpdatePermission() &&
+  !$isHistory`) — one link per *group* (tab), not per item. A page showing one content object's group
+  with another content object's rows (a season's episodes on its show's page) passes `xrefContentId`
+  to `list_xref.tpl`/`action_icons.tpl`; the Add/Edit/Archive/Delete links then address that
+  content_id instead of `$gContent`'s. Optional, defaults to `$gContent->mInfo.content_id`.
+- **`edit_xref.php`** — edits *one existing row*, addressed by `xref_id`. Handles save (`fSaveXref` →
+  `storeXref($_REQUEST)`), `fSetAsThumbnail`, and expunge (see below). A row with `multiple = -1` is
+  never rendered for edit. What it renders depends on the item's `template` (see "Fields templates"):
+  the shared page `liberty/edit_xref_page.tpl` around the item's fields template when there is one,
+  otherwise the item's whole-page `edit_<template>_item.tpl` as before.
+- **`add_xref.php`** — shows the group's addable types as a dropdown, with **one panel of fields per
+  type** (the item's own fields template, rendered by `{xref_item_form}`). A small script shows the
+  panel for the chosen type and disables the inputs in the others, so only that item's fields are
+  submitted; element ids carry a per-panel prefix (`p1_`, `p2_`, ...) so none repeat. The page itself
+  comes from `getXrefAddTemplate( $groupTemplate )`, resolved from the *group's* `template`:
+  `<package>/templates/xref/<content_type_guid>/add_<template>_group.tpl`, then
+  `<package>/templates/xref/add_<template>_group.tpl`, then `liberty/templates/add_xref.tpl`. A failed
+  save shows the typed values again in the panel they were typed for. **It has no `xref` field at all
+  yet** — there is no way to set a linked-content `xref` through the generic Add flow, for any
+  package, so `link` items still need their package's own add page.
+
+### Fields templates
+
+An item's `template` names how its row is shown and edited. Editing needs the item's *inputs* in two
+places - the edit page and a panel on the add page - so the inputs live in one file, the **fields
+template**, and the page around them is shared:
+
+- `edit_<template>_fields.tpl` holds only the inputs (labels and fields, no heading, `<form>` tag,
+  hidden ids or buttons). It reads the row as `$xrefInfo` and an optional id prefix as `$xid`; give
+  every element `id="{$xid}name"` and label `for="`$xid`name"` so several panels can share a page.
+- `liberty/templates/edit_xref_page.tpl` supplies the heading, form, the hidden `content_id`/`xref_id`/
+  `item`/`xorder`, the Save and Cancel buttons, and includes the fields template as `$fieldsTemplate`.
+- `LibertyContent::getXrefFieldsTemplate( $template )` resolves it in the usual three places
+  (`<package>/templates/xref/<content_type_guid>/`, `<package>/templates/xref/`, then
+  `liberty/templates/xref/`); an empty or `generic` template means `text`. It returns **null** when the
+  template has no fields file, and the caller then falls back to the whole-page edit template. So
+  templates convert one at a time, and an item that still has only a whole-page template shows the plain
+  text fields on the add page.
+- `{xref_item_form content=$gContent item="CODE" template="name" [row=$row] [xid="p1_"]}`
+  (`themes/smartyplugins/function.xref_item_form.php`) renders one item's fields. For a new row it
+  builds the blank row from the item's definition (`LibertyContent::getXrefItemDefinition()`: the
+  title as `template_title`, the `template`, the field hints as `item_data`, `multiple`,
+  `cross_ref_href`), adds the default dates a new row starts with, runs `enrichXrefDisplay()`, and
+  fetches the template in its own scope, so nothing it assigns reaches the calling page.
+
+The liberty templates already converted are `text`, `value`, `ext`, `href`, `json-list`, `json-text` and
+`link`; Contact's `phone`, `contact`, `locate`, `address`, `gallery` and `person` are converted too
+(`contact/templates/xref/`), and Food's `unit` for a component's weight/volume record
+(`food/templates/xref/foodcomponent/`). Templates that are still whole pages (Food's `sup` and `sod`, and any
+package's own) show the plain text fields on the add page until their fields templates are written. A
+`json-list`/`json-text` item with no field list in its definition's `data` has no fields to show on a blank
+row, so give such an item a field list before offering it for add.
+
+**Tidying input belongs in the fields template, not the store.** Clean-up that is only about what a person
+types or pastes (Contact's phone numbers lose every dash and space: `0345-677-9866` becomes
+`03456779866`) is a small script in the item's fields template (`contact/xref/phone_tidy_inc.tpl`),
+which runs on paste, on leaving the box and on submit. Nothing changes in `storeXref()`, so imports and
+other code that want to keep a value exactly as they have it still can.
+
+**Dates.** Start and end dates belong to the row, not the item type, so the shared pages show them once
+around whatever fields the item has, as a "Time period" tab, when the content class opts in:
+`LibertyContent::xrefShowsDates()` returns false by default, and Contact (so also its subclasses) returns
+true. A new row starts now with no end date. A fields template never includes the dates itself.
+
+**The link picker.** `liberty/xref/edit_link_picker_inc.tpl` is the one picker for an item that links to
+another piece of content: a search box that fills the hidden `xref` id, built on
+`kernel/scripts/BitComponentTypeahead.js`. It is written to work when the form is injected into a page
+after it loaded (it loads the script itself if it is missing), and its element ids carry the `$xid` prefix.
+Typing again clears the link until a result is chosen. **Where to search is the content class's decision**:
+`enrichXrefDisplay()` sets `$pXrefInfo['lookup']` to `url` (a JSON endpoint taking `?q=`, returning rows
+with `title` and `content_id`, optionally `scref`), `params` (extra query values such as
+`['type' => 'contactperson']`), and optionally `label` and `help`. With no `lookup` the linked item is only
+shown, not editable. The `link` fields template is the picker plus Value, Extended Value and Note;
+Contact's `person` fields template is the picker plus Notes, and its `enrichXrefDisplay()` supplies the
+people lookup. The widget takes an optional `label: function(row)` to format a result.
+
+### Hooks a content class can provide
+
+The generic controllers know nothing about any package. Where a content class needs to take part,
+they call an optional method **if it exists** (`method_exists()`-gated) — a class that does not
+define one is unaffected. `enrichXrefDisplay()` and `loadXrefInfo()` are real overridable methods on
+`LibertyContent`; the rest are only looked for.
+
+| Method | Called from | Purpose |
+|---|---|---|
+| `loadXrefInfo()` | page code | Override, call `parent::loadXrefInfo()` first, then enrich `$group->mXrefs`. |
+| `xrefShowsDates()` | `edit_xref.php`, `add_xref.php` | Return true to offer the start/end date tab on this content type's xref rows. Default false. |
+| `enrichXrefDisplay( array &$pXrefInfo )` | `edit_xref.php`, before the form renders | Add computed display fields to the single row being edited (the edit path does not run the view-path query). Base implementation fills `linked_title`; call the parent first. Also where a content class supplies `lookup` for a link picker (below). |
+| `replaceXrefFile( $pItem, $pXkeyExt, $pTmpPath )` | `edit_xref.php`, on save with an uploaded file | An upload replaces the file the row already references, in place (the row's `xkey_ext` is unchanged). Receives the stored item and `xkey_ext`, so it **cannot repair a row whose `xkey_ext` is empty** — create a new row instead. |
+| `deleteXrefFile( $pItem, $pXkeyExt )` | `edit_xref.php`, on `expunge=3` only | Clean up a disposable file when the row is hard-deleted. Called before `stepXref()` runs (the row is gone afterwards). The class decides which items own a file: a row whose `xkey_ext` points at a precious source file must be left alone. |
+| `promoteImageToThumbnail( $pRelativePath )` | `edit_xref.php`, `fSetAsThumbnail` | Make this row's image the content object's own thumbnail. |
+| `addImageXrefFile( $pTmpPath, $pOriginalName )` | `add_xref.php`, on add with an uploaded file | Create the file for a brand-new row; returns the relative path, which becomes the row's `xkey_ext`. The class picks the filename. |
+| `xrefAdded( $pItem, $pXkeyExt )` | `add_xref.php`, after a successful add | Act on a row just added (a book with no thumbnail making this first image its own). |
+| `getDayCellHtml( array $pHash )` (static) | `getContentList()` | See below. |
+
+Templates cannot call a bare PHP function inside `{if}` on this Smarty setup (`{if method_exists(...)}`
+fails as "unknown modifier"). Expose a capability check as a real method on the content class
+(`$gContent->supportsAddImage()`) and call that.
+
+**The templates for a content type are resolved only inside its own `handler_package`.** A media type
+registered by one package whose templates live in a different package silently falls back to the
+generic table, with no error.
+
+## Defining the vocabulary — three routes
+
+The groups (tabs) and items (fields) a content type can carry are rows in `liberty_xref_group` and
+`liberty_xref_item`. They get there by one of three routes, and which one is right depends on who
+should end up with the rows:
+
+1. **A package's `admin/schema_inc.php`** — the public, versioned route. Build `INSERT` strings
+   for the two tables (`$xrefTypes[]` for groups, `$xrefItems[]` for items) and register them with
+   `$gBitInstaller->registerSchemaDefault( PKG_NAME, array_merge( $xrefTypes, $xrefItems ) )`.
+   Every site that installs the package gets them. Use for vocabulary any installation of the
+   package needs.
+2. **A local scheme** — the private, per-site route. A PHP file in the site's own
+   `config/local/xref_schemes/*.php` that **returns** an array:
+
+   ```php
+   return [
+       'groups'    => [ [ 'x_group' => 'cast', 'content_type_guid' => 'mytype', 'title' => 'Cast',
+                          'sort_order' => 3, 'role_id' => 3, 'template' => '' ] ],
+       'items'     => [ [ 'item' => 'star', 'content_type_guid' => 'mytype', 'x_group' => 'cast',
+                          'cross_ref_title' => 'Star', 'multiple' => 1, 'role_id' => 3,
+                          'template' => 'text' ] ],
+       'replace'   => [],          // optional: content_type_guids whose whole vocabulary is rebuilt
+       'galleries' => [],          // optional: top-level fisheye galleries to create if missing
+   ];
+   ```
+
+   **Liberty admin > Local Scheme** (`admin/admin_local_scheme.php`, `p_admin` only) lists the files
+   and applies the ones ticked. `LibertyXrefScheme::apply( $groups, $items, $replaceGuids )` does the
+   work and is safe to run repeatedly: a row is inserted if missing, updated in place if any column
+   differs, left alone if it matches; rows are matched on the natural key (`x_group` +
+   `content_type_guid` for a group, `item` + `content_type_guid` for an item). It returns the
+   inserted/updated/unchanged/deleted counts. Use for vocabulary that is specific to one site and
+   should not be pushed onto every installation through route 1 (private tags, a site's own credit
+   roles).
+   - Every column given is **overwritten** on an update, so copy `role_id`, `multiple`, `template` and
+     `cross_ref_href` exactly from the row being replaced rather than simplifying them.
+   - `replace` deletes the *entire* existing vocabulary for those guids first, then applies what the
+     selected files declare. It is for remodelling a guid (moving a group to another guid, dropping one
+     no longer wanted); it can never be inferred from plain insert-or-update. All selected files are
+     merged **before** the one `apply()` call, so a guid split across several files is only safe if
+     every file that owns part of it is selected in the same run — selecting one without its siblings
+     wipes the siblings' rows with nothing to reinsert them.
+   - The `galleries` key is the one non-generic piece: it only knows fisheye galleries.
+3. **The admin pages** (`admin_xref_groups.php`, `admin_xref_sources.php`, below) — direct row edits,
+   for a quick change. Nothing keeps those rows in a file, so a rebuilt database loses them.
+
+A group's `template` and an item's `template` are different columns with different jobs. The
+group's picks the whole-tab list and add templates (`view_<t>_group.tpl`, `add_<t>_group.tpl`); the
+item's picks the row templates (`view_<t>_item.tpl`, `edit_<t>_item.tpl`). **The group override only
+applies when the `template` column of that group row is set** — for a package on route 1 that is
+in the insert string; on route 2 it is the `template` key. A value changed only by hand in the admin
+page will not survive a fresh install.
+
+### `liberty_xref_item.data` — per-item definition data
+
+The column is not the row's value (that is `liberty_xref.data`). On the item it holds definition data a
+template can read, as JSON: either a plain **array of field names**, or an **object** with any of these
+options (`LibertyXrefType::parseItemHint()` reads both, an array being `{"fields": [...]}`):
+
+| Option | Meaning |
+|---|---|
+| `fields` | The JSON keys a `json-list`/`json-text` form offers, so it can show a key the stored row does not have yet. Without it the form offers the keys the row already holds. |
+| `labels` | `{key: label}` for the form; the default is the key, capitalised. (The `ext` template has its own `labels` of `value` and `note`, and `"note": false` to leave the note box out.) |
+| `wide` | `true` for full-width inputs instead of the narrow default. |
+| `follows` | Another item this item's rows sort after, at the same `xorder` (`LibertyXrefType::orderFollowingRows()`): fisheyemedia's `track_artist` rows follow their track rows. |
+| `key` | A field whose value is **also written to `xkey`** when the row is saved through the form. |
+| `ext` | A list of fields whose non-empty values, joined with `", "`, are **also written to `xkey_ext`**. |
+| `legacy` | `{column: key}`: for a row with no JSON yet, the form starts from these plain columns (`xkey_ext`, `xkey`, `data`), so a row saved the old way opens complete and nothing needs migrating. |
+
+`key` and `ext` exist so structured data can keep serving code that reads the flat columns. Contact's
+address items are the working example: the parts (`address`, `town`, `county`, `postcode`, `country`,
+`notes`) live as JSON in `data`, the postcode is mirrored to `xkey` and the address as one line to
+`xkey_ext`, so the contact list, the postcode lookup, the export and the address view template keep reading
+the plain columns while the form edits the parts. The mirror runs on save only: a row nobody has edited
+since the definition changed still has its old columns, which the `legacy` map reads.
+
+`LibertyXrefType::applyJsonFields()` (called by `edit_xref.php` and `add_xref.php`) assembles the saved JSON
+from the form's `json_field[key]` inputs: it starts from the row's existing JSON so keys the form does not
+carry (a list, a thumbnail path) survive; every key the form did send replaces what was there, **and a
+blank one is removed**; a numeric-looking value becomes a number only if it reads back unchanged (`007`
+stays text). `LibertyContent::enrichXrefDisplay()` prepares the form's data (`item_hint`, `json_values`,
+`json_fields`) for every item that has definition data.
+
+## Xref vocabulary management — real admin tools, but dated/overlapping
+
+Everything above is about a content object's own xref *data*. The xref *vocabulary* itself —
+`liberty_xref_group`/`liberty_xref_item` definition rows, which groups/items exist for a given
+`content_type_guid` at all — does have real, generic, cross-package admin tools, they're just
+showing their age:
+
+- **`liberty/admin/admin_xref_groups.php`** ("Xref Groups") — add/edit/delete `liberty_xref_group`
+  rows for any `content_type_guid`.
+- **`liberty/admin/admin_xref_sources.php`** ("Xref Sources") — add/edit/delete `liberty_xref_item`
+  rows for any `content_type_guid`. **Name is stale** — the underlying table was renamed
+  `liberty_xref_source` → `liberty_xref_item` some time ago, but the admin page's own title and internal variable names
+  (`fAddSource`, `$source`) never followed. Should read "Xref Items".
+- Both default `role_id` to `3` (Registered) when the form doesn't supply one — going through
+  either page avoids the exact `role_id`-missing gotcha documented above, which only bit because
+  that particular row was inserted via direct `isql`, bypassing this default entirely.
+- **`contact/admin/admin_contact_type.php`** ("Contact Type List") and
+  **`contact/admin/admin_xref_types.php`** ("Contact Xref List") predate the two generic pages
+  above, from when Contact was the only package with any xref vocabulary at all — real overlapping
+  functionality now, a package-specific hangover rather than a gap.
+
+**What's actually missing**: a single grid/tree view of one content type's *entire* xref structure
+— every group, and every item within each — at a glance. The two generic admin pages above only
+ever show one group's items or one item's own fields at a time; a hand-authored scheme file (the
+array `LibertyXrefScheme::apply()` reconciles against the DB) still communicates the whole shape of
+a content type's vocabulary better than the live admin UI does, purely by being readable as one
+piece of code. A grid-style overview page — not a new storage mechanism, just a different read/edit
+view over the same two tables — would close that gap.
+
+## Expunge and history — archive, step, or real hard-delete
+
+`LibertyContent::storeXref()`/`stepXref()` are the two write paths; `stepXref()`'s `expunge`
+parameter controls what "delete" actually does:
+
+| `expunge` value | Effect |
+|---|---|
+| *(unset/default)* | Restore — sets `ignore_end_date='on'` |
+| `1` | Soft-close (Archive) — sets `end_date = now()`. Row stays in the table, moves to the "history" view (`isHistory` in templates checks `end_date IS NOT NULL`). Gated behind ordinary update permission. |
+| `2` | Step — closes the current row (`end_date = now()`) *and* opens a new one (`fStepXref`), preserving the old value in history while starting a fresh one. Used for e.g. a rename that should keep the old value visible in history. |
+| `3` | **Real hard delete** — a genuine `DELETE FROM liberty_xref`, no history trace left. Gated behind the stricter expunge permission (`verifyExpungePermission()`), not the update permission the other three use. All item view templates across liberty/stock/food/contact share this: Archive/Restore icons under update permission, a separate always-available Delete icon under expunge permission (see "Shared date/action-icon columns" above). |
+
+**`multiple=-1` (read-only) items can still be archived/restored** — `LibertyXref::verify()`
+exempts a call from its read-only rejection when `expunge` is set **and** none of
+`xkey`/`xkey_ext`/`edit` are present, i.e. a genuinely pure lifecycle op (archive/restore/step)
+touching no actual value. This is deliberately narrow rather than a blanket "any expunge call is
+exempt" rule — `edit_xref.php`'s own `expunge` branch passes the whole `$_REQUEST` into
+`stepXref()`, so a looser exemption would let a crafted request sneak a real value edit through the
+read-only guard on a `-1` item.
+
+## Known by-reference footguns
+
+Several liberty methods take their param hash **by reference** — passing a literal array (e.g.
+`->store( [ 'foo' => 'bar' ] )`) is a PHP fatal error ("could not be passed by reference"), not a
+warning. Always assign to a named variable first. Confirmed affected: `storeXref()`,
+`parseDataHash()`, `LibertyXref::store()`, `FoodComponent::getDisplayUrlFromHash()` (this one
+package-level, but the same base-class contract — any `getDisplayUrlFromHash()` override should
+assume the same). Worth grepping `->store( [` / `->getDisplayUrlFromHash( [` etc. for a
+literal-array argument before considering xref-touching code finished. See "Versioning and
+history" above for a related `store()` footgun (calling it twice on one loaded object).
+
+## `'edit'`, not `'data'` — the free-text field's real param key
+
+Both `LibertyContent::store()` and `LibertyXref::store()`/`verify()` populate their own free-text
+field (`liberty_content.data` / `liberty_xref.data`) from a param key literally named `'edit'` —
+`LibertyXref::verify()`: `if( isset( $pParamHash['edit'] ) ) { $pParamHash['xref_store']['data'] =
+$pParamHash['edit']; }`. A plain `'data'` key in the hash passed to either `store()` is **silently
+ignored** — no error, no warning, the row just saves with that field empty, which looks exactly
+like "the value never made it into the form/request" rather than "the value was there but the
+wrong key name". Confirmed hit twice independently (Contact's own note field, and a `wikidata` xref
+item meant to cache a whole fetched JSON blob) - grep for a literal `'data' =>` in any hash about to
+be passed to `store()`/`storeXref()` before trusting that field actually saved.
+
+## Optional per-content-type calendar/grid rendering — `getDayCellHtml()`
+
+`LibertyContent::getContentList()` — the single generic content-listing method used by search,
+Calendar, and anywhere else a list of mixed content types gets built — already dispatches per
+content type for `title`/`display_link`/`display_url` (calls that type's own static
+`getTitleFromHash()`/`getDisplayLinkFromHash()`/`getDisplayUrlFromHash()`). Same spot: if the
+content type's handler class also defines a static `getDayCellHtml( array $pHash ): string`, it
+gets called and the result stashed as `$aux['cell_html']`. Purely additive — a content type that
+doesn't implement it is completely unaffected, `cell_html` just never gets set.
+
+Built for Calendar specifically (`calendar/templates/calendar.tpl`'s three "Cell Content" blocks —
+day/weeklist/month views — each check `{if $item.cell_html}{$item.cell_html}{else}` before falling
+back to the plain title/link markup every type got before), but the hook itself lives here, not in
+`calendar`, since `getContentList()` is what every consumer shares — any future content-list
+consumer gets the same override capability for free. `Health\HealthDay::getDayCellHtml()` (health
+package) is the reference implementation to copy — see its own `MANUAL.md` for what it actually
+renders.
 
 ## Local Imports (`admin/admin_local_import.php`)
 
@@ -44,3 +885,22 @@ return [
 Upgrade scripts (`<package>/admin/upgrades/<version>.php`) register steps with the installer, which runs them
 in version order once per database and records the version. Local imports have no version record. If a site
 needs "has this run here?" it should keep that in its own script (a marker preference or xref row).
+
+## Package registration
+
+Every package needs its own `includes/bit_setup_inc.php`, which:
+1. Builds a `$pRegisterHash` (`package_name`, `package_path`, plus optional flags like
+   `required_package`/`homeable`) and calls `$gBitSystem->registerPackage( $pRegisterHash )`.
+2. `define()`s six `<PKG>_PKG_*` constants from that hash before registering — `<PKG>_PKG_NAME`,
+   `_URL`, `_PATH`, `_INCLUDE_PATH`, `_CLASS_PATH`, `_ADMIN_PATH` (see any existing package's
+   `includes/bit_setup_inc.php`, e.g. `stock/includes/bit_setup_inc.php`, for the exact pattern to
+   copy). These must be defined explicitly (not left to dynamic lookup) — some IDEs/static analysis
+   can't otherwise see them as real constants.
+3. Registers anything else the package needs at boot — an app menu entry
+   (`$gBitSystem->registerAppMenu()`), a Liberty service (`$gLibertySystem->registerService()`) if
+   the package is content-bearing, etc.
+
+### Search index text on a partial save
+`LibertyContent::verify()` builds a save's search text from the title, author and `edit` text of that save. A save that carries `edit` but
+no `title` keeps the stored title in the database, and (since 2026-10-08) in the index too - it falls back to the loaded content's title.
+A save with no `edit` still clears the stored data (the fisheye convention), so there is nothing of it to index.

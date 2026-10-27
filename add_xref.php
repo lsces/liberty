@@ -44,6 +44,11 @@ if( !empty( $_REQUEST['fAddXref'] ) ) {
 			}
 		}
 	}
+	if( isset( $_REQUEST['json_field'] ) && is_array( $_REQUEST['json_field'] ) ) {
+		// A json-list/json-text item's panel: same reassembly as edit_xref.php, for a new row.
+		$itemDef = $gContent->getXrefItemDefinition( (string)( $_REQUEST['item'] ?? '' ) );
+		LibertyXrefType::applyJsonFields( $_REQUEST, $itemDef['item_data'] ?? null, null );
+	}
 	if( $gContent->storeXref( $_REQUEST ) ) {
 		// Optional hook, same shape as the file hooks above: lets a content class act on a row just added (a book with no
 		// thumbnail making this first image its own) without this controller knowing what that means.
@@ -69,6 +74,20 @@ foreach( $gContent->getXrefGroupList() as $groupRow ) {
 		break;
 	}
 }
+
+// A failed add shows the typed values again in the panel of the item they were typed for.
+if( !empty( $_REQUEST['fAddXref'] ) ) {
+	$posted = $_REQUEST;
+	$posted['data'] = $_REQUEST['edit'] ?? '';
+	$gBitSmarty->assign( 'postedRow', $posted );
+}
+
+// Dates, when the content type offers them: a new row starts now, with no end.
+$gBitSmarty->assign( 'xrefDates', $gContent->xrefShowsDates() );
+$gBitSmarty->assign( 'xrefInfo', array_merge(
+	[ 'ignore_start_date' => 'n', 'start_date' => date( 'Y-m-d\TH:i' ), 'ignore_end_date' => 'y', 'end_date' => '' ],
+	array_intersect_key( $_REQUEST, array_flip( [ 'ignore_start_date', 'start_date', 'ignore_end_date', 'end_date' ] ) )
+) );
 
 $gBitSmarty->assign( 'gContent', $gContent );
 $gBitSmarty->assign( 'group', $group );

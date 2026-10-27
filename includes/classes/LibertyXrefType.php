@@ -197,6 +197,103 @@ class LibertyXrefType {
 	}
 
 	/**
+	 * An item's definition data (liberty_xref_item.data) as an array. Two shapes are accepted: a plain
+	 * list of field names, or an object. The list is treated as {"fields": [...]}. Options an object may
+	 * carry (all optional):
+	 *   fields  names of the JSON keys a json-list/json-text form offers
+	 *   labels  {key: label} for the form (default: the key, capitalised)
+	 *   wide    true for full-width inputs
+	 *   follows another item this item's rows sort after (see orderFollowingRows())
+	 *   key     a field whose value is also written to the row's `xkey` when saved through the form
+	 *   ext     a list of fields whose non-empty values, joined with ", ", are also written to `xkey_ext`
+	 *   legacy  {column: key} - for a row with no JSON yet, the form starts from these plain columns
+	 *
+	 * @param string|null $pItemData
+	 * @return array  empty if the item has no usable definition data
+	 */
+	public static function parseItemHint( ?string $pItemData ): array {
+		$hint = json_decode( (string)$pItemData, true );
+		if( !is_array( $hint ) ) {
+			return [];
+		}
+		return array_is_list( $hint ) ? [ 'fields' => $hint ] : $hint;
+	}
+
+	/**
+	 * Turn the `json_field[key]` inputs of a json-list/json-text form into the row's JSON text (the `edit`
+	 * param, which storeXref() saves as the row's `data`), and mirror flat columns from it as the item's
+	 * definition data asks (`key` -> xkey, `ext` -> xkey_ext). Shared by edit_xref.php and add_xref.php.
+	 *
+	 * The row's existing JSON is the starting point, so keys the form does not carry (a list, a thumbnail
+	 * path) survive. Every key the form did send replaces what was there, and a blank one is removed - a
+	 * field emptied on the form is emptied in the data. A numeric-looking value becomes a number only when
+	 * it reads back the same, so 007 and 1e3 stay text.
+	 *
+	 * @param array       &$pParamHash   the request; json_field in, edit (and maybe xkey, xkey_ext) out
+	 * @param string|null  $pItemData    liberty_xref_item.data for the item
+	 * @param string|null  $pExistingData the row's current `data` (null for a new row)
+	 */
+	public static function applyJsonFields( array &$pParamHash, ?string $pItemData, ?string $pExistingData ): void {
+		if( !isset( $pParamHash['json_field'] ) || !is_array( $pParamHash['json_field'] ) ) {
+			return;
+		}
+		$hint   = self::parseItemHint( $pItemData );
+		$merged = json_decode( (string)$pExistingData, true );
+		$merged = is_array( $merged ) ? $merged : [];
+		foreach( $pParamHash['json_field'] as $key => $value ) {
+			unset( $merged[$key] );
+			$value = is_string( $value ) ? trim( $value ) : $value;
+			if( is_numeric( $value ) && (string)( $value + 0 ) === (string)$value ) {
+				$value = $value + 0;
+			}
+			if( $value !== '' && $value !== 0 && $value !== 0.0 && $value !== null ) {
+				$merged[$key] = $value;
+			}
+		}
+		if( !empty( $hint['key'] ) ) {
+			$pParamHash['xkey'] = mb_substr( (string)( $merged[$hint['key']] ?? '' ), 0, 32 );
+		}
+		if( !empty( $hint['ext'] ) && is_array( $hint['ext'] ) ) {
+			$parts = [];
+			foreach( $hint['ext'] as $field ) {
+				if( isset( $merged[$field] ) && !is_array( $merged[$field] ) && (string)$merged[$field] !== '' ) {
+					$parts[] = (string)$merged[$field];
+				}
+			}
+			$pParamHash['xkey_ext'] = mb_substr( implode( ', ', $parts ), 0, 250 );
+		}
+		$pParamHash['edit'] = json_encode( (object)$merged );
+	}
+
+	/**
+	 * The definition of one item as a loaded row would carry it - the same aliases LibertyXref::load()
+	 * puts on a row (template_title, item_data), so a template can be rendered for a row that does not
+	 * exist yet (the add page). A definition registered at the content type's own level wins over the
+	 * package-level one with the same item code.
+	 *
+	 * @param string $pItem  liberty_xref_item.item
+	 * @return array|null    item, x_group, template_title, template, item_data, multiple, cross_ref_href; null if unknown
+	 */
+	public function getItemDefinition( string $pItem ): ?array {
+		global $gBitSystem;
+		$guidFilter = $this->packageGuid
+			? "IN (?, ?)"
+			: "= ?";
+		$bindVars = $this->packageGuid
+			? [ $pItem, $this->contentTypeGuid, $this->packageGuid, $this->contentTypeGuid ]
+			: [ $pItem, $this->contentTypeGuid, $this->contentTypeGuid ];
+		$row = $gBitSystem->mDb->getRow(
+			"SELECT s.`item`, s.`x_group`, s.`cross_ref_title` AS `template_title`, s.`template`,
+			        s.`data` AS `item_data`, s.`multiple`, s.`cross_ref_href`
+			 FROM `".BIT_DB_PREFIX."liberty_xref_item` s
+			 WHERE s.`item` = ? AND s.`content_type_guid` $guidFilter
+			 ORDER BY CASE WHEN s.`content_type_guid` = ? THEN 0 ELSE 1 END",
+			$bindVars
+		);
+		return $row ?: null;
+	}
+
+	/**
 	 * Return available item slots for the add-xref type selector.
 	 *
 	 * Three modes controlled by the arguments:
@@ -221,7 +318,7 @@ class LibertyXrefType {
 		$guidFilter = $this->packageGuid
 			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
 			: "= '$this->contentTypeGuid'";
-		// s.multiple = -1 = read-only (see liberty/MANUAL.md's Data model section) — never
+		// s.multiple = -1 = read-only (see liberty/DEVELOPER.md's Data model section) — never
 		// offer a read-only item as something to add. multiple = -2 (mutually exclusive)
 		// stays offered — that's a normal, still-addable item, just one that evicts a
 		// sibling on store.
@@ -274,7 +371,7 @@ class LibertyXrefType {
 	 * its 'track' in the same group, rather than all of them after every track (the group query
 	 * orders by item first). Items that don't declare it keep the query's order exactly; a follower
 	 * with no matching row stays at the end. Item data is either a plain list of json-list field
-	 * names, or an object {"fields":[...], "follows":"<item>"} (see edit_json-list_item.tpl).
+	 * names, or an object {"fields":[...], "follows":"<item>"} (see edit_json-list_fields.tpl).
 	 *
 	 * @param array $pRows  one group's live rows, in query order
 	 * @return array

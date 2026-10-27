@@ -199,7 +199,7 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 			}
 			$sql  = "SELECT x.`multiple` FROM `".BIT_DB_PREFIX."liberty_xref_item` x WHERE x.`item` = ? $guidWhere";
 			$itemMultiple = (int)$this->mDb->getOne( $sql, $guidBind );
-			// multiple = -1 = read-only (see liberty/MANUAL.md's Data model section) — the
+			// multiple = -1 = read-only (see liberty/DEVELOPER.md's Data model section) — the
 			// item picker already excludes these (LibertyXrefType::getAvailableItems()),
 			// this is defense-in-depth against a direct POST bypassing that. multiple = -2
 			// (mutually exclusive) is NOT rejected here — it's a normal single-cardinality
@@ -348,7 +348,7 @@ class LibertyXref extends BitBase implements \ArrayAccess {
 				$this->mDb->associateInsert( $table, $pParamHash['xref_store'] );
 			}
 			$this->load( $this->mXrefId );
-			// multiple = -2 = mutually exclusive within the same group (see liberty/MANUAL.md's
+			// multiple = -2 = mutually exclusive within the same group (see liberty/DEVELOPER.md's
 			// Data model section) — a successful store of one such item evicts any *other*
 			// item in the same x_group that's also flagged -2, for this content_id. Hard
 			// delete, not stepXref's archive path — mirrors stepXref's own expunge=3 case,

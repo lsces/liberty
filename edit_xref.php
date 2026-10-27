@@ -24,7 +24,7 @@ if( !empty( $_REQUEST['xref_id'] ) ) {
 	$gContent->loadXref( $_REQUEST['xref_id'] );
 }
 
-// multiple = -1 = read-only (see liberty/MANUAL.md's Data model section) — refuse to even
+// multiple = -1 = read-only (see liberty/DEVELOPER.md's Data model section) — refuse to even
 // render the edit form, not just reject a save; LibertyXref::verify() rejects the write
 // too (defense-in-depth for any caller that bypasses this controller). multiple = -2
 // (mutually exclusive) is freely editable in place, only -1 is blocked here.
@@ -41,28 +41,14 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 if( !empty( $_REQUEST['fSaveXref'] ) ) {
 	$gContent->verifyUpdatePermission();
 	if( isset( $_REQUEST['json_field'] ) && is_array( $_REQUEST['json_field'] ) ) {
-		// json-list/json-text edit forms (edit_xref_json-list_item.tpl) submit one
-		// field per JSON key rather than a single 'edit' textarea — reassemble into
-		// the JSON string storeXref() actually saves into 'data'. Numeric strings cast
-		// back to int/float first so a human edit doesn't quietly turn a field's JSON
-		// type from number to string (every form input value arrives as a string).
-		//
-		// Starts from the EXISTING stored data, not empty - the edit form only ever shows a
-		// hinted subset of fields (liberty_xref_item.data), so any field outside that subset
-		// (e.g. fisheye episode's own 'thumb', or 'director'/'writer'/'star' arrays no plain-text
-		// field can edit) must survive untouched rather than being silently dropped on every save.
-		$existingData = (array)json_decode( (string)( $gContent->mInfo['xref_store']['data']['data'] ?? '' ), true );
-		$jsonFields = array_map(
-			fn( $v ) => is_numeric( $v ) ? $v + 0 : $v,
-			$_REQUEST['json_field']
+		// json-list/json-text forms send one field per JSON key; reassemble them into the JSON text
+		// storeXref() saves as `data`, and mirror the flat columns the item asks for (postcode to
+		// xkey, say). See LibertyXrefType::applyJsonFields().
+		LibertyXrefType::applyJsonFields(
+			$_REQUEST,
+			$gContent->mInfo['xref_store']['data']['item_data'] ?? null,
+			$gContent->mInfo['xref_store']['data']['data'] ?? null
 		);
-		// Drop blank/zero entries from what was actually submitted rather than storing every
-		// possible field every time — most components only ever have a few real values (matches
-		// the sparse-write convention every importer already uses). The merge below then only
-		// overwrites keys the form actually knew about, leaving everything else in
-		// $existingData (fields outside the hint) alone.
-		$jsonFields = array_filter( $jsonFields, fn( $v ) => $v !== '' && $v !== 0 && $v !== 0.0 );
-		$_REQUEST['edit'] = json_encode( (object)array_merge( $existingData, $jsonFields ) );
 	}
 	if( isset( $_REQUEST['sod_salt'] ) || isset( $_REQUEST['sod_sodium'] ) ) {
 		// Food-specific: SOD's edit form (food/templates/xref/foodcomponent/edit_sod_item.tpl)
@@ -149,6 +135,16 @@ $gContent->enrichXrefDisplay( $xrefInfo );
 $gBitSmarty->assign( 'gContent', $gContent );
 $gBitSmarty->assign( 'xrefInfo', $xrefInfo );
 $gBitSmarty->assign( 'errors', $gContent->mErrors );
+$gBitSmarty->assign( 'xrefDates', $gContent->xrefShowsDates() );
 
 $xrefTemplate = $gContent->mInfo['xref_store']['data']['template'] ?? 'text';
-$gBitSystem->display( $gContent->getXrefEditTemplate( $xrefTemplate ), 'Edit Detail', [ 'display_mode' => 'edit' ] );
+// An item whose template has a fields file is shown inside the shared page (the same fields the
+// add page uses); one that still has only a whole-page edit template keeps rendering that.
+$fieldsTemplate = $gContent->getXrefFieldsTemplate( $xrefTemplate );
+if( $fieldsTemplate ) {
+	$gBitSmarty->assign( 'fieldsTemplate', $fieldsTemplate );
+	$editTemplate = 'bitpackage:liberty/edit_xref_page.tpl';
+} else {
+	$editTemplate = $gContent->getXrefEditTemplate( $xrefTemplate );
+}
+$gBitSystem->display( $editTemplate, 'Edit Detail', [ 'display_mode' => 'edit' ] );
