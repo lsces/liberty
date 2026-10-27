@@ -69,9 +69,10 @@ if( empty( $contentListHash ) ) {
 
 	// The request is merged in so a list page can pass filters straight through (they are bound as data). These
 	// keys are different: getContentList() pastes them into the SQL text itself - a join fragment, and a table and
-	// column name - so a request must never supply them. Code that needs them sets $contentListHash itself,
-	// which skips this branch.
-	$contentListHash = array_merge( array_diff_key( $_REQUEST, array_flip( [ 'join_sql', 'time_limit_table', 'time_limit_column' ] ) ), $contentListHash );
+	// column name - so a request must never supply them (getContentList() also refuses anything but a plain
+	// identifier for the column, table and key ones). Code that needs them sets $contentListHash
+	// itself, which skips this branch.
+	$contentListHash = array_merge( array_diff_key( $_REQUEST, array_flip( [ 'join_sql', 'time_limit_table', 'time_limit_column', 'hash_key', 'order_table' ] ) ), $contentListHash );
 }
 
 // Finally we're ready to get some content

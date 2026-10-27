@@ -3061,6 +3061,27 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	}
 
 	/**
+	 * A list-hash value that getContentList() has to paste into the SQL text because it cannot be bound as data -
+	 * a column, a table alias, a select expression. Only a plain identifier passes: 'column' is `name`, 'qualified'
+	 * is `name` or `alias.name`, 'alias' is `alias.` (a table alias with its dot, as in `lc.`). Anything else
+	 * returns '' and the caller leaves that part of the query out, so a hash filled from a request can never carry SQL.
+	 *
+	 * @param mixed  $pValue
+	 * @param string $pKind  'column', 'qualified' or 'alias'
+	 */
+	private static function listHashIdentifier( $pValue, string $pKind ): string {
+		$id = '[A-Za-z_][A-Za-z0-9_]*';
+		$pattern = match( $pKind ) {
+			// D: "$" must mean the very end, not just before a final newline.
+			'column'    => "/^$id$/D",
+			'qualified' => "/^$id(\\.$id)?$/D",
+			'alias'     => "/^$id\\.$/D",
+			default     => '/^$/D',
+		};
+		return is_string( $pValue ) && preg_match( $pattern, $pValue ) ? $pValue : '';
+	}
+
+	/**
 	 * Get a list of all content
 	 *
 	 * @param string $pListHash['content_type_guid'] Content GUID to limit the list to
@@ -3155,16 +3176,16 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 
 		// Allow selection based on arbitrary time limits -- used in calendar
 		// TODO: We should replace usages of from_date and until_date with this generic setup and depricate those
-		if( !empty( $pListHash['time_limit_column'] )) {
-			if( empty( $pListHash['time_limit_table'] ) ) {
-				$pListHash['time_limit_table'] = 'lc.';
-			}
+		// Both are pasted into the SQL (identifiers cannot be bound), so only a plain column name and table alias are used.
+		$timeLimitColumn = self::listHashIdentifier( $pListHash['time_limit_column'] ?? '', 'column' );
+		if( $timeLimitColumn !== '' ) {
+			$timeLimitTable = self::listHashIdentifier( $pListHash['time_limit_table'] ?? '', 'alias' ) ?: 'lc.';
 			if( !empty( $pListHash['time_limit_start'] ) ) {
-				$whereSql .= " AND ".$pListHash['time_limit_table']."`".$pListHash['time_limit_column']."` >= ? ";
+				$whereSql .= " AND ".$timeLimitTable."`".$timeLimitColumn."` >= ? ";
 				$bindVars[] = $pListHash['time_limit_start'];
 			}
 			if( !empty( $pListHash['time_limit_stop'] ) ) {
-				$whereSql .= " AND ".$pListHash['time_limit_table']."`".$pListHash['time_limit_column']."` <= ? ";
+				$whereSql .= " AND ".$timeLimitTable."`".$timeLimitColumn."` <= ? ";
 				$bindVars[] = $pListHash['time_limit_stop'];
 			}
 		}
@@ -3226,8 +3247,9 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 
 		// Should results be hashed or sequential indexed
 		$hashKeySql = '';
-		if( !empty( $pListHash['hash_key'] ) ) {
-			$hashKeySql = $pListHash['hash_key'].' AS `hash_key`, ';
+		$hashKey = self::listHashIdentifier( $pListHash['hash_key'] ?? '', 'qualified' );
+		if( $hashKey !== '' ) {
+			$hashKeySql = $hashKey.' AS `hash_key`, ';
 		}
 
 		if( $gBitSystem->isPackageActive( 'gatekeeper' ) ) {
@@ -3259,7 +3281,7 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 
 		if( in_array( $pListHash['sort_mode'], $sortHash ) ) {
 			$orderTable = '';
-		} elseif( !empty( $pListHash['order_table'] ) ) {
+		} elseif( self::listHashIdentifier( $pListHash['order_table'] ?? '', 'alias' ) !== '' ) {
 			$orderTable = $pListHash['order_table'];
 		} elseif( !empty( $pListHash['sort_mode'] ) && strtolower( substr( $pListHash['sort_mode'], 0, 4 ) ) =='hits' ) {
 			$orderTable = 'lch.';
