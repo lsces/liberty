@@ -16,7 +16,10 @@ use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyContent;
 
-$gBitSystem->verifyPermission( 'p_liberty_list_content' );
+// This is the "List All Content" page of liberty's admin menu, and it lists every content type including user
+// accounts, so it is an admin page: anyone else is sent to log in (p_liberty_list_content, a plain "basic"
+// permission that Anonymous can hold on a public site, used to be enough).
+$gBitSystem->verifyPermission( 'p_admin' );
 
 // some content specific offsets and pagination settings
 if( !empty( $_REQUEST['sort_mode'] )) {
