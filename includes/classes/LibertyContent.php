@@ -3212,15 +3212,6 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			$bindVars = array_merge( $bindVars, $pListHash['exclude_content_type_guid'] );
 		}
 
-		// User records ARE the user list, so they are shown only to someone who may see that list
-		// (users/index.php asks for the same permission). This generic list used to hand every visitor
-		// who may list content - Anonymous, on a public site - all the accounts, with their real
-		// names and links to their home pages.
-		if( !$gBitUser->hasPermission( 'p_users_view_user_list' ) ) {
-			$whereSql .= ' AND lc.`content_type_guid` != ?';
-			$bindVars[] = BITUSER_CONTENT_TYPE_GUID;
-		}
-
 		// only display content modified more recently than this (UTC timestamp)
 		if( !empty( $pListHash['from_date'] ) ) {
 			$whereSql .= ' AND lc.`last_modified` >= ?';
