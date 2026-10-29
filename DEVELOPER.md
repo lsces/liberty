@@ -858,8 +858,16 @@ the query:
 
 `LibertyContent::listHashIdentifier()` enforces the shapes above (anything else is ignored and the clause left out),
 and `get_content_list_inc.php` removes all five from a request before merging it into the hash. `sort_mode` is made
-safe by `BitDb::convertSortmode()`, which strips everything except letters, digits, dots, underscores and commas; an
-unknown column name there gives an SQL error, not an injection.
+safe against injection by `BitDb::convertSortmode()`, which strips everything except letters, digits, dots, underscores and
+commas - but it only cleans characters, so an unknown column name (or table alias) there is an SQL error, a 500 that prints
+the query. **A list must pass the request's `sort_mode` through `$this->convertSortMode()`** (capital M, on the content
+class, not on `$this->mDb`): it checks the name against `getSortModeFields()` and the alias against `getSortModeAliases()`
+(`lc`, `lch`, `uu`, `uuc`, `uue`) via `isValidSortMode()`, and uses the default order if either is unknown. A class with its
+own sortable columns or aliases overrides those two static methods (`BitBlogPost`, `BitArticle`, `BitPage` do), and a class
+with two differently shaped queries passes its column list as the third argument (`BitBlog`). PHP method names ignore case,
+so `$this->mDb->convertSortMode()` is the *unchecked* `convertSortmode()` - `BitBlog` did exactly that for years. The older
+`valid_sort_modes` hash (fisheye, stock) is checked by `BitBase::verifySortMode()`, which now also refuses an alias outside
+the usual list.
 
 Rules for code that builds a list hash:
 - **Do not copy `$_REQUEST` wholesale** to pick up the pagination variables. Take the named keys you mean to support

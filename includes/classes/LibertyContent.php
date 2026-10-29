@@ -2949,19 +2949,36 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * @param string pSortHash hash of parameters for any getList() function
 	 * @return string the link to display the page.
 	 */
-	public function convertSortMode( $pSortMode, $pDefault='last_modified_desc' ) {
-
-		$sortHash = static::getSortModeFields();
-
-		$baseSortMode = str_replace( '_asc', '', str_replace( '_desc', '', $pSortMode ) );
-
-		$baseSortMode = preg_replace( '/^.*\./', '', $baseSortMode );
-
-		if( !in_array( $baseSortMode, $sortHash ) ) {
+	public function convertSortMode( $pSortMode, $pDefault='last_modified_desc', ?array $pFields = null ) {
+		if( !static::isValidSortMode( $pSortMode, $pFields ) ) {
 			$pSortMode = $pDefault;
 		}
 
 		return $this->mDb->convertSortmode( $pSortMode );
+	}
+
+	/**
+	 * The table aliases a sort_mode may carry in front of its column ('lch.hits_desc'). A class whose list query uses others adds them by overriding this.
+	 * Anything else is refused: the alias is pasted into the SQL, and one the query does not have is an 'unknown table' error from the database.
+	 */
+	public static function getSortModeAliases(): array {
+		return [ 'lc', 'lch', 'uu', 'uuc', 'uue' ];
+	}
+
+	/**
+	 * Whether a sort_mode names a column this list can sort by: an optional known table alias, the column, then _asc or _desc. The request's sort_mode
+	 * reaches ORDER BY, and BitDb::convertSortmode() only cleans the characters - it cannot tell that a made-up name is not a column - so every
+	 * getList() must pass it through here (convertSortMode() does) rather than call $this->mDb->convertSortmode() on it; PHP method names ignore case,
+	 * so the two look alike and the unchecked one is easy to call by mistake.
+	 * @param string     $pSortMode the sort_mode as received
+	 * @param array|null $pFields   the sortable columns for this query; null for static::getSortModeFields()
+	 */
+	public static function isValidSortMode( $pSortMode, ?array $pFields = null ): bool {
+		if( !is_string( $pSortMode ) || !preg_match( '/^(?:([a-z][a-z0-9]*)\.)?([a-z][a-z0-9_]*?)(?:_(?:asc|desc))?$/i', $pSortMode, $m ) ) {
+			return false;
+		}
+		return ( $m[1] === '' || in_array( strtolower( $m[1] ), static::getSortModeAliases(), true ) )
+			&& in_array( $m[2], $pFields ?? static::getSortModeFields(), true );
 	}
 
 	/**
