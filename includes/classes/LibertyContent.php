@@ -2974,6 +2974,11 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 	 * @param array|null $pFields   the sortable columns for this query; null for static::getSortModeFields()
 	 */
 	public static function isValidSortMode( $pSortMode, ?array $pFields = null ): bool {
+		// 'random' is a sort in its own right, not a column: BitDb::convertSortmode() turns it into the database's random function. Code sets it
+		// (the random pages / images / banner / specials / components modules) and it has to pass.
+		if( $pSortMode === 'random' ) {
+			return true;
+		}
 		if( !is_string( $pSortMode ) || !preg_match( '/^(?:([a-z][a-z0-9]*)\.)?([a-z][a-z0-9_]*?)(?:_(?:asc|desc))?$/i', $pSortMode, $m ) ) {
 			return false;
 		}
