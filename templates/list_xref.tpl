@@ -32,6 +32,12 @@
 		</tbody>
 	</table>
 </div>
+{if $isHistory && $xrefGroup->mXrefs && $xrefAllowEdit && $gContent->isValid() && $gContent->hasExpungePermission()}
+	{* A link, not a form: this tab is normally inside the page's own edit form, and a form inside a form is dropped by the browser (the click then submitted the outer one) - the row icons are links for the same reason *}
+	<div>
+		<a class="btn btn-default" href="{$smarty.const.LIBERTY_PKG_URL}edit_xref.php?content_id={$xrefContentId|default:$gContent->mInfo.content_id}&amp;fClearHistory=1" title="{tr}Deletes every record listed here for good (no files are touched){/tr}" onclick="return confirm('{tr}Delete all{/tr} {$xrefGroup->mXrefs|@count} {tr}history records? This cannot be undone.{/tr}');">{tr}Clear history{/tr}</a>
+	</div>
+{/if}
 {if $allow_add && $gContent->isValid() && $gContent->hasUpdatePermission() && !$isHistory}
 	<div>
 		{smartlink ititle="Add record" ipackage="liberty" ifile="add_xref.php" biticon="list-add" content_id=$xrefContentId|default:$gContent->mInfo.content_id group=$xrefGroup->mSortOrder}

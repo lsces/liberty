@@ -38,6 +38,15 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 	die;
 }
 
+// The History tab's Clear button: every retired row of this item removed at once (records only, no files). A hard delete, so the same permission
+// as a row's own Delete.
+if( !empty( $_REQUEST['fClearHistory'] ) ) {
+	$gContent->verifyExpungePermission();
+	$gContent->clearXrefHistory();
+	header( 'Location: '.$gContent->getEditUrl() );
+	die;
+}
+
 if( !empty( $_REQUEST['fSaveXref'] ) ) {
 	$gContent->verifyUpdatePermission();
 	if( isset( $_REQUEST['json_field'] ) && is_array( $_REQUEST['json_field'] ) ) {

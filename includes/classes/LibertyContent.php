@@ -4815,4 +4815,30 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		return false;
 	}
 
+	/**
+	 * Hard-delete every row the History tab lists for this item (the retired rows: end_date in the past), the same as pressing each row's Delete
+	 * (expunge=3) except that no file is touched - a retired image row's file stays on disk, only the records go. The rows come from the same load
+	 * the tab uses, so exactly what the visitor's roles let them see is removed and nothing else (a live row, or one the tab hides, is safe).
+	 * The caller checks the expunge permission.
+	 * @return int the number of rows removed
+	 */
+	public function clearXrefHistory(): int {
+		if( !$this->isValid() ) {
+			return 0;
+		}
+		$ids = [];
+		foreach( $this->xrefType()->loadContent( (int)$this->mContentId )->mGroups['history']->mXrefs ?? [] as $row ) {
+			$ids[] = (int)$row['xref_id'];
+		}
+		if( !$ids ) {
+			return 0;
+		}
+		$this->StartTrans();
+		foreach( array_chunk( $ids, 200 ) as $chunk ) {
+			$this->mDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `end_date` IS NOT NULL AND `xref_id` IN (".implode( ',', array_fill( 0, count( $chunk ), '?' ) ).")", array_merge( [ (int)$this->mContentId ], $chunk ) );
+		}
+		$this->CompleteTrans();
+		return count( $ids );
+	}
+
 }
