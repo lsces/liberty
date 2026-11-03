@@ -156,6 +156,17 @@ class LibertyMime extends LibertyContent {
 				}
 			}
 
+			// A mime plugin can add a text layer (pdf) to liberty_content.data while storing its file, which is after
+			// LibertyContent::store() has already run its services. Services that index content get told, once.
+			if( empty( $this->mErrors ) && !empty( $pParamHash['upload_store']['files'] ) && is_array( $pParamHash['upload_store']['files'] ) ) {
+				foreach( $pParamHash['upload_store']['files'] as $storedFile ) {
+					if( !empty( $storedFile['data'] ) ) {
+						$this->invokeServices( 'content_index_function', $pParamHash );
+						break;
+					}
+				}
+			}
+
 			// deal with the primary attachment after we've dealt with all the files
 			$this->setPrimaryAttachment(
 				$pParamHash['liberty_attachments']['primary'],
