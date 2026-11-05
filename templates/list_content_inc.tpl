@@ -11,6 +11,8 @@
 
 {if $gBitUser->isAdmin()}
 <form id="bulkcontentform" action="{$smarty.const.LIBERTY_PKG_URL}list_content.php?{$smarty.server.QUERY_STRING}" method="POST">
+{* not {form}: the form opens under one {if} and closes under another, which a block tag cannot span *}
+<input type="hidden" name="tk" value="{$gBitUser->mTicket}" />
 {/if}
 
 {assign var=showStatus value=($gBitSystem->isFeatureActive( 'liberty_display_status' ) && $gBitUser->hasPermission( 'p_liberty_view_all_status' ))}
