@@ -4,8 +4,9 @@
   <source src="{$attachment.source_url}" type="{$attachment.mime_type|default:'video/mp4'}">
   <p>{tr}Your browser does not support HTML5 video.{/tr} <a href="{$attachment.download_url}">{tr}Download{/tr}</a></p>
 </video>
-{if $attachment.download_url}
-  {* Always-visible, not just the <video> tag's own hidden no-HTML5-support fallback text above
+{if $attachment.download_url && ( !isset( $showDownload ) || $showDownload )}
+  {* Always-visible (unless the including page passes showDownload=false - fisheyemedia's film page does, per its
+     "Enable local download" option; liberty does not know that setting), not just the <video> tag's own hidden no-HTML5-support fallback text above
      (which no browser that can actually play the tag ever renders) - a real download is still
      the only way to get full multichannel audio out of this: browsers commonly downmix or just
      go silent on 5.1+ audio through the <video> element itself, even though the same file plays
