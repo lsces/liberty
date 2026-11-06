@@ -55,8 +55,19 @@ if ( !empty( $_REQUEST['fDeleteSource'] ) ) {
 	}
 }
 
-$guidList  = LibertyXrefType::getContentTypeGuids();
+// content types by the package they belong to (fisheye / fisheyemedia and the like overlap, so they are shown under their owner)
+$schemaPackages = LibertyXrefType::getSchemaPackages();
 $sources   = LibertyXrefType::getXrefTypeList( $activeGuid ? [ 'content_type_guid' => $activeGuid ] : [] );
+
+// Arriving from the schema page with a group or an item chosen: list only that
+$showGroup = (string)( $_REQUEST['show_group'] ?? '' );
+$showItem  = (string)( $_REQUEST['show_item'] ?? '' );
+if( $showGroup !== '' ) {
+	$sources = array_values( array_filter( $sources, fn( $row ) => $row['x_group'] === $showGroup ) );
+}
+if( $showItem !== '' ) {
+	$sources = array_values( array_filter( $sources, fn( $row ) => $row['item'] === $showItem ) );
+}
 
 // Build group list for the add-form dropdown, filtered to active guid
 $groups = $activeGuid
@@ -64,7 +75,9 @@ $groups = $activeGuid
 	: [];
 
 $gBitSmarty->assign( 'activeGuid',   $activeGuid );
-$gBitSmarty->assign( 'guidList',     $guidList );
+$gBitSmarty->assign( 'showGroup',    $showGroup );
+$gBitSmarty->assign( 'showItem',     $showItem );
+$gBitSmarty->assign( 'schemaPackages', $schemaPackages );
 $gBitSmarty->assign( 'xref_sources', $sources );
 $gBitSmarty->assign( 'xref_groups',  $groups );
 

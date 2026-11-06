@@ -9,25 +9,38 @@
 
 	<div class="body">
 
-		{* Package filter *}
+		{* Content type filter, grouped by the package each belongs to; the Xref Schema page starts from a package and shows one slice at a time *}
 		<form method="get" action="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_sources.php" class="form-inline">
 			<div class="form-group">
-				<label for="content_type_guid">{tr}Package{/tr}</label>
+				<label for="content_type_guid">{tr}Content type{/tr}</label>
 				<select name="content_type_guid" id="content_type_guid" class="form-control">
-					<option value="">{tr}— All packages —{/tr}</option>
-					{foreach from=$guidList item=guid}
-						<option value="{$guid|escape}" {if $guid eq $activeGuid}selected="selected"{/if}>{$guid|escape}</option>
+					<option value="">{tr}— All content types —{/tr}</option>
+					{foreach from=$schemaPackages key=pkg item=pkgGuids}
+						<optgroup label="{if $pkg == ''}{tr}(no registered content type){/tr}{else}{$pkg|escape}{/if}">
+							{foreach from=$pkgGuids item=guid}
+								<option value="{$guid|escape}" {if $guid eq $activeGuid}selected="selected"{/if}>{$guid|escape}</option>
+							{/foreach}
+						</optgroup>
 					{/foreach}
 				</select>
 				<button type="submit" class="btn btn-default">{tr}Filter{/tr}</button>
 				{if $activeGuid}
 					<a href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_sources.php?content_type_guid=" class="btn btn-link">{tr}Clear{/tr}</a>
 				{/if}
+				<a href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_schema.php" class="btn btn-link">{tr}Browse by package{/tr}</a>
 			</div>
 		</form>
 
 		{if $deleteError}
 			<div class="alert alert-danger">{$deleteError|escape}</div>
+		{/if}
+
+		{if $showGroup || $showItem}
+			<p class="help-block">{tr}Showing only{/tr}&nbsp;
+				{if $showGroup}{tr}group{/tr}&nbsp;<code>{$showGroup|escape}</code>&nbsp;{/if}
+				{if $showItem}{tr}item{/tr}&nbsp;<code>{$showItem|escape}</code>&nbsp;{/if}
+				<a href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_sources.php?content_type_guid={$activeGuid|escape:'url'}">{tr}Show all sources{/tr}</a>
+				<a href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_schema.php">{tr}Back to the schema{/tr}</a></p>
 		{/if}
 
 		{* Add source form — only when a package is selected (need a group to assign to) *}
@@ -44,7 +57,7 @@
 				{forminput}
 					<select name="x_group" id="x_group" class="form-control">
 						{foreach from=$xref_groups item=grp}
-							<option value="{$grp.x_group|escape}">{$grp.title|escape} ({$grp.x_group|escape})</option>
+							<option value="{$grp.x_group|escape}" {if $grp.x_group == $showGroup}selected="selected"{/if}>{$grp.title|escape} ({$grp.x_group|escape})</option>
 						{/foreach}
 					</select>
 				{/forminput}

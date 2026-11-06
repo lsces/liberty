@@ -52,11 +52,18 @@ if ( !empty( $_REQUEST['fDeleteGroup'] ) ) {
 	}
 }
 
-$guidList  = LibertyXrefType::getContentTypeGuids();
+// content types by the package they belong to (fisheye / fisheyemedia and the like overlap, so they are shown under their owner)
+$schemaPackages = LibertyXrefType::getSchemaPackages();
 $groups    = LibertyXrefType::getGroupList( $activeGuid ? [ 'content_type_guid' => $activeGuid ] : [] );
+// Arriving from the schema page with one group chosen: list only that group
+$showGroup = (string)( $_REQUEST['show_group'] ?? '' );
+if( $showGroup !== '' ) {
+	$groups = array_values( array_filter( $groups, fn( $row ) => $row['x_group'] === $showGroup ) );
+}
 
 $gBitSmarty->assign( 'activeGuid', $activeGuid );
-$gBitSmarty->assign( 'guidList',   $guidList );
+$gBitSmarty->assign( 'showGroup',  $showGroup );
+$gBitSmarty->assign( 'schemaPackages', $schemaPackages );
 $gBitSmarty->assign( 'xref_groups', $groups );
 
 $gBitSystem->display( 'bitpackage:liberty/admin_xref_groups.tpl', KernelTools::tra( 'Xref Groups' ), [ 'display_mode' => 'admin' ] );
