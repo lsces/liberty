@@ -4499,6 +4499,25 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 		return $this->mXrefType ??= new LibertyXrefType( $this->mContentTypeGuid, $this->mPackageGuid ?: null );
 	}
 
+	/**
+	 * The visibility term to compose into a query that reads this content's liberty_xref rows with its own SQL.
+	 * @see LibertyXrefType::visibleRowSql()
+	 */
+	public function getVisibleXrefSql( string $pAlias = 'x' ): array {
+		return $this->xrefType()->visibleRowSql( $pAlias );
+	}
+
+	/**
+	 * May the current user see this xref row of this content? For the pages that stream a row's file by xref_id.
+	 */
+	public function isXrefRowVisible( int $pXrefId ): bool {
+		$vis = $this->getVisibleXrefSql( 'x' );
+		return (bool)$this->mDb->getOne(
+			"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` x WHERE x.`xref_id` = ? AND x.`content_id` = ?".$vis['where_sql'],
+			[ $pXrefId, $this->mContentId, ...$vis['bind_vars'] ]
+		);
+	}
+
 	/** @see LibertyXrefType::getDisplayGroups() */
 	public function getXrefGroupList(): array {
 		return $this->xrefType()->getDisplayGroups();

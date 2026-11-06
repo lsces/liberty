@@ -76,6 +76,76 @@ class LibertyXrefType {
 	// -------------------------------------------------------------------------
 
 	/**
+	 * The role gate every xref query applies to one role_id column (a group's or an item's): visible when the viewer
+	 * carries that role, or is mapped to it in users_roles_map. Anonymous carries -1, and every user carries it too.
+	 *
+	 * @param string $pAlias  table alias holding the role_id column, e.g. 'g' for a group, 's' for an item
+	 * @return array{join:string,where:string,bind:array}  LEFT JOIN text, the WHERE term, and its bind values in order
+	 */
+	protected static function roleGate( string $pAlias ): array {
+		global $gBitUser;
+		$roles  = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
+		$userId = (int)( $gBitUser->mUserId ?? 0 );
+		$map    = 'purm_'.$pAlias;
+		return [
+			'join'  => "LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` $map ON $map.`user_id` = $userId AND $map.`role_id` = $pAlias.`role_id`",
+			'where' => "($pAlias.`role_id` IN(".implode( ',', array_fill( 0, count( $roles ), '?' ) ).") OR $map.`user_id` = ?)",
+			'bind'  => [ ...$roles, $userId ],
+		];
+	}
+
+	/**
+	 * Visibility term for code that reads liberty_xref rows with its own SQL (a file to stream, an Extras list, a credits
+	 * query) rather than through loadContent(), which already applies it. Same shape as protector's content_list_sql_function:
+	 * join_sql, where_sql (starts with AND) and bind_vars, to compose into the caller's query. Write paths and importers do
+	 * not use it: they read every row on purpose.
+	 *
+	 * A row is visible when its item is defined for this content type (either guid level) and both the item and its group
+	 * pass the role gate, as loadContent() decides. A row whose item has no definition at all is treated as Registered
+	 * only, so a missing definition cannot lock logged-in users out, nor open the row to anonymous.
+	 *
+	 * @param string $pAlias  alias of the liberty_xref table in the caller's query
+	 * @return array{join_sql:string,where_sql:string,bind_vars:array}
+	 */
+	public function visibleRowSql( string $pAlias = 'x' ): array {
+		$guids = $this->packageGuid
+			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
+			: "= '$this->contentTypeGuid'";
+		return self::buildVisibleRowSql( $pAlias, $guids );
+	}
+
+	/**
+	 * visibleRowSql() for a query over rows of several content types in one package, such as a show's seasons: each row is
+	 * judged by the definitions of its own content type (or the package's), taken from the query's liberty_content alias.
+	 *
+	 * @param string $pPackageGuid  the package the content types belong to, e.g. 'fisheyemedia'
+	 * @param string $pAlias        alias of the liberty_xref table in the caller's query
+	 * @param string $pContentAlias alias of the liberty_content table the caller has joined on content_id
+	 * @return array{join_sql:string,where_sql:string,bind_vars:array}
+	 */
+	public static function visibleRowSqlForPackage( string $pPackageGuid, string $pAlias = 'x', string $pContentAlias = 'lc' ): array {
+		return self::buildVisibleRowSql( $pAlias, "IN ($pContentAlias.`content_type_guid`, '$pPackageGuid')" );
+	}
+
+	/**
+	 * @param string $pGuids  SQL comparing s.content_type_guid, e.g. "IN ('stockcomponent','stock')"
+	 */
+	private static function buildVisibleRowSql( string $pAlias, string $pGuids ): array {
+		global $gBitUser;
+		$itemGate   = self::roleGate( 's' );
+		$groupGate  = self::roleGate( 'g' );
+		$registered = $gBitUser->isRegistered() ? '1 = 1' : '1 = 0';
+		$where = " AND ( EXISTS ( SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref_item` s
+		                          JOIN `".BIT_DB_PREFIX."liberty_xref_group` g ON g.`x_group` = s.`x_group` AND g.`content_type_guid` = s.`content_type_guid`
+		                          $itemGate[join] $groupGate[join]
+		                          WHERE s.`item` = $pAlias.`item` AND s.`content_type_guid` $pGuids
+		                            AND $itemGate[where] AND $groupGate[where] )
+		          OR ( $registered AND NOT EXISTS ( SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref_item` d
+		                                           WHERE d.`item` = $pAlias.`item` AND d.`content_type_guid` $pGuids ) ) )";
+		return [ 'join_sql' => '', 'where_sql' => $where, 'bind_vars' => [ ...$itemGate['bind'], ...$groupGate['bind'] ] ];
+	}
+
+	/**
 	 * Return display groups (sort_order > 0) for this content type, filtered to the
 	 * current user's roles.
 	 *
@@ -86,21 +156,19 @@ class LibertyXrefType {
 	 * @return array[]  liberty_xref_group rows ordered by sort_order
 	 */
 	public function getDisplayGroups(): array {
-		global $gBitSystem, $gBitUser;
-		$roles      = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-		$bindVars   = array_merge( $roles, [ $gBitUser->mUserId ] );
+		global $gBitSystem;
+		$gate       = self::roleGate( 'g' );
 		// Dual-guid join — see class docblock.
 		$guidFilter = $this->packageGuid
 			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
 			: "= '$this->contentTypeGuid'";
 		$result = $gBitSystem->mDb->query(
 			"SELECT g.* FROM `".BIT_DB_PREFIX."liberty_xref_group` g
-			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
-			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = g.`role_id`
+			 $gate[join]
 			 WHERE g.`content_type_guid` $guidFilter AND g.`sort_order` > 0
-			   AND (g.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
+			   AND $gate[where]
 			 ORDER BY g.`sort_order`",
-			$bindVars
+			$gate['bind']
 		);
 		$ret = [];
 		while( $res = $result->fetchRow() ) {
@@ -125,9 +193,8 @@ class LibertyXrefType {
 	 * @return array[]  [{item: string, name: string}, ...] ordered by item key
 	 */
 	public function getTypeMarkers(): array {
-		global $gBitSystem, $gBitUser;
-		$roles      = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-		$bindVars   = array_merge( $roles, [ $gBitUser->mUserId ] );
+		global $gBitSystem;
+		$gate       = self::roleGate( 'g' );
 		// Dual-guid join — see class docblock.
 		$guidFilter = $this->packageGuid
 			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
@@ -138,14 +205,13 @@ class LibertyXrefType {
 			// returned every item once per matching group row.
 			"SELECT g.`cross_ref_title` AS `type_name`, g.`item`
 			 FROM `".BIT_DB_PREFIX."liberty_xref_item` g
-			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
-			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = g.`role_id`
+			 $gate[join]
 			 WHERE g.`content_type_guid` = '$this->contentTypeGuid' AND g.`x_group` = 'type'
 			   AND EXISTS ( SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref_group` t
 			                WHERE t.`x_group` = 'type' AND t.`content_type_guid` $guidFilter AND t.`sort_order` = 0 )
-			   AND (g.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
+			   AND $gate[where]
 			 ORDER BY g.`sort_order`, g.`item`",
-			$bindVars
+			$gate['bind']
 		);
 		$ret = [];
 		$cnt = 0;
@@ -438,12 +504,11 @@ class LibertyXrefType {
 		global $gBitSystem, $gBitUser;
 
 		$db          = $gBitSystem->mDb;
-		$roles       = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-		$userId      = (int)( $gBitUser->mUserId ?? 0 );
+		$groupGate   = self::roleGate( 'g' );
+		$itemGate    = self::roleGate( 's' );
 		$guidFilter  = $this->packageGuid
 			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
 			: "= '$this->contentTypeGuid'";
-		$rolePlaceholders = implode( ',', array_fill( 0, count( $roles ), '?' ) );
 
 		$content    = new LibertyXrefContent();
 		$allHistory = [];
@@ -465,12 +530,11 @@ class LibertyXrefType {
 		$groupResult = $db->query(
 			"SELECT g.`x_group`, g.`title`, g.`sort_order`, g.`template`, g.`role_id`, g.`content_type_guid` AS group_guid
 			 FROM `".BIT_DB_PREFIX."liberty_xref_group` g
-			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
-			     ON purm.`user_id` = $userId AND purm.`role_id` = g.`role_id`
+			 $groupGate[join]
 			 WHERE g.`content_type_guid` $guidFilter AND g.`sort_order` > 0
-			   AND (g.`role_id` IN($rolePlaceholders) OR purm.`user_id` = ?)
+			   AND $groupGate[where]
 			 ORDER BY g.`sort_order`",
-			array_merge( $roles, [ $userId ] )
+			$groupGate['bind']
 		);
 		if( !$groupResult ) return $content;
 
@@ -494,12 +558,11 @@ class LibertyXrefType {
 				     AND s.`content_type_guid` = '$groupGuid'
 				     AND s.`x_group` = '$xGroup'
 				 LEFT JOIN `".BIT_DB_PREFIX."liberty_content` lc_linked ON lc_linked.`content_id` = x.`xref`
-				 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
-				     ON purm.`user_id` = $userId AND purm.`role_id` = s.`role_id`
+				 $itemGate[join]
 				 WHERE x.`content_id` = ?
-				   AND (s.`role_id` IN($rolePlaceholders) OR purm.`user_id` = ?)
+				   AND $itemGate[where]
 				 ORDER BY s.`sort_order`, x.`item`, x.`xorder`",
-				array_merge( [ $gBitSystem->getUTCTime(), $contentId ], $roles, [ $userId ] )
+				array_merge( [ $gBitSystem->getUTCTime(), $contentId ], $itemGate['bind'] )
 			);
 			if( $rowResult ) {
 				$groupRows = [];
@@ -543,18 +606,16 @@ class LibertyXrefType {
 	 * @return string[]
 	 */
 	public function getTemplateFormats(): array {
-		global $gBitSystem, $gBitUser;
-		$roles    = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-		$bindVars = array_merge( $roles, [ $gBitUser->mUserId ] );
+		global $gBitSystem;
+		$gate   = self::roleGate( 'g' );
 		$result = $gBitSystem->mDb->query(
 			"SELECT DISTINCT g.`template`
 			 FROM `".BIT_DB_PREFIX."liberty_xref_item` g
-			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
-			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = g.`role_id`
+			 $gate[join]
 			 WHERE g.`content_type_guid` = '$this->contentTypeGuid'
-			   AND (g.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
+			   AND $gate[where]
 			 ORDER BY g.`template`",
-			$bindVars
+			$gate['bind']
 		);
 		$ret = [];
 		while( $res = $result->fetchRow() ) {
@@ -577,9 +638,9 @@ class LibertyXrefType {
 	 * @return array[]
 	 */
 	public function getContentTypeMarkers( int $contentId ): array {
-		global $gBitSystem, $gBitUser;
-		$roles      = array_keys( $gBitUser->mRoles ?? [] ) ?: [-1];
-		$bindVars   = array_merge( [ $contentId ], $roles, [ $gBitUser->mUserId ] );
+		global $gBitSystem;
+		$gate       = self::roleGate( 'r' );
+		$bindVars   = array_merge( [ $contentId ], $gate['bind'] );
 		// Dual-guid join — see class docblock.
 		$guidFilter = $this->packageGuid
 			? "IN ('$this->contentTypeGuid', '$this->packageGuid')"
@@ -590,10 +651,9 @@ class LibertyXrefType {
 			 JOIN `".BIT_DB_PREFIX."liberty_xref_group` t
 			     ON t.`x_group` = r.`x_group` AND t.`content_type_guid` $guidFilter
 			 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` d ON d.`content_id` = ? AND d.`item` = r.`item`
-			 LEFT OUTER JOIN `".BIT_DB_PREFIX."users_roles_map` purm
-			     ON purm.`user_id` = ".(int)($gBitUser->mUserId ?? 0)." AND purm.`role_id` = r.`role_id`
+			 $gate[join]
 			 WHERE r.`content_type_guid` = '$this->contentTypeGuid' AND t.`x_group` = 'type' AND t.`sort_order` = 0
-			   AND (r.`role_id` IN(".implode(',', array_fill(0, count($roles), '?')).") OR purm.`user_id` = ?)
+			   AND $gate[where]
 			 ORDER BY r.`sort_order`, r.`item`",
 			$bindVars
 		);
@@ -733,5 +793,109 @@ class LibertyXrefType {
 			$ret[] = $res;
 		}
 		return $ret;
+	}
+
+	/**
+	 * Every content_type_guid that carries xref groups or items, grouped by the package it belongs to, for the schema admin.
+	 * A content type belongs to its handler_package; a guid that is itself a package name (stock's package-level groups) belongs to
+	 * that package; anything else (a type that is no longer registered) is listed under '' so it can still be seen.
+	 *
+	 * @return array<string,string[]>  package => its guids, packages in name order, '' last
+	 */
+	public static function getSchemaPackages(): array {
+		global $gBitSystem, $gLibertySystem;
+		$guids = $gBitSystem->mDb->getCol(
+			"SELECT `content_type_guid` FROM `".BIT_DB_PREFIX."liberty_xref_group`
+			 UNION SELECT `content_type_guid` FROM `".BIT_DB_PREFIX."liberty_xref_item` ORDER BY 1"
+		) ?: [];
+		$ret = [];
+		foreach( $guids as $guid ) {
+			$pkg = $gLibertySystem->mContentTypes[$guid]['handler_package'] ?? ( isset( $gBitSystem->mPackages[$guid] ) ? $guid : '' );
+			$ret[$pkg][] = $guid;
+		}
+		uksort( $ret, fn( $a, $b ) => ( $a === '' ) <=> ( $b === '' ) ?: strcmp( $a, $b ) );
+		return $ret;
+	}
+
+	/** @return array<int,string>  role_id => role name, every role there is */
+	public static function getSchemaRoles(): array {
+		global $gBitSystem;
+		$ret = [];
+		foreach( $gBitSystem->mDb->getAll( "SELECT `role_id`, `role_name` FROM `".BIT_DB_PREFIX."users_roles` ORDER BY `role_id`" ) ?: [] as $row ) {
+			$ret[(int)$row['role_id']] = $row['role_name'];
+		}
+		return $ret;
+	}
+
+	/**
+	 * How many groups and items each role gates, for each of these content types.
+	 *
+	 * @param string[] $pGuids
+	 * @return array<string,array<int,array{groups:int,items:int}>>  guid => role_id => counts
+	 */
+	public static function getSchemaRoleCounts( array $pGuids ): array {
+		global $gBitSystem;
+		$ret = [];
+		if( !$pGuids ) {
+			return $ret;
+		}
+		$in = implode( ',', array_fill( 0, count( $pGuids ), '?' ) );
+		foreach( [ 'groups' => 'liberty_xref_group', 'items' => 'liberty_xref_item' ] as $key => $table ) {
+			foreach( $gBitSystem->mDb->getAll(
+				"SELECT `content_type_guid`, `role_id`, COUNT(*) AS n FROM `".BIT_DB_PREFIX."$table` WHERE `content_type_guid` IN ($in) GROUP BY `content_type_guid`, `role_id`",
+				$pGuids
+			) ?: [] as $row ) {
+				$ret[$row['content_type_guid']][(int)$row['role_id']] ??= [ 'groups' => 0, 'items' => 0 ];
+				$ret[$row['content_type_guid']][(int)$row['role_id']][$key] = (int)$row['n'];
+			}
+		}
+		return $ret;
+	}
+
+	/**
+	 * Move every group and item of these content types that sits at one role to another: the package switch between
+	 * Registered (3) and Anonymous (-1). Rows at any other role (Editors, Administrators, a private role) are left as they are.
+	 *
+	 * @param string[] $pGuids  content types to touch; the caller has already checked them against the chosen package
+	 * @return array{groups:int,items:int}  rows moved
+	 */
+	public static function moveSchemaRoles( array $pGuids, int $pFromRole, int $pToRole ): array {
+		global $gBitSystem;
+		$moved = [ 'groups' => 0, 'items' => 0 ];
+		if( !$pGuids || $pFromRole === $pToRole ) {
+			return $moved;
+		}
+		$in = implode( ',', array_fill( 0, count( $pGuids ), '?' ) );
+		foreach( [ 'groups' => 'liberty_xref_group', 'items' => 'liberty_xref_item' ] as $key => $table ) {
+			$moved[$key] = (int)$gBitSystem->mDb->getOne(
+				"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."$table` WHERE `role_id` = ? AND `content_type_guid` IN ($in)",
+				[ $pFromRole, ...$pGuids ]
+			);
+			if( $moved[$key] ) {
+				$gBitSystem->mDb->query(
+					"UPDATE `".BIT_DB_PREFIX."$table` SET `role_id` = ? WHERE `role_id` = ? AND `content_type_guid` IN ($in)",
+					[ $pToRole, $pFromRole, ...$pGuids ]
+				);
+			}
+		}
+		return $moved;
+	}
+
+	/** Set the role of one group. */
+	public static function setGroupRole( string $pGuid, string $pGroup, int $pRoleId ): void {
+		global $gBitSystem;
+		$gBitSystem->mDb->query(
+			"UPDATE `".BIT_DB_PREFIX."liberty_xref_group` SET `role_id` = ? WHERE `content_type_guid` = ? AND `x_group` = ?",
+			[ $pRoleId, $pGuid, $pGroup ]
+		);
+	}
+
+	/** Set the role of one item. */
+	public static function setItemRole( string $pGuid, string $pGroup, string $pItem, int $pRoleId ): void {
+		global $gBitSystem;
+		$gBitSystem->mDb->query(
+			"UPDATE `".BIT_DB_PREFIX."liberty_xref_item` SET `role_id` = ? WHERE `content_type_guid` = ? AND `x_group` = ? AND `item` = ?",
+			[ $pRoleId, $pGuid, $pGroup, $pItem ]
+		);
 	}
 }
