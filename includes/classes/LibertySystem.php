@@ -820,6 +820,11 @@ class LibertySystem extends BitSingleton {
 			global $gBitSmarty, $gLibertySystem;
 
 			$ext = strtolower( $parts[1] );
+			// The icon is named after the mime subtype; detection often says another name for the same format (a rar is vnd.rar).
+			$ext = [
+				'vnd.rar' => 'rar', 'x-rar' => 'rar', 'x-rar-compressed' => 'rar',
+				'x-zip-compressed' => 'zip', 'x-tar' => 'tar', 'gzip' => 'gz', 'x-gzip' => 'gz', 'x-bzip2' => 'bz2',
+			][$ext] ?? $ext;
 			$biticon = [
 				'ipackage' => 'liberty',
 				'ipath' => 'mime/',
