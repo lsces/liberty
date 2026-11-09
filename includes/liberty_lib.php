@@ -507,6 +507,7 @@ function liberty_process_archive( &$pFileHash ) {
 	// file directly. if it's been ftp uploaded or some other method used,
 	// we'll copy the file. in the case of xuploaded files, the files have been
 	// processed but don't have to be copied
+	$origTmpName = $pFileHash['tmp_name'];
 	if( empty( $pFileHash['preprocessed'] ) && !is_uploaded_file( $pFileHash['tmp_name'] ) && is_file( $pFileHash['tmp_name'] ) ) {
 		$tmpDir = KernelTools::get_temp_dir();
 		$copyFile = tempnam( !empty( $tmpDir ) ? $tmpDir : '/tmp', $pFileHash['name'] );
@@ -577,6 +578,11 @@ function liberty_process_archive( &$pFileHash ) {
 	// if we created a copy of the original, we remove it
 	if( !empty( $copyFile ) ) {
 		@unlink( $copyFile );
+		// a file that is not an archive of a kind we can unpack made no directory: the caller stores the file itself, so tmp_name has to go back to
+		// the original, not stay on the copy that was just removed (the upload was silently lost)
+		if( $destDir === null && !empty( $origTmpName ) ) {
+			$pFileHash['tmp_name'] = $origTmpName;
+		}
 	}
 
 	if( preg_match( "!^/+$!", $destDir || '' )) {
