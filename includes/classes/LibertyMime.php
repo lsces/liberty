@@ -139,7 +139,7 @@ class LibertyMime extends LibertyContent {
 
 			// some mime plugins might not have file uploads - these plugins will tell us what mime handlers they are using
 			if( !empty( $pParamHash['mimeplugin'] ) && is_array( $pParamHash['mimeplugin'] )) {
-				foreach( $pParamHash['mimeplugin'] as $guid => $storeRow ) {
+				foreach( $pParamHash['mimeplugin'] as $guid => &$storeRow ) {
 					// check to see if we have anything worth storing in the array
 					$plugin_store = false;
 					foreach( array_values( $storeRow ) as $value ) {
@@ -154,13 +154,15 @@ class LibertyMime extends LibertyContent {
 						$this->pluginStore( $storeRow, $guid, BitBase::verifyId( $upload['attachment_id'] ));
 					}
 				}
+				unset( $storeRow );
 			}
 
-			// A mime plugin can add a text layer (pdf) to liberty_content.data while storing its file, which is after
-			// LibertyContent::store() has already run its services. Services that index content get told, once.
-			if( empty( $this->mErrors ) && !empty( $pParamHash['upload_store']['files'] ) && is_array( $pParamHash['upload_store']['files'] ) ) {
-				foreach( $pParamHash['upload_store']['files'] as $storedFile ) {
-					if( !empty( $storedFile['data'] ) ) {
+			// A mime plugin can add a text layer (pdf) to liberty_content.data, or its text to liberty_content_data, while storing its
+			// file, which is after LibertyContent::store() has already run its services. Services that index content get told, once.
+			if( empty( $this->mErrors ) ) {
+				$stored = array_merge( is_array( $pParamHash['upload_store']['files'] ?? null ) ? $pParamHash['upload_store']['files'] : [], is_array( $pParamHash['mimeplugin'] ?? null ) ? $pParamHash['mimeplugin'] : [] );
+				foreach( $stored as $storedFile ) {
+					if( !empty( $storedFile['data'] ) || !empty( $storedFile['text'] ) ) {
 						$this->invokeServices( 'content_index_function', $pParamHash );
 						break;
 					}

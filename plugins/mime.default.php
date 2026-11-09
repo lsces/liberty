@@ -175,6 +175,10 @@ if( !function_exists( '\Bitweaver\Liberty\mime_default_update' )) {
 					$sql = "UPDATE `".BIT_DB_PREFIX."liberty_content` SET `data` = ? WHERE `content_id` = ?";
 					$gBitSystem->mDb->query( $sql, [ $pStoreRow['data'], $pStoreRow['content_id'] ] );
 				}
+				// the whole text of a document (pdf) is a liberty_content_data row of its own
+				if ( !empty( $pStoreRow['text'] ) && !empty( $pStoreRow['this'] ) ) {
+					$pStoreRow['this']->storeData( $pStoreRow['text'], 'text' );
+				}
 
 				// ensure we have the correct guid in the db
 				if( empty( $pStoreRow['attachment_plugin_guid'] )) {
@@ -230,6 +234,10 @@ if( !function_exists( '\Bitweaver\Liberty\mime_default_store' )) {
 			if ( !empty( $pStoreRow['data'] ) ) {
 				$sql = "UPDATE `".BIT_DB_PREFIX."liberty_content` SET `data` = ? WHERE `content_id` = ?";
 				$gBitSystem->mDb->query( $sql, [ $pStoreRow['data'], $pStoreRow['content_id'] ] );
+			}
+			// the whole text goes in its own liberty_content_data row (data_type 'text'), data above is only its summary
+			if ( !empty( $pStoreRow['text'] ) && !empty( $pStoreRow['this'] ) ) {
+				$pStoreRow['this']->storeData( $pStoreRow['text'], 'text' );
 			}
 
 			$ret = true;

@@ -123,6 +123,9 @@ function mime_pdf_update( &$pStoreRow, $pParams = null ) {
 			$sql = "UPDATE `".BIT_DB_PREFIX."liberty_content` SET `data` = ? WHERE `content_id` = ?";
 			$gBitSystem->mDb->query( $sql, [$pStoreRow['data'], $pStoreRow['content_id']] );
 		}
+		if( !empty( $pStoreRow['text'] ) && !empty( $pStoreRow['this'] ) ) {
+			$pStoreRow['this']->storeData( $pStoreRow['text'], 'text' );
+		}
 	}
 
 	if( $gBitSystem->getConfig( 'pdf_thumbnails', 'y' ) == 'y' && (!empty( $pStoreRow['source_file'] ) || !empty( $pStoreRow['upload'] )) ) {
@@ -156,8 +159,25 @@ function mime_pdf_load( &$pFileHash, &$pPrefs, $pParams = null ) {
 }
 
 /**
+ * A short summary of a document's text for the description: whitespace collapsed, cut at a word boundary.
+ *
+ * @param string $pText the whole text
+ * @param int $pLength longest summary
+ * @return string
+ */
+function mime_pdf_summary( string $pText, int $pLength = 400 ): string {
+	$text = trim( preg_replace( '/[\s\x00-\x1f]+/u', ' ', $pText ) ?? '' );
+	if( mb_strlen( $text ) <= $pLength ) {
+		return $text;
+	}
+	$cut = mb_substr( $text, 0, $pLength );
+	$space = mb_strrpos( $cut, ' ' );
+	return trim( $space !== false && $space > $pLength / 2 ? mb_substr( $cut, 0, $space ) : $cut ).' ...';
+}
+
+/**
  * mime_pdf_text_extract Download text layer from a PDF
- *		This will be saved as ['data'] and stored in the liberty base object
+ *		The whole text goes in ['text'] (stored in liberty_content_data), a short summary of it in ['data'] (liberty_content.data)
  *
  * @param array $pFileHash file details.
  * @var array $pFileHash[upload] should contain a complete hash from $_FILES
@@ -179,8 +199,12 @@ function mime_pdf_text_extract( &$pFileHash ) {
 			chmod($source, 0666);
 			$pdftotextcommand = $pdftotext. " \"$source\" \"$source.txt\" ";
 			shell_exec( $pdftotextcommand );
-			$pFileHash['data'] = file_get_contents($source.'.txt');
+			$text = (string)file_get_contents( $source.'.txt' );
 			@unlink( $source.'.txt' );
+			// the whole text is stored in liberty_content_data (data_type 'text') by the store function, and read back into the search index by
+			// the content class (getExtraIndexWords); liberty_content.data keeps only a short summary, the description everything shows
+			$pFileHash['text'] = $text;
+			$pFileHash['data'] = mime_pdf_summary( $text );
 		} else {
 			$pFileHash['log']['pdftotext'] = "PDF to Text function not installed.";
 		}

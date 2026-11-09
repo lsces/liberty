@@ -10,6 +10,7 @@
 	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_sources.php">{tr}Xref Sources{/tr}</a></li>
 	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_local_scheme.php">{tr}Local Scheme{/tr}</a></li>
 	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_local_import.php">{tr}Local Imports{/tr}</a></li>
+	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_pdf_text.php">{tr}PDF text{/tr}</a></li>
 		{if $gBitSystem->isPackageActive( 'pdf' ) }
 			<li><a class="item" href="{$smarty.const.KERNEL_PKG_URL}admin/index.php?page=pdf">{tr}PDF{/tr}</a></li>
 		{/if}
