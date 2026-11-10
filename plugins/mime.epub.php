@@ -107,10 +107,41 @@ function mime_epub_read( string $pFile ): array {
 		if( $cover === '' && ( $meta = $opf->xpath( '//o:metadata/o:meta[@name="cover"]' ) ) && isset( $items[(string)$meta[0]['content']] ) ) {
 			$cover = $items[(string)$meta[0]['content']]['href'];
 		}
+		// some books put the cover image's path where the id belongs: <meta name="cover" content="Images/cover.jpg"/>
+		if( $cover === '' && ( $meta = $opf->xpath( '//o:metadata/o:meta[@name="cover"]' ) ) ) {
+			$want = rawurldecode( (string)$meta[0]['content'] );
+			foreach( $items as $it ) {
+				$href = rawurldecode( $it['href'] );
+				if( $want !== '' && str_starts_with( $it['type'], 'image/' ) && ( $href === $want || str_ends_with( $href, '/'.$want ) ) ) {
+					$cover = $it['href'];
+					break;
+				}
+			}
+		}
 		if( $cover === '' ) {
 			foreach( $items as $id => $it ) {
 				if( str_starts_with( $it['type'], 'image/' ) && preg_match( '/cover/i', $id.' '.$it['href'] ) ) {
 					$cover = $it['href'];
+					break;
+				}
+			}
+		}
+		// the book's cover page: its first picture is the cover
+		if( $cover === '' ) {
+			foreach( $items as $id => $it ) {
+				if( str_contains( $it['type'], 'html' ) && preg_match( '/cover/i', $id.' '.basename( $it['href'] ) )
+					&& ( $page = $zip->getFromName( ( dirname( $opfPath ) !== '.' ? dirname( $opfPath ).'/' : '' ).rawurldecode( $it['href'] ) ) ) !== false
+					&& preg_match( '#<(?:img|image)\b[^>]*?(?:src|href)=["\']([^"\']+)["\']#i', $page, $m ) ) {
+					// the picture's path is relative to the page; the cover path is kept relative to the package file
+					$parts = [];
+					foreach( explode( '/', ( dirname( $it['href'] ) !== '.' ? dirname( $it['href'] ).'/' : '' ).$m[1] ) as $seg ) {
+						if( $seg === '..' ) {
+							array_pop( $parts );
+						} elseif( $seg !== '.' && $seg !== '' ) {
+							$parts[] = $seg;
+						}
+					}
+					$cover = implode( '/', $parts );
 					break;
 				}
 			}
