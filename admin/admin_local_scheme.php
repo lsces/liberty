@@ -10,9 +10,8 @@
  * Deliberately minimal for now - just discover+apply, no in-browser editing of the scheme files
  * themselves (that's real content-management work, parked as a known follow-up). Runs as a
  * genuine authenticated admin request, so ownership/permissions are handled the normal way -
- * no CLI login impersonation needed, unlike the retracted /etc/webstack/scripts/
- * apply_local_scheme.php this replaces (wrong location - that was real framework logic, not
- * server/infra config, see fisheye.md's 2026-09-02 entry).
+ * no CLI login impersonation needed, unlike the CLI script this replaces
+ * (that was real framework logic, which belongs in the framework and not in server config).
  *
  * @package liberty
  */
