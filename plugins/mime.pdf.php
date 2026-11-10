@@ -238,6 +238,9 @@ function mime_pdf_thumbnail( $pFileHash ) {
 	try {
 		$im = new \Imagick();
 		$im->setResolution( 150, 150 );
+		// draw the page the way a viewer does, inside its CropBox: many PDFs carry a MediaBox far larger than the page (1359x864 around a 540x666 book page),
+		// and the whole MediaBox made the cover a small picture on a mostly white sheet
+		$im->setOption( 'pdf:use-cropbox', 'true' );
 		$im->readImage( $source . '[0]' );
 		$im->setImageFormat( 'jpeg' );
 		$im->setImageCompressionQuality( 85 );
