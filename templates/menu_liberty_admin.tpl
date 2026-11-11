@@ -10,7 +10,10 @@
 	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_xref_sources.php">{tr}Xref Sources{/tr}</a></li>
 	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_local_scheme.php">{tr}Local Scheme{/tr}</a></li>
 	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_local_import.php">{tr}Local Imports{/tr}</a></li>
+	{* listed only until liberty is upgraded to 5.1.1 (string compare is right for these 5.x.y numbers) *}
+	{if $gBitSystem->getVersion( 'liberty', '0.0.0' ) < '5.1.1'}
 	<li><a class="item" href="{$smarty.const.LIBERTY_PKG_URL}admin/admin_pdf_text.php">{tr}PDF text{/tr}</a></li>
+	{/if}
 		{if $gBitSystem->isPackageActive( 'pdf' ) }
 			<li><a class="item" href="{$smarty.const.KERNEL_PKG_URL}admin/index.php?page=pdf">{tr}PDF{/tr}</a></li>
 		{/if}
