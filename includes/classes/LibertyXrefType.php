@@ -366,7 +366,8 @@ class LibertyXrefType {
 	 *   $xrefTemplate set  — all items whose template matches, regardless of group
 	 *   $xrefGroup > -1    — items in the group at that sort_order, excluding slots
 	 *                        already filled for this content item (single-cardinality
-	 *                        items that already have an active row)
+	 *                        items that already have an active row; an item with
+	 *                        multiple > 0 is always offered, whatever its rows' xorder)
 	 *   $xrefGroup == -1   — same but across all groups (sort_order > 0)
 	 *
 	 * When a packageGuid was supplied at construction, item/group rows for both guids
@@ -405,7 +406,7 @@ class LibertyXrefType {
 				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x
 				     ON x.`item` = s.`item` AND x.`content_id` = ? AND (x.`end_date` IS NULL OR x.`end_date` > ?)
 				 WHERE s.`content_type_guid` $guidFilter AND t.`sort_order` = ?
-				   AND (x.`xref_id` IS NULL OR x.`xorder` > 0) AND s.`multiple` <> -1
+				   AND (x.`xref_id` IS NULL OR x.`xorder` > 0 OR s.`multiple` > 0) AND s.`multiple` <> -1
 				 ORDER BY s.`sort_order`, s.`cross_ref_title`",
 				[ $contentId, $gBitSystem->getUTCTime(), $xrefGroup ]
 			);
@@ -418,7 +419,7 @@ class LibertyXrefType {
 				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` x
 				     ON x.`item` = s.`item` AND x.`content_id` = ? AND (x.`end_date` IS NULL OR x.`end_date` > ?)
 				 WHERE s.`content_type_guid` $guidFilter AND t.`sort_order` > 0
-				   AND (x.`xref_id` IS NULL OR x.`xorder` > 0) AND s.`multiple` <> -1
+				   AND (x.`xref_id` IS NULL OR x.`xorder` > 0 OR s.`multiple` > 0) AND s.`multiple` <> -1
 				 ORDER BY s.`sort_order`, s.`cross_ref_title`",
 				[ $contentId, $gBitSystem->getUTCTime() ]
 			);
