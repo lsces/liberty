@@ -10,6 +10,7 @@
 </div>
 {/if}
 
+{if $xrefInfo.cross_ref_href}
 <div class="form-group">
 	{formlabel label="External ID" for="`$xid`xkey"}
 	{forminput}
@@ -24,6 +25,24 @@
 		<input type="text" class="form-control" name="xkey_ext" id="{$xid}xkey_ext" value="{$xrefInfo.xkey_ext|escape}" />
 	{/forminput}
 </div>
+{else}
+{* no link prefix: the item holds a whole web address (an official site, a shop page) *}
+<div class="form-group">
+	{formlabel label="Web address" for="`$xid`xkey_ext"}
+	{forminput}
+		<input type="text" class="form-control" name="xkey_ext" id="{$xid}xkey_ext" value="{$xrefInfo.xkey_ext|escape}" placeholder="https://" />
+		{formhelp note="The whole address, starting http:// or https://."}
+	{/forminput}
+</div>
+
+<div class="form-group">
+	{formlabel label="Link text" for="`$xid`xkey"}
+	{forminput}
+		<input type="text" class="form-control input-small" name="xkey" id="{$xid}xkey" value="{$xrefInfo.xkey|escape}" maxlength="32" />
+		{formhelp note="Optional, up to 32 characters: shown in place of the item's title in the lists."}
+	{/forminput}
+</div>
+{/if}
 
 <div class="form-group">
 	{formlabel label="Note" for="`$xid`edit"}
