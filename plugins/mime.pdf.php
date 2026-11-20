@@ -159,6 +159,31 @@ function mime_pdf_load( &$pFileHash, &$pPrefs, $pParams = null ) {
 }
 
 /**
+ * The text without its running lines: a line that turns up on many pages (a watermark, a running header or footer, a site's advertisement) says nothing about the
+ * document, and would be the whole "description" of any file that carries one. A line counts as running when it occurs at least five times and on at least a
+ * fifth of the pages (pages are separated by form feeds); a short text is left as it is.
+ */
+function mime_pdf_drop_running_lines( string $pText ): string {
+	$lines = preg_split( '/\R/u', $pText ) ?: [];
+	if( count( $lines ) < 12 ) {
+		return $pText;
+	}
+	$counts = [];
+	foreach( $lines as $line ) {
+		$line = trim( str_replace( "\f", '', $line ) );
+		if( mb_strlen( $line ) >= 12 ) {   // not a single word: a title broken across lines repeats its short pieces
+			$counts[$line] = ( $counts[$line] ?? 0 ) + 1;
+		}
+	}
+	$pages = max( 1, substr_count( $pText, "\f" ) + 1 );
+	$running = array_filter( $counts, fn( int $n ) => $n >= 5 && $n >= $pages * 0.2 );
+	if( !$running ) {
+		return $pText;
+	}
+	return implode( "\n", array_filter( $lines, fn( string $line ) => !isset( $running[trim( str_replace( "\f", '', $line ) )] ) ) );
+}
+
+/**
  * A short summary of a document's text for the description: whitespace collapsed, cut at a word boundary.
  *
  * @param string $pText the whole text
@@ -166,7 +191,7 @@ function mime_pdf_load( &$pFileHash, &$pPrefs, $pParams = null ) {
  * @return string
  */
 function mime_pdf_summary( string $pText, int $pLength = 400 ): string {
-	$text = trim( preg_replace( '/[\s\x00-\x1f]+/u', ' ', $pText ) ?? '' );
+	$text = trim( preg_replace( '/[\s\x00-\x1f]+/u', ' ', mime_pdf_drop_running_lines( $pText ) ) ?? '' );
 	if( mb_strlen( $text ) <= $pLength ) {
 		return $text;
 	}
