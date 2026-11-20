@@ -941,3 +941,17 @@ Every package needs its own `includes/bit_setup_inc.php`, which:
 `LibertyContent::verify()` builds a save's search text from the title, author and `edit` text of that save. A save that carries `edit` but
 no `title` keeps the stored title in the database, and (since 2026-10-08) in the index too - it falls back to the loaded content's title.
 A save with no `edit` still clears the stored data (the fisheye convention), so there is nothing of it to index.
+
+## Thumbnails for pictures and PDFs over the image processor's limits
+ImageMagick's stock policy refuses any picture wider or taller than 8000 pixels, or over 32 megapixels, before it reads a pixel, and the thumbnail code used to swallow the
+exception, leaving the thumbnails folder empty with no message. `liberty_picture_too_big( $file )` tests a file against those limits (a little under them) and
+`liberty_picture_shrink( $file, $dest, $longSide = 4000 )` makes a temporary reduced JPEG: a JPEG is read through libjpeg's scale-on-load (`jpeg:size`), so the full picture is never held;
+other types go through GD when their memory need fits. `liberty_generate_thumbnails()` uses the reduced copy as the source when the picture is too big and removes it afterwards; the original is
+never touched. Every route that makes thumbnails of a stored picture goes through it. `mime_pdf_thumbnail()` renders page 1 at 150 dpi, lowered for a large-format page so that no side exceeds 2400
+pixels (the page size is read from `pdfinfo`, inside the CropBox); ordinary pages are unchanged. The in-place plugins (`mime.extimage`, `mime.extpdf`) use the same shrink.
+
+## PDF descriptions
+`mime_pdf_summary( $text )` is the description made from a PDF's text: the first 400 characters, cut at a word. `mime_pdf_drop_running_lines()` first removes any line of 12 or more characters that occurs
+at least five times and on at least a fifth of the pages (pages are separated by form feeds): a watermark, a running header or footer, a site's advertisement. A text of fewer than twelve lines is left
+alone. The summary may therefore be empty for a file that is nothing but such lines.
+
