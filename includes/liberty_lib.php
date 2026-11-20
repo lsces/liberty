@@ -715,6 +715,73 @@ function liberty_get_function( $pType ) {
 }
 
 /**
+ * Whether ImageMagick's resource policy would refuse a picture outright: the stock policy reads nothing wider or taller than 8000 pixels or larger than
+ * 32 megapixels, and refuses before one pixel is decoded, so no thumbnail is made and nothing says why. The limits are kept a little under.
+ *
+ * @param string $pFile path of the picture
+ * @return bool
+ */
+function liberty_picture_too_big( string $pFile ): bool {
+	[ $w, $h ] = @getimagesize( $pFile ) ?: [ 0, 0 ];
+	return $w > 7900 || $h > 7900 || $w * $h > 31000000;
+}
+
+/**
+ * A reduced copy of a picture too large for liberty_picture_too_big(), made so the thumbnails can still be drawn from it. A JPEG is read at a fraction of its
+ * size (libjpeg scales while decoding, so the full picture is never held); any other type goes through GD when its memory need fits. The copy is a JPEG the
+ * caller removes. The original is never touched.
+ *
+ * @param string $pFile the picture
+ * @param string $pDest the file to write (a .jpg)
+ * @param int $pLongSide longest side of the copy: enough for the largest thumbnail with room to spare
+ * @return string|null $pDest, or null when the picture could not be reduced
+ */
+function liberty_picture_shrink( string $pFile, string $pDest, int $pLongSide = 4000 ): ?string {
+	[ $w, $h, $type ] = @getimagesize( $pFile ) ?: [ 0, 0, 0 ];
+	if( !$w || !$h ) {
+		return null;
+	}
+	try {
+		if( $type === IMAGETYPE_JPEG && extension_loaded( 'imagick' ) ) {
+			$im = new \Imagick();
+			$im->setOption( 'jpeg:size', $pLongSide.'x'.$pLongSide );   // libjpeg scales by 1/2, 1/4 or 1/8 while it decodes
+			$im->readImage( $pFile );
+			$im->thumbnailImage( $pLongSide, $pLongSide, true );
+			$im->setImageFormat( 'jpeg' );
+			$im->setImageCompressionQuality( 88 );
+			$im->writeImage( $pDest );
+			$im->clear();
+			return is_file( $pDest ) && filesize( $pDest ) > 0 ? $pDest : null;
+		}
+	} catch( \Throwable $e ) {
+		// fall through to GD
+	}
+	// GD holds about 5 bytes a pixel for the source and then the reduced copy; leave a fifth of the memory limit free
+	$ini = trim( (string)ini_get( 'memory_limit' ) );
+	$n = (int)$ini;
+	$limit = match( strtolower( substr( $ini, -1 ) ) ) { 'g' => $n << 30, 'm' => $n << 20, 'k' => $n << 10, default => $n };
+	if( $limit > 0 && $w * $h * 5 > $limit * 0.8 - memory_get_usage( true ) ) {
+		return null;
+	}
+	$src = match( $type ) {
+		IMAGETYPE_JPEG => @imagecreatefromjpeg( $pFile ),
+		IMAGETYPE_PNG  => @imagecreatefrompng( $pFile ),
+		IMAGETYPE_GIF  => @imagecreatefromgif( $pFile ),
+		IMAGETYPE_WEBP => function_exists( 'imagecreatefromwebp' ) ? @imagecreatefromwebp( $pFile ) : false,
+		IMAGETYPE_BMP  => function_exists( 'imagecreatefrombmp' ) ? @imagecreatefrombmp( $pFile ) : false,
+		default        => false,
+	};
+	if( !$src ) {
+		return null;
+	}
+	$scaled = imagescale( $src, $w >= $h ? $pLongSide : (int)round( $w * $pLongSide / $h ), $h > $w ? $pLongSide : (int)round( $h * $pLongSide / $w ) );
+	unset( $src );
+	$ok = $scaled && imagejpeg( $scaled, $pDest, 88 );
+	unset( $scaled );
+	return $ok && is_file( $pDest ) ? $pDest : null;
+}
+
+/**
  * liberty_generate_thumbnails
  *
  * @param array $pFileHash
@@ -726,6 +793,14 @@ function liberty_generate_thumbnails( $pFileHash ) {
 	$ret = false;
 
 	if( $resizeFunc = liberty_get_function( 'resize' ) ) {
+
+		// a picture over the image processor's size policy is refused before anything is read, so the thumbnails are drawn from a reduced copy instead
+		$shrunk = null;
+		if( !empty( $pFileHash['source_file'] ) && is_file( $pFileHash['source_file'] ) && liberty_picture_too_big( $pFileHash['source_file'] )
+			&& ( $shrunk = liberty_picture_shrink( $pFileHash['source_file'], dirname( $pFileHash['source_file'] ).'/shrunk-source.jpg' ) ) ) {
+			$pFileHash['source_file'] = $shrunk;
+			$pFileHash['type'] = 'image/jpeg';
+		}
 
 		// allow custom selection of thumbnail sizes
 		if( empty( $pFileHash['thumbnail_sizes'] )) {
@@ -824,6 +899,9 @@ function liberty_generate_thumbnails( $pFileHash ) {
 
 		// to keep everything in bitweaver working smoothly, we need to remove the thumbs/ subdir again
 		$pFileHash['dest_branch'] = $initialDestPath;
+		if( $shrunk ) {
+			@unlink( $shrunk );
+		}
 	}
 
 	return $ret;

@@ -237,7 +237,14 @@ function mime_pdf_thumbnail( $pFileHash ) {
 
 	try {
 		$im = new \Imagick();
-		$im->setResolution( 150, 150 );
+		// 150 dpi, lowered for a large-format page so that no side comes out over 2400 pixels (a 55 x 44 inch map at 150 dpi is past the image
+		// processor's size policy and was refused without a thumbnail). The page is measured as a viewer draws it, inside the CropBox.
+		$dpi = 150;
+		$info = (string)shell_exec( 'pdfinfo -f 1 -l 1 '.escapeshellarg( $source ).' 2>/dev/null' );
+		if( preg_match( '/Page(?:\s+1)? size:\s+([\d.]+) x ([\d.]+) pts/', $info, $m ) && max( (float)$m[1], (float)$m[2] ) * $dpi / 72 > 2400 ) {
+			$dpi = max( 10, (int)floor( 2400 * 72 / max( (float)$m[1], (float)$m[2] ) ) );
+		}
+		$im->setResolution( $dpi, $dpi );
 		// draw the page the way a viewer does, inside its CropBox: many PDFs carry a MediaBox far larger than the page (1359x864 around a 540x666 book page),
 		// and the whole MediaBox made the cover a small picture on a mostly white sheet
 		$im->setOption( 'pdf:use-cropbox', 'true' );
