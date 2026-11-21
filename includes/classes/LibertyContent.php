@@ -3025,6 +3025,17 @@ class LibertyContent extends LibertyBase implements BitCacheable {
 			$pListHash['user_id'] = $gBitUser->mUserId;
 		}
 
+		// A content type guid is letters, digits and underscores, at most 16 of them (the column is VARCHAR(16)). A request value that is anything else
+		// is junk, and a longer string bound to the column makes Firebird throw "string right truncation" - an uncaught exception, a 500 and a fatal-error
+		// mail for every request a scanner sends. Keep what a guid can contain and cut it to 16; the search's "group:" scopes are resolved by the search
+		// itself and pass through untouched.
+		if( isset( $pListHash['content_type_guid'] ) ) {
+			$cleanGuid = static fn( $pGuid ) => is_string( $pGuid ) && !str_starts_with( $pGuid, 'group:' )
+				? substr( preg_replace( '/[^A-Za-z0-9_]/', '', $pGuid ), 0, 16 ) : $pGuid;
+			$pListHash['content_type_guid'] = is_array( $pListHash['content_type_guid'] )
+				? array_map( $cleanGuid, $pListHash['content_type_guid'] ) : $cleanGuid( $pListHash['content_type_guid'] );
+		}
+
 		parent::prepGetList( $pListHash );
 	}
 
