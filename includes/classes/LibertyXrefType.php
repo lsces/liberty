@@ -710,9 +710,13 @@ class LibertyXrefType {
 
 		$ret = [];
 		while( $res = $result->fetchRow() ) {
+			// Item codes are reused across content types (BP is blood pressure on a health day and a
+			// bill payment on an account), so count only rows on content of this item's own type.
 			$res["num_entries"] = $gBitSystem->mDb->getOne(
-				"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `item` = ?",
-				[ $res["item"] ]
+				"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` x
+				 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = x.`content_id`
+				 WHERE x.`item` = ? AND lc.`content_type_guid` = ?",
+				[ $res["item"], $res["content_type_guid"] ]
 			);
 			$ret[] = $res;
 		}
